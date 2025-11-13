@@ -20,8 +20,8 @@ export default function Header() {
             <a className="navchip" href="/">Home</a>
             <a className="navchip" href="/category/Women">Women</a>
             <a className="navchip" href="/category/Men">Men</a>
-            <a className="navchip" href="https://instagram.com" target="_blank">Instagram</a>
-            <a className="navchip" href="https://wa.me/96100000000" target="_blank">WhatsApp</a>
+            <a className="navchip" href="https://instagram.com/classyline78" target="_blank">Instagram</a>
+            <a className="navchip" href="https://wa.me/96181643280" target="_blank">WhatsApp</a>
 
             {/* CART BUTTON */}
             <button
