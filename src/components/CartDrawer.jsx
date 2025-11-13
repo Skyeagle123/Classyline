@@ -2,7 +2,7 @@
 import React from 'react';
 import { useCart } from '../store.jsx';
 
-const WHATSAPP_NUMBER = '96170000000'; // ← غيّر الرقم من هون
+const WHATSAPP_NUMBER = '96181643280'; // ← غيّر الرقم من هون
 
 function buildWhatsAppMessage(cart, subtotal) {
   if (!cart.length) return 'Hello, I want to order from Classyline, but my cart is empty.';
