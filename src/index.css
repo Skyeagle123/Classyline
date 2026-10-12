@@ -1,9 +1,140 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
-.btn{ @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold shadow-sm bg-zinc-900 text-white hover:bg-zinc-800 transition; }
-.btn-outline{ @apply border border-zinc-300 text-zinc-700 bg-white hover:bg-zinc-50; }
-.card{ @apply bg-white rounded-2xl shadow-sm border border-zinc-100; }
-.navchip{ @apply rounded-xl px-3 py-2 text-sm bg-white border border-zinc-200 hover:bg-zinc-50; }
-.input{ @apply w-full rounded-xl border border-zinc-300 px-3 py-2; }
+.btn {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold shadow-sm bg-zinc-900 text-white hover:bg-zinc-800 transition;
+}
+.btn-outline {
+  @apply border border-zinc-300 text-zinc-700 bg-white hover:bg-zinc-50;
+}
+.card {
+  @apply bg-white rounded-2xl shadow-sm border border-zinc-100;
+}
+.navchip {
+  @apply rounded-xl px-3 py-2 text-sm bg-white border border-zinc-200 hover:bg-zinc-50;
+}
+.input {
+  @apply w-full rounded-xl border border-zinc-300 px-3 py-2;
+}
+:root {
+  color: #241e1b;
+  background: #f6f1e8;
+  font-family: Arial, sans-serif;
+}
+body {
+  margin: 0;
+}
+h1,
+h2,
+h3,
+.brand {
+  font-family: Georgia, serif;
+  font-weight: 400;
+}
+.page {
+  max-width: 80rem;
+  margin: auto;
+  padding: 2rem 1rem;
+}
+.announcement {
+  background: #241e1b;
+  color: #f6f1e8;
+  text-align: center;
+  padding: 0.6rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+header {
+  background: #f6f1e8ed;
+  border-bottom: 1px solid #b8a79a;
+  backdrop-filter: blur(12px);
+}
+.brand {
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+.brand span {
+  display: block;
+  font-family: Arial, sans-serif;
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  margin-top: 0.4rem;
+}
+.eyebrow {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: #766457;
+}
+.hero {
+  padding: 3rem 1rem;
+  max-width: 80rem;
+  margin: auto;
+  border-bottom: 1px solid #b8a79a;
+}
+.hero h1 {
+  font-size: clamp(2.4rem, 7vw, 5rem);
+  line-height: 1.1;
+  max-width: 50rem;
+}
+.hero p {
+  margin-top: 1rem;
+}
+.btn {
+  background: #241e1b;
+  min-height: 44px;
+}
+.navchip {
+  background: transparent;
+  border-color: #b8a79a;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.navchip[aria-pressed="true"] {
+  background: #241e1b;
+  color: #f6f1e8;
+}
+.card {
+  border-color: #ded3c8;
+  background: #fcf9f4;
+  box-shadow: none;
+}
+.input {
+  background: #fffaf5;
+  border-color: #b8a79a;
+  min-height: 44px;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #c9a39b;
+  outline-offset: 3px;
+}
+.bag {
+  border: 0;
+  padding: 0;
+  margin: 0 0 0 auto;
+  max-height: 100dvh;
+  height: 100dvh;
+  width: min(100%, 30rem);
+  background: #f6f1e8;
+  color: #241e1b;
+  overflow: auto;
+}
+.bag::backdrop {
+  background: #241e1b88;
+}
+footer {
+  border-top: 1px solid #b8a79a;
+  padding: 2rem 1rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
