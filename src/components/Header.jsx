@@ -1,41 +1,30 @@
-import React, { useState } from 'react';
-import { useCart } from '../store.jsx';
-import CartDrawer from './CartDrawer.jsx';
-
+import React from "react";
+import { useCart } from "../store.jsx";
+import CartDrawer from "./CartDrawer.jsx";
 export default function Header() {
-  const { count } = useCart();
-  const [openCart, setOpenCart] = useState(false);
-
+  const { count } = useCart(),
+    [open, setOpen] = React.useState(false);
   return (
     <>
-      {/* Cart Drawer */}
-      <CartDrawer open={openCart} onClose={() => setOpenCart(false)} />
-
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
-          <img src="/logo.svg" alt="logo" className="w-9 h-9 rounded-xl" />
-          <h1 className="text-lg font-bold">Classyline</h1>
-
-          <nav className="ml-auto flex flex-wrap gap-2 justify-end">
-            <a className="navchip" href="/">Home</a>
-            <a className="navchip" href="/category/Women">Women</a>
-            <a className="navchip" href="/category/Men">Men</a>
-            <a className="navchip" href="https://instagram.com/classyline78" target="_blank">Instagram</a>
-            <a className="navchip" href="https://wa.me/96181643280" target="_blank">WhatsApp</a>
-
-            {/* CART BUTTON */}
-            <button
-              className="navchip"
-              onClick={() => setOpenCart(true)}
-            >
-              Cart: {count}
+      <div className="announcement">
+        Delivery throughout Lebanon · Cash on Delivery
+      </div>
+      <header className="sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
+          <a href="/" className="brand">
+            ClassyLine<span>EVERYDAY, CONSIDERED</span>
+          </a>
+          <nav className="ml-auto flex gap-2">
+            <a href="/" className="navchip">
+              Shop
+            </a>
+            <button className="navchip" onClick={() => setOpen(true)}>
+              Bag ({count})
             </button>
-
-            <a className="navchip" href="/admin">Admin</a>
           </nav>
         </div>
       </header>
+      <CartDrawer open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
-
