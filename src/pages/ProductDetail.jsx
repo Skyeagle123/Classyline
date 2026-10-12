@@ -1,33 +1,81 @@
-import React from 'react';
-import { loadProducts } from '../utils.js';
-import { useCart } from '../store.jsx';
-
-export default function ProductDetail({ id }){
+import React from "react";
+import { loadProducts } from "../utils.js";
+import { money } from "../api.js";
+import { useCart } from "../store.jsx";
+export default function ProductDetail({ id }) {
   const { add } = useCart();
-  const [p,setP] = React.useState(null);
-  const [size,setSize] = React.useState('');
-  React.useEffect(()=>{ (async()=>{
-    const all = await loadProducts();
-    const found = all.find(x => String(x.id)===String(id));
-    setP(found||null);
-    setSize((found?.sizes && found.sizes[0]) || 'S');
-  })(); },[id]);
-
-  if(!p) return <main className="max-w-7xl mx-auto px-4 py-10">Product not found.</main>;
-
+  const [p, setP] = React.useState(null),
+    [selected, setSelected] = React.useState(""),
+    [msg, setMsg] = React.useState("");
+  React.useEffect(() => {
+    let live = true;
+    setP(null);
+    setSelected("");
+    loadProducts()
+      .then((all) => {
+        if (live) {
+          setP(all.find((x) => x.id === id));
+          setMsg("");
+        }
+      })
+      .catch((e) => live && setMsg(e.message));
+    return () => {
+      live = false;
+    };
+  }, [id]);
+  if (!p)
+    return (
+      <main className="page" role="status">
+        {msg || "Loading product…"}
+      </main>
+    );
+  const v = p.variants.find((x) => x.id === selected);
   return (
-    <main className="max-w-7xl mx-auto px-4 py-6">
-      <div className="grid md:grid-cols-2 gap-6">
-        <img src={p.image} alt={p.title} className="w-full aspect-[4/5] object-cover rounded-2xl" />
-        <div className="space-y-4">
-          <h1 className="text-3xl font-bold">{p.title}</h1>
-          <div className="text-zinc-600 text-lg">${(p.price||0).toFixed(2)}</div>
-          <div className="flex gap-2">{(p.sizes||['S','M','L']).map(s=>(
-            <button key={s} className={`btn-outline px-3 py-1 rounded-full ${size===s?'!bg-zinc-900 !text-white':''}`} onClick={()=>setSize(s)}>{s}</button>
-          ))}</div>
-          <button className="btn" onClick={()=>add({id:p.id,title:p.title,price:p.price,size})}>Add to cart</button>
-        </div>
-      </div>
+    <main className="page grid md:grid-cols-2 gap-8">
+      <img
+        src={p.image}
+        alt={p.title}
+        className="w-full aspect-[4/5] object-cover rounded-xl"
+      />
+      <section className="space-y-5">
+        <a href="/">← Collection</a>
+        <p className="eyebrow">{p.category}</p>
+        <h1 className="text-4xl">{p.title}</h1>
+        <p>{money(p.price_cents)}</p>
+        <p>{p.description}</p>
+        <fieldset>
+          <legend className="mb-3">Choose your size and color</legend>
+          <div className="flex flex-wrap gap-2">
+            {p.variants.map((x) => (
+              <button
+                key={x.id}
+                disabled={!x.stock}
+                aria-pressed={x.id === selected}
+                className="navchip"
+                onClick={() => setSelected(x.id)}
+              >
+                {x.size} / {x.color}
+                {!x.stock ? " — sold out" : ""}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <button
+          className="btn"
+          disabled={!v?.stock}
+          onClick={() => {
+            add({ variant_id: v.id });
+            setMsg("Added to your bag");
+          }}
+        >
+          Add to bag
+        </button>
+        <p role="status">{msg}</p>
+        <p className="text-sm">
+          Cash on Delivery · Delivery throughout Lebanon. The regional delivery
+          fee is shown at checkout.
+        </p>
+      </section>
     </main>
-  )
+  );
 }
