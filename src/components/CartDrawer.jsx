@@ -1,6 +1,7 @@
 import React from "react";
 import { useCart } from "../store.jsx";
 import { api, money } from "../api.js";
+import { checkout } from "../checkout.js";
 export default function CartDrawer({ open, onClose }) {
   const { cart, remove, clear } = useCart();
   const [catalog, setCatalog] = React.useState(null),
@@ -14,7 +15,27 @@ export default function CartDrawer({ open, onClose }) {
     region: "",
     channel: "cod",
   });
-  const retry = React.useRef(null);
+  const recovery = React.useMemo(
+    () =>
+      checkout({
+        storage: {
+          getItem: (k) => localStorage.getItem(k),
+          setItem: (k, v) => localStorage.setItem(k, v),
+          removeItem: (k) => localStorage.removeItem(k),
+        },
+        tabStorage: {
+          getItem: (k) => sessionStorage.getItem(k),
+          setItem: (k, v) => sessionStorage.setItem(k, v),
+          removeItem: (k) => sessionStorage.removeItem(k),
+        },
+        request: api,
+        lock: navigator.locks
+          ? (name, fn) => navigator.locks.request(name, fn)
+          : null,
+      }),
+    [],
+  );
+  const [unresolved, setUnresolved] = React.useState(false);
   const dialog = React.useRef(null);
   React.useEffect(() => {
     if (open) {
@@ -22,8 +43,38 @@ export default function CartDrawer({ open, onClose }) {
       api("/catalog")
         .then(setCatalog)
         .catch((e) => setError(e.message));
+      resolveCheckout();
     } else dialog.current?.close();
   }, [open]);
+  async function resolveCheckout() {
+    setBusy(true);
+    try {
+      const snapshot = recovery.snapshot();
+      if (snapshot)
+        setForm({
+          name: snapshot.name,
+          phone: snapshot.phone,
+          address: snapshot.address,
+          region: snapshot.region,
+          channel: snapshot.channel,
+        });
+      const result = await recovery.recover();
+      setUnresolved(false);
+      if (result) {
+        setReceipt(result);
+        if (result.status !== "cancelled") {
+          localStorage.setItem("CL_CART_V3", "[]");
+          clear();
+        }
+      }
+      setError("");
+    } catch (e) {
+      setUnresolved(true);
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
   const items = cart.map((i) => {
     for (const p of catalog?.products || []) {
       const v = p.variants.find((v) => v.id === i.variant_id);
@@ -38,7 +89,7 @@ export default function CartDrawer({ open, onClose }) {
     fee = region?.fee_cents;
   async function submit(e) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || unresolved) return;
     setBusy(true);
     setError("");
     const payload = {
@@ -46,19 +97,13 @@ export default function CartDrawer({ open, onClose }) {
       items: cart.map((i) => ({ variant_id: i.variant_id, qty: i.qty })),
       expected_total_cents: subtotal + fee,
     };
-    const signature = JSON.stringify(payload);
-    if (!retry.current || retry.current.signature !== signature)
-      retry.current = { signature, key: crypto.randomUUID() };
     try {
-      const result = await api("/orders", {
-        method: "POST",
-        headers: { "Idempotency-Key": retry.current.key },
-        body: signature,
-      });
+      const result = await recovery.submit(payload);
       setReceipt(result);
+      localStorage.setItem("CL_CART_V3", "[]");
       clear();
-      retry.current = null;
     } catch (e) {
+      setUnresolved(true);
       setError(e.message);
     } finally {
       setBusy(false);
@@ -79,7 +124,20 @@ export default function CartDrawer({ open, onClose }) {
             <p>
               {money(receipt.total_cents)} · Cash on Delivery · {receipt.status}
             </p>
-            {receipt.whatsapp_url && (
+            {receipt.status === "pending" && (
+              <p>
+                Please wait for merchant confirmation. Unconfirmed reservations
+                expire after 30 minutes. Sending WhatsApp does not confirm the
+                order.
+              </p>
+            )}
+            {receipt.cancellation_reason === "expired" && (
+              <p>
+                This reservation expired and its stock was released. Review the
+                bag before placing a new order.
+              </p>
+            )}
+            {receipt.whatsapp_url && receipt.status !== "cancelled" && (
               <a
                 className="btn mt-4"
                 href={receipt.whatsapp_url}
@@ -89,7 +147,27 @@ export default function CartDrawer({ open, onClose }) {
                 Send itemized order on WhatsApp
               </a>
             )}
-            <button className="navchip mt-4" onClick={() => setReceipt(null)}>
+            <button
+              className="navchip mt-4"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await recovery.acknowledge(() => {
+                    if (receipt.status !== "cancelled") {
+                      localStorage.setItem("CL_CART_V3", "[]");
+                      clear();
+                    }
+                  });
+                  setReceipt(null);
+                } catch (e) {
+                  setUnresolved(true);
+                  setError(e.message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
               Continue shopping
             </button>
           </section>
@@ -198,11 +276,12 @@ export default function CartDrawer({ open, onClose }) {
                 <p className="text-xs">
                   Your name, phone and address are stored privately to fulfil
                   this order. WhatsApp opens only when you choose to send the
-                  saved order.
+                  saved order. Pending checkout details are held temporarily in
+                  this tab until the saved order is recovered.
                 </p>
                 <button
                   className="btn w-full"
-                  disabled={busy || !available || fee == null}
+                  disabled={busy || unresolved || !available || fee == null}
                 >
                   {busy ? "Saving order…" : "Place order · Pay on delivery"}
                 </button>
@@ -213,6 +292,21 @@ export default function CartDrawer({ open, onClose }) {
         <p className="mt-3" role="alert">
           {error}
         </p>
+        {unresolved && (
+          <section role="status">
+            <p>
+              Your earlier checkout must be resolved before another order can be
+              placed.
+            </p>
+            <button
+              className="btn mt-3"
+              disabled={busy}
+              onClick={resolveCheckout}
+            >
+              Recover previous checkout
+            </button>
+          </section>
+        )}
       </div>
     </dialog>
   );

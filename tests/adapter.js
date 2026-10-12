@@ -1,13 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 export function database() {
   const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(
-    readFileSync(
-      new URL("../migrations/0001_storefront.sql", import.meta.url),
-      "utf8",
-    ),
-  );
+  const migrations = new URL("../migrations/", import.meta.url);
+  for (const file of readdirSync(migrations)
+    .filter((x) => x.endsWith(".sql"))
+    .sort())
+    sqlite.exec(readFileSync(new URL(file, migrations), "utf8"));
   const db = {
     prepare(sql) {
       let args = [];
@@ -23,7 +22,10 @@ export function database() {
           return { results: sqlite.prepare(sql).all(...args) };
         },
         async run() {
-          const result = sqlite.prepare(sql).run(...args);
+          const statement = sqlite.prepare(sql);
+          if (statement.columns().length)
+            return { results: statement.all(...args), meta: { changes: 0 } };
+          const result = statement.run(...args);
           return { meta: { changes: Number(result.changes) } };
         },
       };

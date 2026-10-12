@@ -1,4 +1,5 @@
 import { digest, passwordHash, equal, cookie } from "./security.js";
+import { normalizePhone, expirePendingOrders } from "./checkout.js";
 class Failure extends Error {
   constructor(status, message) {
     super(message);
@@ -128,6 +129,8 @@ function receipt(order, items, number) {
   const result = {
     reference: order.reference,
     status: order.status,
+    reservation_expires_at: order.reservation_expires_at,
+    cancellation_reason: order.cancellation_reason || null,
     subtotal_cents: order.subtotal_cents,
     delivery_cents: order.delivery_cents,
     total_cents: order.subtotal_cents + order.delivery_cents,
@@ -162,6 +165,7 @@ export async function handle(request, env) {
     )
       fail(403, "Same-origin request required");
     if (path === "/api/catalog" && method === "GET") {
+      await expirePendingOrders(db, now);
       const products = (
         await db
           .prepare("SELECT * FROM products WHERE active=1 ORDER BY title")
@@ -222,16 +226,30 @@ export async function handle(request, env) {
             "__Host-cl_session=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0",
         });
       }
-      if (path === "/api/admin/orders" && method === "GET")
+      if (path === "/api/admin/orders" && method === "GET") {
+        await expirePendingOrders(db, now);
+        const orders = (
+          await db
+            .prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 100")
+            .all()
+        ).results;
+        const items = orders.length
+          ? (
+              await db
+                .prepare(
+                  `SELECT order_id,variant_id,title,size,color,unit_cents,qty FROM order_items WHERE order_id IN (${orders.map(() => "?").join(",")})`,
+                )
+                .bind(...orders.map((o) => o.id))
+                .all()
+            ).results
+          : [];
         return json({
-          orders: (
-            await db
-              .prepare(
-                "SELECT * FROM orders ORDER BY created_at DESC LIMIT 100",
-              )
-              .all()
-          ).results,
+          orders: orders.map((o) => ({
+            ...o,
+            items: items.filter((i) => i.order_id === o.id),
+          })),
         });
+      }
       if (path === "/api/admin/products" && method === "PUT") {
         const p = product(await body(request));
         const statements = [
@@ -309,6 +327,7 @@ export async function handle(request, env) {
         return json({ ok: true });
       }
       if (path === "/api/admin/orders" && method === "PATCH") {
+        await expirePendingOrders(db, now);
         const v = await body(request),
           id = text(v.id, 80);
         const old = await db
@@ -317,18 +336,74 @@ export async function handle(request, env) {
           .first();
         if (!old || !transitions[old.status].includes(v.status))
           fail(409, "Invalid status transition");
-        const result = await db
-          .prepare("UPDATE orders SET status=? WHERE id=? AND status=?")
-          .bind(v.status, id, old.status)
-          .run();
+        let result;
+        try {
+          result = await db
+            .prepare(
+              "UPDATE orders SET status=?,cancellation_reason=? WHERE id=? AND status=?",
+            )
+            .bind(
+              v.status,
+              v.status === "cancelled" ? "admin" : null,
+              id,
+              old.status,
+            )
+            .run();
+        } catch {
+          fail(409, "Reservation expired; refresh the order");
+        }
         if (!result.meta.changes) fail(409, "Order changed; refresh");
         return json({ ok: true });
       }
     }
+    if (path === "/api/orders/recover" && method === "POST") {
+      const input = await body(request),
+        key = text(input.key, 80);
+      if (
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
+          key,
+        )
+      )
+        fail(400, "Invalid order key");
+      await limit(
+        db,
+        "recover:" +
+          (await digest(request.headers.get("cf-connecting-ip") || "local")),
+        30,
+        now,
+      );
+      await expirePendingOrders(db, now);
+      // Atomically retire a missing attempt before answering: a delayed original POST can never commit later.
+      const results = await db.batch([
+        db
+          .prepare(
+            "INSERT INTO retired_order_keys VALUES (?,?) ON CONFLICT(idempotency_key) DO NOTHING",
+          )
+          .bind(key, now),
+        db.prepare("SELECT * FROM orders WHERE idempotency_key=?").bind(key),
+      ]);
+      const saved = results[1].results[0];
+      if (!saved) return json({ not_created: true });
+      const items = (
+        await db
+          .prepare(
+            "SELECT title,size,color,unit_cents,qty FROM order_items WHERE order_id=?",
+          )
+          .bind(saved.id)
+          .all()
+      ).results;
+      return json({ receipt: receipt(saved, items, env.WHATSAPP_NUMBER) });
+    }
     if (path === "/api/orders" && method === "POST") {
+      await expirePendingOrders(db, now);
       const input = await body(request);
       const key = text(request.headers.get("idempotency-key"), 80);
-      if (!/^[a-f0-9-]{36}$/.test(key)) fail(400, "Invalid order key");
+      if (
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
+          key,
+        )
+      )
+        fail(400, "Invalid order key");
       const hash = await digest(JSON.stringify(input));
       const previous = await db
         .prepare("SELECT * FROM orders WHERE idempotency_key=?")
@@ -351,6 +426,15 @@ export async function handle(request, env) {
           ),
         );
       }
+      if (
+        await db
+          .prepare(
+            "SELECT idempotency_key FROM retired_order_keys WHERE idempotency_key=?",
+          )
+          .bind(key)
+          .first()
+      )
+        fail(409, "Order attempt retired; review and submit a new order");
       await limit(
         db,
         "order:" +
@@ -359,10 +443,17 @@ export async function handle(request, env) {
         now,
       );
       const name = text(input.name, 120),
-        phone = text(input.phone, 30),
+        phone = normalizePhone(input.phone),
         address = text(input.address, 500),
         region = text(input.region, 80);
-      if (!/^\+?[\d ()-]{7,30}$/.test(phone)) fail(400, "Invalid phone");
+      if (!phone)
+        fail(
+          400,
+          "Enter a valid Lebanese number or an international number starting with + or 00",
+        );
+      // Additional protection independent of IP. These limits are abuse controls, not confirmation.
+      await limit(db, "order-phone:" + (await digest(phone)), 3, now);
+      await limit(db, "order-global", 100, now);
       if (!["cod", "whatsapp"].includes(input.channel))
         fail(400, "Invalid channel");
       if (
@@ -417,11 +508,12 @@ export async function handle(request, env) {
         status: "pending",
         subtotal_cents: subtotal,
         delivery_cents: delivery.fee_cents,
+        reservation_expires_at: now + 1800,
       };
       const statements = [
         db
           .prepare(
-            "INSERT INTO orders(id,reference,idempotency_key,request_hash,customer_name,phone,address,region_id,delivery_cents,subtotal_cents,channel,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO orders(id,reference,idempotency_key,request_hash,customer_name,phone,address,region_id,delivery_cents,subtotal_cents,channel,created_at,reservation_expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
           )
           .bind(
             order.id,
@@ -436,6 +528,7 @@ export async function handle(request, env) {
             subtotal,
             input.channel,
             now,
+            order.reservation_expires_at,
           ),
       ];
       for (const i of items)

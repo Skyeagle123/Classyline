@@ -205,6 +205,29 @@ export default function Admin() {
             <p>
               {o.address} · {o.region_id}
             </p>
+            <ul className="my-3 space-y-2">
+              {o.items.map((i) => (
+                <li key={i.variant_id}>
+                  {i.title} · {i.size} / {i.color} · Qty {i.qty} ·{" "}
+                  {money(i.unit_cents)} each · {money(i.unit_cents * i.qty)}
+                </li>
+              ))}
+            </ul>
+            {o.cancellation_reason === "expired" && (
+              <p>Pending reservation expired; stock released.</p>
+            )}
+            {o.status === "pending" && (
+              <p>
+                Awaiting merchant confirmation. Reserved until{" "}
+                {new Date(o.reservation_expires_at * 1000).toLocaleString()}.
+              </p>
+            )}
+            {o.channel === "whatsapp" && (
+              <p>
+                WhatsApp requested; opening a link does not verify that a
+                message was sent.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2 mt-3">
               {(
                 {
