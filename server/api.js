@@ -119,6 +119,7 @@ function product(raw) {
         size: text(v.size, 40),
         color: text(v.color, 60),
         stock: integer(v.stock, 0, 1000000),
+        expected_stock: v.expected_stock,
       }));
     })(),
   };
@@ -263,9 +264,16 @@ export async function handle(request, env) {
           statements.push(
             db
               .prepare(
-                "INSERT INTO variants VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET stock=excluded.stock",
+                "INSERT INTO variants VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET stock=CASE WHEN variants.stock=? THEN excluded.stock ELSE -1 END",
               )
-              .bind(v.id, p.id, v.size, v.color, v.stock),
+              .bind(
+                v.id,
+                p.id,
+                v.size,
+                v.color,
+                v.stock,
+                old ? integer(v.expected_stock, 0, 1000000) : -1,
+              ),
           );
         }
         statements.push(
@@ -273,7 +281,11 @@ export async function handle(request, env) {
             .prepare("INSERT INTO audit VALUES (?,?,?,?)")
             .bind(crypto.randomUUID(), "product.upsert", p.id, now),
         );
-        await db.batch(statements);
+        try {
+          await db.batch(statements);
+        } catch {
+          fail(409, "Stock changed; refresh the product before editing");
+        }
         return json({ ok: true });
       }
       if (path === "/api/admin/regions" && method === "PUT") {
