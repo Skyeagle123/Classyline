@@ -1,3 +1,7 @@
+import {
+  CHECKOUT_PROTOCOL_HEADER,
+  CHECKOUT_PROTOCOL_VERSION,
+} from "../shared/checkout-protocol.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { database } from "./adapter.js";
@@ -13,6 +17,9 @@ test("0002 rollback rehearsal rejects incompatible parent writes without loss; c
       headers: {
         Origin: "https://store.test",
         "Content-Type": "application/json",
+        ...(path === "/orders"
+          ? { [CHECKOUT_PROTOCOL_HEADER]: CHECKOUT_PROTOCOL_VERSION }
+          : {}),
         ...(key ? { "Idempotency-Key": key } : {}),
       },
       body: JSON.stringify(data),

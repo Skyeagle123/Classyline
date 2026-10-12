@@ -12,6 +12,7 @@ export default function CartDrawer({ open, onClose }) {
     error: cartError,
     reviewRequired,
     review,
+    reconcile,
   } = useCart();
   const [catalog, setCatalog] = React.useState(null),
     [error, setError] = React.useState(""),
@@ -59,6 +60,7 @@ export default function CartDrawer({ open, onClose }) {
   async function resolveCheckout() {
     setBusy(true);
     try {
+      await reconcile();
       const snapshot = recovery.snapshot();
       if (snapshot)
         setForm({
@@ -203,6 +205,7 @@ export default function CartDrawer({ open, onClose }) {
                     onClick={async () => {
                       try {
                         await remove(i.variant_id);
+                        setError("");
                       } catch (e) {
                         setError(e.message);
                       }

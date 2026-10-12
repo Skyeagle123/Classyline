@@ -1,4 +1,5 @@
 import React from "react";
+import { cartReady, performCartAction, cartErrorMessage } from "./cart-ui.js";
 import {
   ATTEMPT_KEY,
   CART_EVENT,
@@ -25,7 +26,13 @@ export function CartProvider({ children }) {
     [],
   );
   const [state, setState] = React.useState(null),
-    [error, setError] = React.useState("");
+    [actionError, setActionError] = React.useState(""),
+    [fatalError, setFatalError] = React.useState("");
+  function acceptState(s) {
+    setState(s);
+    setFatalError("");
+    setActionError("");
+  }
   React.useEffect(() => {
     let live = true;
     const sync = () =>
@@ -33,12 +40,11 @@ export function CartProvider({ children }) {
         .refresh()
         .then((s) => {
           if (live) {
-            setState(s);
-            setError("");
+            acceptState(s);
           }
         })
         .catch((e) => {
-          if (live) setError(e.message);
+          if (live) setFatalError(cartErrorMessage(e));
         });
     const storageChanged = (e) => {
       if (
@@ -58,17 +64,12 @@ export function CartProvider({ children }) {
       window.removeEventListener("focus", sync);
     };
   }, [coordinator]);
-  async function mutate(fn) {
-    try {
-      const s = await fn();
-      setState(s);
-      setError("");
-      return s;
-    } catch (e) {
-      setError(e.message);
-      throw e;
-    }
-  }
+  const mutate = (fn) =>
+    performCartAction(coordinator, fn, {
+      success: acceptState,
+      actionError: setActionError,
+      fatalError: setFatalError,
+    });
   const cart = state ? cartItems(state.lines) : [];
   return (
     <Ctx.Provider
@@ -77,11 +78,12 @@ export function CartProvider({ children }) {
         coordinator,
         cartVersion: state?.version,
         reviewRequired: state?.reviewRequired,
-        ready: !!state && !error,
-        error,
+        ready: cartReady(state, fatalError),
+        error: fatalError || actionError,
         add: (item) => mutate(() => coordinator.add(item)),
         remove: (id) => mutate(() => coordinator.remove(id)),
         review: (version) => mutate(() => coordinator.review(version)),
+        reconcile: () => mutate(() => coordinator.refresh()),
         count: cart.reduce((n, i) => n + i.qty, 0),
       }}
     >

@@ -1,3 +1,7 @@
+import {
+  CHECKOUT_PROTOCOL_HEADER,
+  CHECKOUT_PROTOCOL_VERSION,
+} from "../shared/checkout-protocol.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
@@ -12,7 +16,14 @@ const origin = "https://store.test";
 const req = (path, data, extra = {}) =>
   new Request(origin + "/api" + path, {
     method: "POST",
-    headers: { Origin: origin, "Content-Type": "application/json", ...extra },
+    headers: {
+      Origin: origin,
+      "Content-Type": "application/json",
+      ...(path === "/orders"
+        ? { [CHECKOUT_PROTOCOL_HEADER]: CHECKOUT_PROTOCOL_VERSION }
+        : {}),
+      ...extra,
+    },
     body: JSON.stringify(data),
   });
 const payload = {

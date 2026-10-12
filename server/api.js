@@ -1,5 +1,9 @@
 import { digest, passwordHash, equal, cookie } from "./security.js";
 import { normalizePhone, expirePendingOrders } from "./checkout.js";
+import {
+  CHECKOUT_PROTOCOL_HEADER,
+  CHECKOUT_PROTOCOL_VERSION,
+} from "../shared/checkout-protocol.js";
 class Failure extends Error {
   constructor(status, message) {
     super(message);
@@ -395,25 +399,46 @@ export async function handle(request, env) {
       return json({ receipt: receipt(saved, items, env.WHATSAPP_NUMBER) });
     }
     if (path === "/api/orders" && method === "POST") {
-      await expirePendingOrders(db, now);
-      const input = await body(request);
-      const key = text(request.headers.get("idempotency-key"), 80);
+      const key = request.headers.get("idempotency-key");
+      const validKey =
+        /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
+          key || "",
+        );
+      const previous = validKey
+        ? await db
+            .prepare("SELECT * FROM orders WHERE idempotency_key=?")
+            .bind(key)
+            .first()
+        : null;
+      // Lookup is read-only. Reject new legacy attempts before expiry, rate limits,
+      // retirement or inventory writes. Existing keys can still recover their receipt.
       if (
-        !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
-          key,
-        )
+        !previous &&
+        request.headers.get(CHECKOUT_PROTOCOL_HEADER) !==
+          CHECKOUT_PROTOCOL_VERSION
       )
-        fail(400, "Invalid order key");
+        return json(
+          {
+            error:
+              "Your checkout tab is out of date. Reload this page, review your bag and try again. Recover any earlier checkout before placing another order.",
+            code: "CHECKOUT_UPGRADE_REQUIRED",
+            required_protocol: CHECKOUT_PROTOCOL_VERSION,
+          },
+          409,
+        );
+      const input = await body(request);
+      if (!validKey) fail(400, "Invalid order key");
       const hash = await digest(JSON.stringify(input));
-      const previous = await db
-        .prepare("SELECT * FROM orders WHERE idempotency_key=?")
-        .bind(key)
-        .first();
       if (previous) {
         if (previous.request_hash !== hash) fail(409, "Order key already used");
+        await expirePendingOrders(db, now);
+        const refreshed = await db
+          .prepare("SELECT * FROM orders WHERE idempotency_key=?")
+          .bind(key)
+          .first();
         return json(
           receipt(
-            previous,
+            refreshed,
             (
               await db
                 .prepare(
@@ -426,6 +451,7 @@ export async function handle(request, env) {
           ),
         );
       }
+      await expirePendingOrders(db, now);
       if (
         await db
           .prepare(

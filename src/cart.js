@@ -2,6 +2,7 @@ export const CART_KEY = "CL_CART_V4";
 export const LEGACY_CART_KEY = "CL_CART_V3";
 export const ATTEMPT_KEY = "CL_CHECKOUT_PENDING_V1";
 export const CART_EVENT = "classyline-cart-changed";
+export class CartActionError extends Error {}
 export const validKey = (k) =>
   typeof k === "string" &&
   /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
@@ -184,9 +185,13 @@ export function sharedCart({
           cartItems(tx.state.lines).find((i) => i.variant_id === variant_id)
             ?.qty || 0;
         if (count >= 20)
-          throw new Error("Maximum quantity is 20 per size and color.");
+          throw new CartActionError(
+            "Maximum quantity is 20 per size and color. Remove some items to change your bag.",
+          );
         if (!count && cartItems(tx.state.lines).length >= 30)
-          throw new Error("Maximum bag size is 30 sizes and colors.");
+          throw new CartActionError(
+            "Maximum bag size is 30 sizes and colors. Remove an item before adding another.",
+          );
         return tx.write({
           ...tx.state,
           lines: [...tx.state.lines, { id: newId(), variant_id, qty: 1 }],

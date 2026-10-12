@@ -78,7 +78,7 @@ export default function ProductDetail({ id }) {
         >
           {adding ? "Adding…" : "Add to bag"}
         </button>
-        <p role="status">{msg || cartError}</p>
+        <p role="status">{cartError || msg}</p>
         <p className="text-sm">
           Cash on Delivery · Delivery throughout Lebanon. The regional delivery
           fee is shown at checkout.

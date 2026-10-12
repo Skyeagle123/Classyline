@@ -1,4 +1,8 @@
 import { ATTEMPT_KEY, cartItems, sharedCart, validKey } from "./cart.js";
+import {
+  CHECKOUT_PROTOCOL_HEADER,
+  CHECKOUT_PROTOCOL_VERSION,
+} from "../shared/checkout-protocol.js";
 const PAYLOAD = "CL_CHECKOUT_PAYLOAD_V1";
 export function checkout({
   storage,
@@ -94,7 +98,10 @@ export function checkout({
           throw new Error("Checkout could not be saved safely.");
         const result = await call("/orders", {
           method: "POST",
-          headers: { "Idempotency-Key": key },
+          headers: {
+            "Idempotency-Key": key,
+            [CHECKOUT_PROTOCOL_HEADER]: CHECKOUT_PROTOCOL_VERSION,
+          },
           body,
         });
         if (!result?.reference)

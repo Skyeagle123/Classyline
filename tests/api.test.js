@@ -1,3 +1,7 @@
+import {
+  CHECKOUT_PROTOCOL_HEADER,
+  CHECKOUT_PROTOCOL_VERSION,
+} from "../shared/checkout-protocol.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { handle } from "../server/api.js";
@@ -7,7 +11,14 @@ const origin = "https://store.test";
 const req = (path, method = "GET", data, extra = {}) =>
   new Request(origin + "/api" + path, {
     method,
-    headers: { Origin: origin, "Content-Type": "application/json", ...extra },
+    headers: {
+      Origin: origin,
+      "Content-Type": "application/json",
+      ...(path === "/orders"
+        ? { [CHECKOUT_PROTOCOL_HEADER]: CHECKOUT_PROTOCOL_VERSION }
+        : {}),
+      ...extra,
+    },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
 async function setup() {
@@ -323,7 +334,11 @@ test("JSON content type, malformed body and body limit enforced", async () => {
       await handle(
         new Request(origin + "/api/orders", {
           method: "POST",
-          headers: { Origin: origin, "Content-Type": "application/json" },
+          headers: {
+            Origin: origin,
+            "Content-Type": "application/json",
+            [CHECKOUT_PROTOCOL_HEADER]: CHECKOUT_PROTOCOL_VERSION,
+          },
           body: "{broken",
         }),
         e,
