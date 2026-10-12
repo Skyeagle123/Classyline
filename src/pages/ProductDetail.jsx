@@ -3,10 +3,11 @@ import { loadProducts } from "../utils.js";
 import { money } from "../api.js";
 import { useCart } from "../store.jsx";
 export default function ProductDetail({ id }) {
-  const { add } = useCart();
+  const { add, ready, error: cartError } = useCart();
   const [p, setP] = React.useState(null),
     [selected, setSelected] = React.useState(""),
-    [msg, setMsg] = React.useState("");
+    [msg, setMsg] = React.useState(""),
+    [adding, setAdding] = React.useState(false);
   React.useEffect(() => {
     let live = true;
     setP(null);
@@ -62,15 +63,22 @@ export default function ProductDetail({ id }) {
         </fieldset>
         <button
           className="btn"
-          disabled={!v?.stock}
-          onClick={() => {
-            add({ variant_id: v.id });
-            setMsg("Added to your bag");
+          disabled={!v?.stock || !ready || adding}
+          onClick={async () => {
+            setAdding(true);
+            try {
+              await add({ variant_id: v.id });
+              setMsg("Added to your bag");
+            } catch (e) {
+              setMsg(e.message);
+            } finally {
+              setAdding(false);
+            }
           }}
         >
-          Add to bag
+          {adding ? "Adding…" : "Add to bag"}
         </button>
-        <p role="status">{msg}</p>
+        <p role="status">{msg || cartError}</p>
         <p className="text-sm">
           Cash on Delivery · Delivery throughout Lebanon. The regional delivery
           fee is shown at checkout.

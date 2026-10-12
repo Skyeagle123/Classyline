@@ -7,6 +7,7 @@ import { handle } from "../server/api.js";
 import { passwordHash } from "../server/security.js";
 import { expirePendingOrders, normalizePhone } from "../server/checkout.js";
 import { checkout } from "../src/checkout.js";
+import { ATTEMPT_KEY, cartItems } from "../src/cart.js";
 const origin = "https://store.test";
 const req = (path, data, extra = {}) =>
   new Request(origin + "/api" + path, {
@@ -371,7 +372,8 @@ test("lost response survives reload: recover original receipt before allowing re
     return data;
   };
   const a = checkout({ storage, tabStorage, lock, request });
-  await assert.rejects(a.submit(payload));
+  await a.cart.add({ variant_id: "v" });
+  await assert.rejects(a.submit(payload, a.cart.read().version));
   assert.equal(stock(e), 4);
   assert.equal(
     JSON.stringify([...storage.m]).includes("Synthetic Customer"),
@@ -386,7 +388,9 @@ test("lost response survives reload: recover original receipt before allowing re
   await assert.rejects(b.submit(payload));
   assert.equal(tabStorage.m.size, 0);
   await b.acknowledge();
-  assert.equal(storage.m.size, 0);
+  assert.equal(storage.getItem(ATTEMPT_KEY), null);
+  assert.equal(a.cart.read().attempt, null);
+  assert.deepEqual(cartItems(a.cart.read().lines), []);
 });
 test("never-arrived request is retired on reload before replacement", async () => {
   const e = setup(),
@@ -401,7 +405,8 @@ test("never-arrived request is retired on reload before replacement", async () =
       throw new Error("Synthetic offline");
     },
   });
-  await assert.rejects(a.submit(payload));
+  await a.cart.add({ variant_id: "v" });
+  await assert.rejects(a.submit(payload, a.cart.read().version));
   const key = a.pending();
   const b = checkout({
     storage,
@@ -429,7 +434,12 @@ test("cross-tab lock prevents simultaneous duplicate submissions", async () => {
   };
   const a = checkout({ ...args, tabStorage: memory() }),
     b = checkout({ ...args, tabStorage: memory() });
-  const r = await Promise.allSettled([a.submit(payload), b.submit(payload)]);
+  await a.cart.add({ variant_id: "v" });
+  const version = a.cart.read().version;
+  const r = await Promise.allSettled([
+    a.submit(payload, version),
+    b.submit(payload, version),
+  ]);
   assert.equal(r.filter((x) => x.status === "fulfilled").length, 1);
   assert.equal(calls, 1);
 });
@@ -472,7 +482,8 @@ test("recovery network failure keeps durable key and blocks replacement", async 
         throw new Error("Synthetic offline");
       },
     });
-  await assert.rejects(c.submit(payload));
+  await c.cart.add({ variant_id: "v" });
+  await assert.rejects(c.submit(payload, c.cart.read().version));
   const key = c.pending();
   await assert.rejects(c.recover());
   assert.equal(c.pending(), key);

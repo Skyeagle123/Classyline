@@ -3,7 +3,16 @@ import { useCart } from "../store.jsx";
 import { api, money } from "../api.js";
 import { checkout } from "../checkout.js";
 export default function CartDrawer({ open, onClose }) {
-  const { cart, remove, clear } = useCart();
+  const {
+    cart,
+    remove,
+    coordinator,
+    cartVersion,
+    ready,
+    error: cartError,
+    reviewRequired,
+    review,
+  } = useCart();
   const [catalog, setCatalog] = React.useState(null),
     [error, setError] = React.useState(""),
     [busy, setBusy] = React.useState(false),
@@ -29,11 +38,12 @@ export default function CartDrawer({ open, onClose }) {
           removeItem: (k) => sessionStorage.removeItem(k),
         },
         request: api,
+        cart: coordinator,
         lock: navigator.locks
           ? (name, fn) => navigator.locks.request(name, fn)
           : null,
       }),
-    [],
+    [coordinator],
   );
   const [unresolved, setUnresolved] = React.useState(false);
   const dialog = React.useRef(null);
@@ -60,13 +70,7 @@ export default function CartDrawer({ open, onClose }) {
         });
       const result = await recovery.recover();
       setUnresolved(false);
-      if (result) {
-        setReceipt(result);
-        if (result.status !== "cancelled") {
-          localStorage.setItem("CL_CART_V3", "[]");
-          clear();
-        }
-      }
+      setReceipt(result);
       setError("");
     } catch (e) {
       setUnresolved(true);
@@ -89,7 +93,7 @@ export default function CartDrawer({ open, onClose }) {
     fee = region?.fee_cents;
   async function submit(e) {
     e.preventDefault();
-    if (busy || unresolved) return;
+    if (busy || unresolved || !ready || reviewRequired) return;
     setBusy(true);
     setError("");
     const payload = {
@@ -98,10 +102,8 @@ export default function CartDrawer({ open, onClose }) {
       expected_total_cents: subtotal + fee,
     };
     try {
-      const result = await recovery.submit(payload);
+      const result = await recovery.submit(payload, cartVersion);
       setReceipt(result);
-      localStorage.setItem("CL_CART_V3", "[]");
-      clear();
     } catch (e) {
       setUnresolved(true);
       setError(e.message);
@@ -133,10 +135,17 @@ export default function CartDrawer({ open, onClose }) {
             )}
             {receipt.cancellation_reason === "expired" && (
               <p>
-                This reservation expired and its stock was released. Review the
-                bag before placing a new order.
+                This reservation expired and its stock was released. To order
+                these items again, add them to the bag for a new order.
               </p>
             )}
+            {receipt.status === "cancelled" &&
+              receipt.cancellation_reason !== "expired" && (
+                <p>
+                  This order was cancelled. Add products to the bag if you
+                  intend to place a new order.
+                </p>
+              )}
             {receipt.whatsapp_url && receipt.status !== "cancelled" && (
               <a
                 className="btn mt-4"
@@ -153,13 +162,10 @@ export default function CartDrawer({ open, onClose }) {
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await recovery.acknowledge(() => {
-                    if (receipt.status !== "cancelled") {
-                      localStorage.setItem("CL_CART_V3", "[]");
-                      clear();
-                    }
-                  });
+                  await recovery.acknowledge();
                   setReceipt(null);
+                  setUnresolved(false);
+                  setError("");
                 } catch (e) {
                   setUnresolved(true);
                   setError(e.message);
@@ -193,7 +199,14 @@ export default function CartDrawer({ open, onClose }) {
                   </div>
                   <button
                     className="navchip"
-                    onClick={() => remove(i.variant_id)}
+                    disabled={busy || !ready}
+                    onClick={async () => {
+                      try {
+                        await remove(i.variant_id);
+                      } catch (e) {
+                        setError(e.message);
+                      }
+                    }}
                   >
                     Remove
                   </button>
@@ -201,7 +214,11 @@ export default function CartDrawer({ open, onClose }) {
               ))}
             </ul>
             {!cart.length ? (
-              <p>Your bag is empty.</p>
+              <p>
+                {ready
+                  ? "Your bag is empty. Add products to start a new order."
+                  : "Loading your saved bag…"}
+              </p>
             ) : (
               <form className="space-y-3 mt-5" onSubmit={submit}>
                 <p>Subtotal {money(subtotal)}</p>
@@ -281,7 +298,14 @@ export default function CartDrawer({ open, onClose }) {
                 </p>
                 <button
                   className="btn w-full"
-                  disabled={busy || unresolved || !available || fee == null}
+                  disabled={
+                    busy ||
+                    unresolved ||
+                    !ready ||
+                    reviewRequired ||
+                    !available ||
+                    fee == null
+                  }
                 >
                   {busy ? "Saving order…" : "Place order · Pay on delivery"}
                 </button>
@@ -290,8 +314,30 @@ export default function CartDrawer({ open, onClose }) {
           </>
         )}
         <p className="mt-3" role="alert">
-          {error}
+          {error || cartError}
         </p>
+        {reviewRequired && !receipt && !unresolved && (
+          <section role="status">
+            <p>
+              This bag was saved by an earlier checkout version. Review its
+              items and confirm that you intend to place a new order.
+            </p>
+            <button
+              className="navchip mt-3"
+              disabled={busy || !ready}
+              onClick={async () => {
+                try {
+                  await review(cartVersion);
+                  setError("");
+                } catch (e) {
+                  setError(e.message);
+                }
+              }}
+            >
+              Use this reviewed bag for a new order
+            </button>
+          </section>
+        )}
         {unresolved && (
           <section role="status">
             <p>

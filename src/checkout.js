@@ -1,31 +1,15 @@
-const KEY = "CL_CHECKOUT_PENDING_V1";
+import { ATTEMPT_KEY, cartItems, sharedCart, validKey } from "./cart.js";
 const PAYLOAD = "CL_CHECKOUT_PAYLOAD_V1";
-const validKey = (k) =>
-  /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
-    k,
-  );
-// Cross-tab durable key contains no customer data. Exact submission data lives only in this tab's session storage.
 export function checkout({
   storage,
   tabStorage,
   request,
   lock,
+  cart = sharedCart({ storage, lock }),
   newKey = () => crypto.randomUUID(),
 }) {
   let resolvedKey = null;
-  function pending() {
-    const key = storage.getItem(KEY);
-    if (key && !validKey(key))
-      throw new Error(
-        "Saved checkout cannot be read. Do not submit a replacement order.",
-      );
-    return key;
-  }
-  async function exclusive(fn) {
-    if (!lock)
-      throw new Error("Secure checkout requires browser Web Locks support.");
-    return lock("classyline-checkout", fn);
-  }
+  const pending = () => cart.read()?.attempt?.key || cart.marker();
   async function call(path, options) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
@@ -35,13 +19,28 @@ export function checkout({
       clearTimeout(timer);
     }
   }
-  function clear(key) {
-    if (pending() !== key)
-      throw new Error("Checkout changed in another tab; recover it first.");
-    storage.removeItem(KEY);
-    tabStorage.removeItem(PAYLOAD);
+  function removeMarker(key) {
+    const marker = cart.marker();
+    if (marker && marker !== key)
+      throw new Error("Checkout changed; recover it first.");
+    storage.removeItem(ATTEMPT_KEY);
+    if (cart.marker())
+      throw new Error("Saved checkout could not be cleared safely.");
+  }
+  function consume(tx) {
+    const s = tx.state,
+      a = s.attempt;
+    if (a.phase === "consumed") return;
+    const submitted = new Set(a.lines.map((i) => i.id));
+    // Additions have distinct lot IDs, including new quantities of the same variant.
+    tx.write({
+      ...s,
+      lines: s.lines.filter((i) => !submitted.has(i.id)),
+      attempt: { ...a, phase: "consumed" },
+    });
   }
   return {
+    cart,
     pending,
     snapshot() {
       const key = pending(),
@@ -52,62 +51,100 @@ export function checkout({
         return saved.key === key ? JSON.parse(saved.body) : null;
       } catch {
         return null;
-      } // A damaged tab snapshot must not prevent server recovery using the durable key.
+      }
     },
-    submit(payload) {
-      return exclusive(async () => {
-        if (pending())
+    submit(payload, version) {
+      return cart.exclusive(async (tx) => {
+        if (tx.state.attempt)
           throw new Error(
             "Recover the previous checkout before submitting another order.",
           );
+        tx.requireVersion(version);
+        if (tx.state.reviewRequired)
+          throw new Error(
+            "Review this recovered bag and confirm that it is a new order.",
+          );
+        const items = cartItems(tx.state.lines);
+        if (
+          !items.length ||
+          JSON.stringify(payload.items) !== JSON.stringify(items)
+        )
+          throw new Error("Review the current bag before ordering.");
         const key = newKey(),
           body = JSON.stringify(payload);
-        tabStorage.setItem(PAYLOAD, JSON.stringify({ key, body }));
-        storage.setItem(KEY, key);
-        if (
-          pending() !== key ||
-          tabStorage.getItem(PAYLOAD) !== JSON.stringify({ key, body })
-        )
+        if (!validKey(key))
+          throw new Error("Unable to create a secure checkout key.");
+        const saved = JSON.stringify({ key, body, cartVersion: version });
+        tabStorage.setItem(PAYLOAD, saved);
+        if (tabStorage.getItem(PAYLOAD) !== saved)
           throw new Error("Checkout could not be saved safely.");
-        // Any network/server error leaves the attempt intact. Recovery, never a new key, resolves uncertainty.
+        tx.write({
+          ...tx.state,
+          attempt: {
+            key,
+            cartVersion: version,
+            lines: tx.state.lines,
+            phase: "pending",
+            legacy: false,
+          },
+        });
+        // A partial marker write leaves the authoritative journal pending and blocks replacement.
+        storage.setItem(ATTEMPT_KEY, key);
+        if (cart.marker() !== key)
+          throw new Error("Checkout could not be saved safely.");
         const result = await call("/orders", {
           method: "POST",
           headers: { "Idempotency-Key": key },
           body,
         });
+        if (!result?.reference)
+          throw new Error("Checkout is still unresolved.");
+        consume(tx);
         resolvedKey = key;
         tabStorage.removeItem(PAYLOAD);
         return result;
       });
     },
     recover() {
-      return exclusive(async () => {
-        const key = pending();
-        if (!key) {
+      return cart.exclusive(async (tx) => {
+        const a = tx.state.attempt;
+        if (!a) {
+          resolvedKey = null;
           tabStorage.removeItem(PAYLOAD);
           return null;
         }
         const result = await call("/orders/recover", {
           method: "POST",
-          body: JSON.stringify({ key }),
+          body: JSON.stringify({ key: a.key }),
         });
-        if (!result.receipt && result.not_created !== true)
+        if (!result.receipt?.reference && result.not_created !== true)
           throw new Error("Checkout is still unresolved.");
-        if (result.receipt) {
-          resolvedKey = key;
+        if (result.receipt?.reference) {
+          consume(tx);
+          resolvedKey = a.key;
           tabStorage.removeItem(PAYLOAD);
-        } else clear(key);
-        return result.receipt || null;
+          return result.receipt;
+        }
+        if (a.phase === "consumed")
+          throw new Error(
+            "Saved order could not be verified. Do not place a replacement.",
+          );
+        tabStorage.removeItem(PAYLOAD);
+        removeMarker(a.key);
+        tx.write({ ...tx.state, attempt: null });
+        resolvedKey = null;
+        return null;
       });
     },
-    acknowledge(beforeClear = () => {}) {
-      return exclusive(async () => {
-        if (!resolvedKey)
-          throw new Error("Recover the saved order before continuing.");
-        if (pending() !== resolvedKey)
+    acknowledge() {
+      return cart.exclusive((tx) => {
+        const a = tx.state.attempt;
+        if (!a || a.key !== resolvedKey || a.phase !== "consumed")
           throw new Error("Checkout changed in another tab; recover it first.");
-        beforeClear();
-        clear(resolvedKey);
+        tabStorage.removeItem(PAYLOAD);
+        removeMarker(a.key);
+        // Consumption already committed with the receipt. Acknowledgement never clears items.
+        tx.write({ ...tx.state, attempt: null });
         resolvedKey = null;
       });
     },
