@@ -1,6 +1,7 @@
 import React from "react";
 import { api, money } from "../api.js";
 import ProductEditor from "../components/ProductEditor.jsx";
+import ExcelCatalog from "../components/ExcelCatalog.jsx";
 export default function Admin() {
   const [auth, setAuth] = React.useState(false),
     [password, setPassword] = React.useState(""),
@@ -10,9 +11,13 @@ export default function Admin() {
     [product, setProduct] = React.useState(""),
     [fees, setFees] = React.useState({});
   async function refresh() {
-    const [o, c] = await Promise.all([api("/admin/orders"), api("/catalog")]);
+    const [o, c, all] = await Promise.all([
+      api("/admin/orders"),
+      api("/catalog"),
+      api("/admin/catalog"),
+    ]);
     setOrders(o.orders);
-    setCatalog(c);
+    setCatalog({ ...c, products: all.products });
   }
   React.useEffect(() => {
     api("/admin/session")
@@ -76,6 +81,7 @@ export default function Admin() {
               await api("/admin/logout", { method: "POST", body: "{}" });
               setAuth(false);
               setOrders([]);
+              setCatalog(null);
             })
           }
         >
@@ -84,6 +90,7 @@ export default function Admin() {
       </div>
       <p role="status">{msg}</p>
       <ProductEditor {...{ catalog, refresh, run }} />
+      <ExcelCatalog refresh={refresh} />
       <details>
         <summary className="navchip">Advanced product JSON editor</summary>
         <section className="card p-5">

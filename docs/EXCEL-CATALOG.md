@@ -1,0 +1,27 @@
+# Excel catalog management
+
+The Admin dashboard downloads an empty XLSX template and exports the authenticated persistent catalog, including drafts. The attached owner workbook was inspected and is covered by a fixture regression test. Its `Products` / `Instructions` structure and 11 headers are supported:
+
+`SKU`, `Product Name`, `Category`, `Collection`, `Price USD`, `Size`, `Color`, `Stock`, `Image Filename or URL`, `Description`, `Status`.
+
+One row per unique SKU (case-insensitive duplicate rejection). SKU maps to the existing product ID. Use the exact existing spelling when updating. Categories/collections: New In, Dresses, Tops, Sets, Jackets, Sale. Multiple explicit collections use ` | `.
+
+For variants, use matched lists: Size `M | L`, Color `Blue | Blue`, Stock `3 | 2`. One variant needs no separator. Size/color identity is immutable: changed values create a new variant; omitted existing variants are retained, with a warning. No variant or product deletion is performed. Stock is **available** stock, excluding pending reservations; the preview highlights every stock change. Active products are public; Draft products are hidden. Once the public API is configured, its visibility replaces the temporary preview display catalog.
+
+Prices are USD with at most two decimal places. Stock is a non-negative integer. Images reference existing `/products/` paths or public HTTPS URLs; bare supported image filenames resolve under `/products/`. Excel does not upload images or check availability. No server fetch of image URLs is performed. Verify external image ownership and privacy before Active status.
+
+Limits: compressed XLSX 1 MiB, declared expansion 4 MiB, 2 MiB per archive entry, 200 archive entries, 2,000 physical rows, 50 nonblank products, 100 total variants, 20 variants per product. Parsing runs in a dedicated worker with a five-second timeout. ZIP64, encryption, macros, external workbook links, DTDs/entities and formula cells are rejected. JSON admin requests retain the existing 100,000-byte server limit, so very long batches may need splitting. Exports use typed numeric prices/single stock counts and explicit inline-string text cells, XML escaping and no formula cells, preserving dangerous-looking text literally. Templates include frozen wrapped headers, category/status dropdowns and a separate instruction sheet.
+
+Snapshot reads and writes use JSON-bound bulk SQL. Confirm uses seven statements in one atomic batch, rather than one statement per variant, plus a small fixed number of reads. A maximum-size regression checks that the adapter invocation stays below 50 queries. Cloudflare documents the Free D1 limit as 50 queries per invocation and guarantees full rollback of failed batches: https://developers.cloudflare.com/d1/platform/limits/ and https://developers.cloudflare.com/d1/worker-api/d1-database/. Runtime CPU/JSON behavior still requires synthetic real-D1 validation.
+
+Workflow: upload → authenticated server preview → review row errors/warnings and old/new values → explicit confirmation → one atomic D1 batch. Any invalid row blocks the whole batch. The session-bound HMAC ticket expires in 10 minutes and binds normalized rows and snapshots of every affected product, variant and collection. The transaction rechecks complete SQLite snapshots before mutation, including unchanged rows and newly created SKU absence. Stock changes from checkout, expiry or cancellation cause a conflict and require a fresh preview. There is no partial-success import.
+
+The import receipt and audit entry commit atomically with the changes. After an ambiguous response, retry the **same** confirmation; it returns the saved summary and never reapplies stock. Do not close/reload until the outcome is resolved. Refresh failure after success is reported separately from import failure. A new preview is a new intentional import.
+
+## Staging prerequisites and rollback
+
+No remote resources, bindings, secrets, migrations or data were changed by this implementation. Live imports require an isolated `DB` binding, configured server-side admin salt/hash, effective Preview Access protection, and migrations **0001 → 0002 → 0003** applied under separate authorization. Until then the admin APIs fail closed. `0003_catalog_import.sql` adds only collection metadata and durable import receipts; it does not alter product/order schemas or stock.
+
+Keep all three schemas, products, orders and import receipts during recovery. Roll forward to a compatible application; do not drop receipt/collection tables or downgrade to schema 0001. Older accepted R3 checkout code remains compatible with the additive tables, but it cannot manage/export collections/import evidence. Prefer disabling Excel import while repairing the compatible app. Existing 0002 checkout recovery safeguards and rollback regression tests remain intact.
+
+Validation is local SQLite through the D1 adapter, parser tests and bundled/rendered UI checks. It does not establish native Excel/mobile-browser or real Cloudflare D1 concurrency behavior. Before live import, test a protected synthetic staging batch, a concurrent checkout/expiry/cancellation conflict, lost-response replay, draft visibility, export/import roundtrip and migration sequence on actual D1. The original workbook's first merchandise row has an empty image reference and is rejected until that field is supplied.

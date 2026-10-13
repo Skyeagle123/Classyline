@@ -57,7 +57,9 @@ test("display fallback excluded from production root, custom domains and unrelat
 });
 test("preview displays without D1, isolated per load and authoritative server record wins", async () => {
   const fail = async () => {
-    throw new Error("DB unavailable");
+    throw Object.assign(new Error("DB unavailable"), {
+      code: "CATALOG_UNCONFIGURED",
+    });
   };
   const first = await customerProducts(host, fail);
   assert.equal(first[0].display_only, true);

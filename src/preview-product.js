@@ -36,12 +36,11 @@ export async function customerProducts(hostname, fetchCatalog) {
   let products;
   try {
     products = (await fetchCatalog()).products;
-  } catch {
+  } catch (error) {
+    if (error.code !== "CATALOG_UNCONFIGURED") throw error;
     // The labelled display record remains viewable without a DB binding.
     return [structuredClone(previewProduct)];
   }
-  // A persisted server product always takes precedence; no price/stock overlay.
-  return products.some((p) => p.id === previewProduct.id)
-    ? products
-    : [...products, structuredClone(previewProduct)];
+  // Once the persistent catalog serves, it alone decides visibility (including drafts).
+  return products;
 }

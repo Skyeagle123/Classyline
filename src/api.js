@@ -5,7 +5,12 @@ export async function api(path, options = {}) {
     headers: { "Content-Type": "application/json", ...options.headers },
   });
   const data = await r.json();
-  if (!r.ok) throw new Error(data.error || "Unable to complete request");
+  if (!r.ok) {
+    const error = new Error(data.error || "Unable to complete request");
+    error.code = data.code;
+    error.status = r.status;
+    throw error;
+  }
   return data;
 }
 export const money = (cents) =>

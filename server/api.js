@@ -1,6 +1,13 @@
 import { digest, passwordHash, equal, cookie } from "./security.js";
 import { normalizePhone, expirePendingOrders } from "./checkout.js";
 import {
+  adminCatalog,
+  previewImport,
+  confirmImport,
+  exportCatalog,
+  ImportFailure,
+} from "./catalog-import.js";
+import {
   CHECKOUT_PROTOCOL_HEADER,
   CHECKOUT_PROTOCOL_VERSION,
 } from "../shared/checkout-protocol.js";
@@ -160,7 +167,17 @@ export async function handle(request, env) {
     path = new URL(request.url).pathname,
     method = request.method;
   try {
-    if (!db) fail(503, "Store service is awaiting configuration");
+    if (!db) {
+      if (path === "/api/catalog" && method === "GET")
+        return json(
+          {
+            error: "Store service is awaiting configuration",
+            code: "CATALOG_UNCONFIGURED",
+          },
+          503,
+        );
+      fail(503, "Store service is awaiting configuration");
+    }
     if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method))
       fail(405, "Method not allowed");
     if (
@@ -177,9 +194,21 @@ export async function handle(request, env) {
       ).results;
       const variants = (await db.prepare("SELECT * FROM variants").all())
         .results;
+      // Existing catalogs continue serving before the additive import migration is applied.
+      let tags = [];
+      try {
+        tags = (
+          await db
+            .prepare("SELECT * FROM product_collections ORDER BY collection")
+            .all()
+        ).results;
+      } catch {}
       return json({
         products: products.map((p) => ({
           ...p,
+          collections: tags
+            .filter((t) => t.product_id === p.id)
+            .map((t) => t.collection),
           price: p.price_cents / 100,
           sizes: [
             ...new Set(
@@ -218,6 +247,28 @@ export async function handle(request, env) {
     }
     if (path.startsWith("/api/admin/")) {
       await admin(db, request, now);
+      if (path.startsWith("/api/admin/catalog")) {
+        try {
+          await db.prepare("SELECT id FROM catalog_imports LIMIT 1").first();
+        } catch {
+          fail(
+            503,
+            "Excel catalog is awaiting migration 0003. No import was applied.",
+          );
+        }
+      }
+      if (path === "/api/admin/catalog" && method === "GET")
+        return json({ products: await adminCatalog(db) });
+      if (path === "/api/admin/catalog/export" && method === "GET")
+        return json({ rows: await exportCatalog(db) });
+      if (path === "/api/admin/catalog/preview" && method === "POST") {
+        const input = await body(request);
+        return json(await previewImport(db, input.rows, cookie(request), now));
+      }
+      if (path === "/api/admin/catalog/import" && method === "POST")
+        return json(
+          await confirmImport(db, await body(request), cookie(request), now),
+        );
       if (path === "/api/admin/session" && method === "GET")
         return json({ ok: true });
       if (path === "/api/admin/logout" && method === "POST") {
@@ -584,8 +635,13 @@ export async function handle(request, env) {
     fail(404, "Not found");
   } catch (e) {
     return json(
-      { error: e instanceof Failure ? e.message : "Service unavailable" },
-      e instanceof Failure ? e.status : 503,
+      {
+        error:
+          e instanceof Failure || e instanceof ImportFailure
+            ? e.message
+            : "Service unavailable",
+      },
+      e instanceof Failure || e instanceof ImportFailure ? e.status : 503,
     );
   }
 }

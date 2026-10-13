@@ -6,11 +6,14 @@ export const collections = [
   { slug: "jackets", label: "Jackets" },
   { slug: "sale", label: "Sale" },
 ];
-// Extra collections are explicit owner metadata on the Preview display record only.
+// Collections are explicit owner metadata; no inferred arrival or discount claims.
 export function inCollection(product, slug) {
   if (
-    product.display_only &&
-    product.collections?.includes(slug === "new" ? "new-in" : slug)
+    product.collections?.some(
+      (c) =>
+        String(c).trim().toLowerCase().replaceAll(" ", "-") ===
+        (slug === "new" ? "new-in" : slug),
+    )
   )
     return true;
   const value = String(product.category || "")
