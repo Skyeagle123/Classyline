@@ -17,9 +17,11 @@ export default function ProductCard({ p }) {
           <h3 className="text-xl mt-1">{p.title}</h3>
           <p className="mt-2">{money(p.price_cents)}</p>
           <p className="text-sm mt-2">
-            {p.variants.some((v) => v.stock > 0)
-              ? "Choose size & color"
-              : "Sold out"}
+            {p.display_only
+              ? "Preview · ordering unavailable"
+              : p.variants.some((v) => v.stock > 0)
+                ? "Choose size & color"
+                : "Sold out"}
           </p>
           <p className="muted text-sm mt-2">
             {[...new Set(p.variants.map((v) => v.size))].join(" · ")}

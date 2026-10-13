@@ -2,6 +2,7 @@ import React from "react";
 import { loadProducts } from "../utils.js";
 import { money } from "../api.js";
 import { useCart } from "../store.jsx";
+import { previewNotice } from "../preview-product.js";
 export default function ProductDetail({ id }) {
   const { add, ready, error: cartError } = useCart();
   const [p, setP] = React.useState(null),
@@ -39,6 +40,36 @@ export default function ProductDetail({ id }) {
         )}
       </main>
     );
+  return (
+    <ProductView
+      {...{
+        p,
+        selected,
+        setSelected,
+        msg,
+        setMsg,
+        adding,
+        setAdding,
+        add,
+        ready,
+        cartError,
+      }}
+    />
+  );
+}
+
+export function ProductView({
+  p,
+  selected,
+  setSelected,
+  msg,
+  setMsg,
+  adding,
+  setAdding,
+  add,
+  ready,
+  cartError,
+}) {
   const v = p.variants.find((x) => x.id === selected);
   return (
     <main className="page product-detail grid md:grid-cols-2 gap-8">
@@ -55,6 +86,8 @@ export default function ProductDetail({ id }) {
         <h1 className="text-4xl">{p.title}</h1>
         <p>{money(p.price_cents)}</p>
         <p>{p.description}</p>
+        {p.display_only && <p role="status">{previewNotice}</p>}
+        {p.sku && <p className="muted text-sm">SKU: {p.sku}</p>}
         <fieldset>
           <legend className="mb-3">Choose your size and color</legend>
           <div className="flex flex-wrap gap-2">
@@ -82,8 +115,9 @@ export default function ProductDetail({ id }) {
         </p>
         <button
           className="btn"
-          disabled={!v?.stock || !ready || adding}
+          disabled={p.display_only || !v?.stock || !ready || adding}
           onClick={async () => {
+            if (p.display_only) return;
             setAdding(true);
             try {
               await add({ variant_id: v.id });
@@ -95,7 +129,11 @@ export default function ProductDetail({ id }) {
             }
           }}
         >
-          {adding ? "Adding…" : "Add to bag"}
+          {p.display_only
+            ? "Ordering unavailable in preview"
+            : adding
+              ? "Adding…"
+              : "Add to bag"}
         </button>
         <p role="status">{cartError || msg}</p>
         <p className="text-sm">

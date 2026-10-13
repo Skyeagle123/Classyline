@@ -6,8 +6,13 @@ export const collections = [
   { slug: "jackets", label: "Jackets" },
   { slug: "sale", label: "Sale" },
 ];
-// Collections use the persisted category field; no inferred arrival or discount claims.
+// Extra collections are explicit owner metadata on the Preview display record only.
 export function inCollection(product, slug) {
+  if (
+    product.display_only &&
+    product.collections?.includes(slug === "new" ? "new-in" : slug)
+  )
+    return true;
   const value = String(product.category || "")
     .trim()
     .toLowerCase()

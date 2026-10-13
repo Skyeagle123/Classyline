@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { customerProducts } from "./preview-product.js";
 export async function loadProducts() {
-  return (await api("/catalog")).products;
+  return customerProducts(window.location.hostname, () => api("/catalog"));
 }
