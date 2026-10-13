@@ -2,10 +2,12 @@ import React from "react";
 import { money } from "../api.js";
 export default function ProductCard({ p }) {
   return (
-    <article className="card overflow-hidden">
+    <article className="card product-card overflow-hidden">
       <a href={`/product/${encodeURIComponent(p.id)}`}>
         <img
           loading="lazy"
+          width="640"
+          height="800"
           src={p.image}
           alt={p.title}
           className="w-full aspect-[4/5] object-cover"
@@ -18,6 +20,9 @@ export default function ProductCard({ p }) {
             {p.variants.some((v) => v.stock > 0)
               ? "Choose size & color"
               : "Sold out"}
+          </p>
+          <p className="muted text-sm mt-2">
+            {[...new Set(p.variants.map((v) => v.size))].join(" · ")}
           </p>
         </div>
       </a>

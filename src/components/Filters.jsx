@@ -14,7 +14,7 @@ export default function Filters({
   sizesAll,
 }) {
   return (
-    <aside className="lg:col-span-1 space-y-4">
+    <aside aria-label="Filter collection" className="lg:col-span-1 space-y-4">
       <div className="card p-4">
         <input
           value={q}
@@ -48,7 +48,8 @@ export default function Filters({
             <button
               key={s}
               onClick={() => setSize(size === s ? "" : s)}
-              className={`btn-outline px-3 py-1 rounded-full ${size === s ? "!bg-zinc-900 !text-white" : ""}`}
+              aria-pressed={size === s}
+              className="navchip"
             >
               {s}
             </button>

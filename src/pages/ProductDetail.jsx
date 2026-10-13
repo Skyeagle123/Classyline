@@ -7,10 +7,12 @@ export default function ProductDetail({ id }) {
   const [p, setP] = React.useState(null),
     [selected, setSelected] = React.useState(""),
     [msg, setMsg] = React.useState(""),
+    [loading, setLoading] = React.useState(true),
     [adding, setAdding] = React.useState(false);
   React.useEffect(() => {
     let live = true;
     setP(null);
+    setLoading(true);
     setSelected("");
     loadProducts()
       .then((all) => {
@@ -19,7 +21,8 @@ export default function ProductDetail({ id }) {
           setMsg("");
         }
       })
-      .catch((e) => live && setMsg(e.message));
+      .catch((e) => live && setMsg(e.message))
+      .finally(() => live && setLoading(false));
     return () => {
       live = false;
     };
@@ -27,15 +30,23 @@ export default function ProductDetail({ id }) {
   if (!p)
     return (
       <main className="page" role="status">
-        {msg || "Loading product…"}
+        {msg ||
+          (loading ? "Loading product…" : "This product is not available.")}
+        {!loading && (
+          <a className="navchip ml-3" href="/">
+            Back to collection
+          </a>
+        )}
       </main>
     );
   const v = p.variants.find((x) => x.id === selected);
   return (
-    <main className="page grid md:grid-cols-2 gap-8">
+    <main className="page product-detail grid md:grid-cols-2 gap-8">
       <img
         src={p.image}
         alt={p.title}
+        width="640"
+        height="800"
         className="w-full aspect-[4/5] object-cover rounded-xl"
       />
       <section className="space-y-5">
@@ -53,7 +64,10 @@ export default function ProductDetail({ id }) {
                 disabled={!x.stock}
                 aria-pressed={x.id === selected}
                 className="navchip"
-                onClick={() => setSelected(x.id)}
+                onClick={() => {
+                  setSelected(x.id);
+                  setMsg("");
+                }}
               >
                 {x.size} / {x.color}
                 {!x.stock ? " — sold out" : ""}
@@ -61,6 +75,11 @@ export default function ProductDetail({ id }) {
             ))}
           </div>
         </fieldset>
+        <p className="muted text-sm">
+          {v
+            ? `${v.size} / ${v.color} selected`
+            : "Select an available size and color to add this piece."}
+        </p>
         <button
           className="btn"
           disabled={!v?.stock || !ready || adding}

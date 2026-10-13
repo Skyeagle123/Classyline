@@ -1,4 +1,7 @@
 import React from "react";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/cormorant-garamond/400.css";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import Header from "./components/Header.jsx";
@@ -25,6 +28,7 @@ function usePath() {
         !e.altKey &&
         !a.target
       ) {
+        if (a.getAttribute("href").startsWith("/#")) return;
         e.preventDefault();
         history.pushState({}, "", a.getAttribute("href"));
         setPath(location.pathname);
@@ -54,7 +58,9 @@ function AppShell() {
   return (
     <CartProvider>
       <Header />
-      <Router />
+      <div id="main-content" tabIndex="-1">
+        <Router />
+      </div>
       <footer>
         ClassyLine · Cash on Delivery · Delivery throughout Lebanon{" "}
         <a href="/admin" className="ml-4">

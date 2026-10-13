@@ -217,11 +217,16 @@ export default function CartDrawer({ open, onClose }) {
               ))}
             </ul>
             {!cart.length ? (
-              <p>
-                {ready
-                  ? "Your bag is empty. Add products to start a new order."
-                  : "Loading your saved bag…"}
-              </p>
+              <div className="empty-state">
+                <p>
+                  {ready
+                    ? "Your bag is empty. Add products to start a new order."
+                    : "Loading your saved bag…"}
+                </p>
+                <button className="navchip mt-3" onClick={onClose}>
+                  Explore the collection
+                </button>
+              </div>
             ) : (
               <form className="space-y-3 mt-5" onSubmit={submit}>
                 <p>Subtotal {money(subtotal)}</p>

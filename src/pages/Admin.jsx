@@ -1,5 +1,6 @@
 import React from "react";
 import { api, money } from "../api.js";
+import ProductEditor from "../components/ProductEditor.jsx";
 export default function Admin() {
   const [auth, setAuth] = React.useState(false),
     [password, setPassword] = React.useState(""),
@@ -82,69 +83,74 @@ export default function Admin() {
         </button>
       </div>
       <p role="status">{msg}</p>
-      <section className="card p-5">
-        <h2 className="text-2xl">Product editor</h2>
-        <p>
-          JSON format: id, title, category, description, image, price_cents,
-          active, variants [{"{"}id, size, color, stock, expected_stock{"}"}].
-          Prices and fees use USD cents. Existing variant identities stay fixed.
-        </p>
-        <select
-          className="input my-3"
-          defaultValue=""
-          onChange={(e) =>
-            setProduct(
-              JSON.stringify(
-                (() => {
-                  const p = catalog.products.find(
-                    (p) => p.id === e.target.value,
-                  );
-                  return p
-                    ? {
-                        ...p,
-                        variants: p.variants.map((v) => ({
-                          ...v,
-                          expected_stock: v.stock,
-                        })),
-                      }
-                    : {};
-                })(),
-                null,
-                2,
-              ),
-            )
-          }
-        >
-          <option value="">Choose existing product</option>
-          {catalog?.products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
-            </option>
-          ))}
-        </select>
-        <label className="block">
-          Product JSON
-          <textarea
-            className="input h-64 font-mono"
-            value={product}
-            onChange={(e) => setProduct(e.target.value)}
-          />
-        </label>
-        <button
-          className="btn mt-3"
-          onClick={() =>
-            run(async () => {
-              await api("/admin/products", {
-                method: "PUT",
-                body: JSON.stringify(JSON.parse(product)),
-              });
-              await refresh();
-            })
-          }
-        >
-          Save product to server
-        </button>
-      </section>
+      <ProductEditor {...{ catalog, refresh, run }} />
+      <details>
+        <summary className="navchip">Advanced product JSON editor</summary>
+        <section className="card p-5">
+          <h2 className="text-2xl">Product editor</h2>
+          <p>
+            JSON format: id, title, category, description, image, price_cents,
+            active, variants [{"{"}id, size, color, stock, expected_stock{"}"}].
+            Prices and fees use USD cents. Existing variant identities stay
+            fixed.
+          </p>
+          <select
+            className="input my-3"
+            defaultValue=""
+            onChange={(e) =>
+              setProduct(
+                JSON.stringify(
+                  (() => {
+                    const p = catalog.products.find(
+                      (p) => p.id === e.target.value,
+                    );
+                    return p
+                      ? {
+                          ...p,
+                          variants: p.variants.map((v) => ({
+                            ...v,
+                            expected_stock: v.stock,
+                          })),
+                        }
+                      : {};
+                  })(),
+                  null,
+                  2,
+                ),
+              )
+            }
+          >
+            <option value="">Choose existing product</option>
+            {catalog?.products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+          <label className="block">
+            Product JSON
+            <textarea
+              className="input h-64 font-mono"
+              value={product}
+              onChange={(e) => setProduct(e.target.value)}
+            />
+          </label>
+          <button
+            className="btn mt-3"
+            onClick={() =>
+              run(async () => {
+                await api("/admin/products", {
+                  method: "PUT",
+                  body: JSON.stringify(JSON.parse(product)),
+                });
+                await refresh();
+              })
+            }
+          >
+            Save product to server
+          </button>
+        </section>
+      </details>
       <section className="card p-5">
         <h2 className="text-2xl">Regional delivery fees</h2>
         <p>

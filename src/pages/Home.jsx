@@ -2,8 +2,7 @@ import React from "react";
 import Filters from "../components/Filters.jsx";
 import ProductCard from "../components/ProductCard.jsx";
 import { loadProducts } from "../utils.js";
-
-const sizesAll = ["XS", "S", "M", "L", "XL", "XXL"];
+import { collections } from "../catalog.js";
 
 export default function Home() {
   const [products, setProducts] = React.useState([]);
@@ -29,6 +28,14 @@ export default function Home() {
     ],
     [products],
   );
+  const sizesAll = [...new Set(products.flatMap((p) => p.sizes || []))];
+  function resetFilters() {
+    setQ("");
+    setMin(0);
+    setMax(1000);
+    setCat("all");
+    setSize("");
+  }
 
   const list = products.filter(
     (p) =>
@@ -52,8 +59,21 @@ export default function Home() {
           Considered style, effortless comfort. Women’s fashion delivered
           throughout Lebanon.
         </p>
+        <a className="btn mt-6" href="#collection">
+          Explore the collection ↓
+        </a>
+        <div className="collection-links">
+          {collections.map((c) => (
+            <a key={c.slug} href={`/category/${c.slug}`}>
+              {c.label} <span aria-hidden="true">↗</span>
+            </a>
+          ))}
+        </div>
       </section>
-      <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <main
+        id="collection"
+        className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6"
+      >
         <Filters
           {...{
             q,
@@ -71,6 +91,12 @@ export default function Home() {
           }}
         />
         <section className="lg:col-span-3">
+          <div className="collection-heading">
+            <h2>The collection</h2>
+            <button className="navchip" onClick={resetFilters}>
+              Reset filters
+            </button>
+          </div>
           <p role="status">
             {error ||
               (loading
@@ -79,7 +105,21 @@ export default function Home() {
                   ? "No products to show yet."
                   : `${list.length} pieces`)}
           </p>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+          {!loading && !error && !list.length && (
+            <div className="empty-state">
+              <h3>
+                {products.length
+                  ? "A little room to explore"
+                  : "The collection is on its way"}
+              </h3>
+              <p>
+                {products.length
+                  ? "Try another size or reset your filters to see all pieces."
+                  : "Please check back for available pieces."}
+              </p>
+            </div>
+          )}
+          <div className="product-grid">
             {list.map((p) => (
               <ProductCard key={p.id} p={p} />
             ))}
