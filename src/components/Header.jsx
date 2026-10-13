@@ -2,6 +2,7 @@ import React from "react";
 import { useCart } from "../store.jsx";
 import CartDrawer from "./CartDrawer.jsx";
 import { collections } from "../catalog.js";
+import ContactLinks from "./ContactLinks.jsx";
 export default function Header() {
   const { count } = useCart(),
     [open, setOpen] = React.useState(false);
@@ -14,7 +15,7 @@ export default function Header() {
         Skip to content
       </a>
       <header className="sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center gap-4">
           <a href="/" className="brand">
             ClassyLine<span>EVERYDAY, CONSIDERED</span>
           </a>
@@ -26,6 +27,7 @@ export default function Header() {
               Bag ({count})
             </button>
           </nav>
+          <ContactLinks className="header-contact" />
         </div>
         <nav className="collection-nav" aria-label="Collections">
           {collections.map((c) => (

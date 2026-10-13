@@ -5,6 +5,8 @@ import "@fontsource/cormorant-garamond/400.css";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import Header from "./components/Header.jsx";
+import Footer from "./components/Footer.jsx";
+import { FloatingWhatsApp } from "./components/ContactLinks.jsx";
 import Home from "./pages/Home.jsx";
 import Category from "./pages/Category.jsx";
 import ProductDetail from "./pages/ProductDetail.jsx";
@@ -61,12 +63,8 @@ function AppShell() {
       <div id="main-content" tabIndex="-1">
         <Router />
       </div>
-      <footer>
-        ClassyLine · Cash on Delivery · Delivery throughout Lebanon{" "}
-        <a href="/admin" className="ml-4">
-          Store admin
-        </a>
-      </footer>
+      <Footer />
+      <FloatingWhatsApp />
     </CartProvider>
   );
 }

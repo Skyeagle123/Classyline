@@ -141,6 +141,77 @@ footer {
 .muted {
   color: #766457;
 }
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.contact-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #b8a79a;
+  border-radius: 50%;
+  color: #241e1b;
+}
+.contact-link:hover {
+  background: #c9a39b33;
+}
+.header-contact {
+  flex-basis: 100%;
+  justify-content: flex-end;
+}
+.footer-contact {
+  margin-top: 1.5rem;
+}
+.footer-contact h2 {
+  font-size: 1.6rem;
+  margin-bottom: 0.75rem;
+}
+.footer-contact .contact-link {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+}
+.floating-contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  right: calc(1rem + env(safe-area-inset-right, 0px));
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  z-index: 9;
+  color: #f6f1e8;
+  background: #241e1b;
+  border: 1px solid #c9a39b;
+  border-radius: 50%;
+  box-shadow: 0 4px 16px #241e1b26;
+}
+.floating-contact:hover {
+  background: #453a33;
+}
+body:has(dialog[open]) .floating-contact {
+  display: none;
+}
+@media (max-width: 639px) {
+  footer {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 640px) {
+  .header-contact {
+    flex-basis: auto;
+  }
+  .floating-contact {
+    display: none;
+  }
+}
 .skip-link {
   position: fixed;
   top: -100px;
