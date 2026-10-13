@@ -26,6 +26,7 @@ export const previewNotice =
 export function isStorefrontPreview(hostname) {
   return (
     hostname === "phase-storefront-cod-whatsapp.classyline2.pages.dev" ||
+    hostname === "phase-storefront-cod-whatsap.classyline2.pages.dev" ||
     /^[a-f0-9]{8}\.classyline2\.pages\.dev$/.test(hostname)
   );
 }

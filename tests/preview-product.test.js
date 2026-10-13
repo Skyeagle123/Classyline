@@ -67,6 +67,10 @@ test("preview displays without D1, isolated per load and authoritative server re
     isStorefrontPreview("phase-storefront-cod-whatsapp.classyline2.pages.dev"),
     true,
   );
+  assert.equal(
+    isStorefrontPreview("phase-storefront-cod-whatsap.classyline2.pages.dev"),
+    true,
+  );
   const persisted = {
     ...p,
     display_only: undefined,
