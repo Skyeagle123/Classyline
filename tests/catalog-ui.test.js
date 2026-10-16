@@ -91,7 +91,7 @@ test("rendered UI escapes merchandise text and exposes labelled structured contr
     assert.ok(editor.includes(label));
   assert.match(editor, /type="file"/);
   assert.match(editor, /aria-label="Choose product image"/);
-  assert.match(editor, /accept="image\/jpeg,image\/png,image\/webp"/);
+  assert.match(editor, /accept="image\/jpeg,image\/png"/);
   assert.match(editor, /Upload Image/);
   assert.match(editor, /Uploading does not save or publish/);
   const filters = render(

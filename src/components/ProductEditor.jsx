@@ -13,7 +13,8 @@ export default function ProductEditor({ catalog, refresh, run }) {
   const [draft, setDraft] = React.useState(newProduct),
     [existing, setExisting] = React.useState(false),
     [saving, setSaving] = React.useState(false),
-    [uploading, setUploading] = React.useState(false);
+    [uploading, setUploading] = React.useState(false),
+    [editorSession, setEditorSession] = React.useState(0);
   const change = (key, value) => setDraft((p) => ({ ...p, [key]: value }));
   const variant = (index, key, value) =>
     setDraft((p) => ({
@@ -40,6 +41,7 @@ export default function ProductEditor({ catalog, refresh, run }) {
             const p = catalog?.products.find((p) => p.id === e.target.value);
             setDraft(p ? editProduct(p) : newProduct());
             setExisting(Boolean(p));
+            setEditorSession((n) => n + 1);
           }}
         >
           <option value="">Create a new product</option>
@@ -65,21 +67,20 @@ export default function ProductEditor({ catalog, refresh, run }) {
               await refresh();
               setDraft(newProduct());
               setExisting(false);
+              setEditorSession((n) => n + 1);
             });
           } finally {
             setSaving(false);
           }
         }}
       >
+        <ImageUpload
+          key={editorSession}
+          disabled={saving}
+          onBusy={setUploading}
+          onUploaded={(result) => setDraft((p) => withUploadedImage(p, result))}
+        />
         <fieldset disabled={saving || uploading} className="space-y-4">
-          <ImageUpload
-            key={`${existing ? "existing" : "new"}:${draft.id}`}
-            disabled={saving}
-            onBusy={setUploading}
-            onUploaded={(result) =>
-              setDraft((p) => withUploadedImage(p, result))
-            }
-          />
           <div className="grid sm:grid-cols-2 gap-4">
             {[
               ["id", "Product ID"],

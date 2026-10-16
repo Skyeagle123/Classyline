@@ -16,16 +16,13 @@ async function readImageBody(request) {
   )
     throw new ImageFailure(413, "Choose an image up to 2 MiB.");
   if (
-    ![
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "application/octet-stream",
-    ].includes(request.headers.get("content-type")?.split(";")[0])
+    !["image/jpeg", "image/png", "application/octet-stream"].includes(
+      request.headers.get("content-type")?.split(";")[0],
+    )
   )
     throw new ImageFailure(
       415,
-      "Choose JPEG, PNG or WebP. HEIC, SVG and animated images are not supported.",
+      "Choose JPEG or PNG. WebP uploads are temporarily disabled; HEIC, SVG and animated images are not supported.",
     );
   const reader = request.body?.getReader();
   if (!reader) throw new ImageFailure(400, "Choose an image first.");

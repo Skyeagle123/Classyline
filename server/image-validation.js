@@ -1,5 +1,5 @@
 import jpeg from "jpeg-js";
-import { Unzlib } from "fflate";
+import { Unzlib, zlibSync } from "fflate";
 import { MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS } from "../shared/product-images.js";
 export class ImageFailure extends Error {
   constructor(status, message) {
@@ -10,7 +10,7 @@ export class ImageFailure extends Error {
 const invalid = () => {
   throw new ImageFailure(
     400,
-    "Invalid or unsupported image. Choose a still JPEG, PNG or WebP image.",
+    "Invalid or unsupported image. Choose a still JPEG or PNG image.",
   );
 };
 const dimensions = (w, h) => {
@@ -37,6 +37,30 @@ export function crc32(bytes) {
     for (let i = 0; i < 8; i++) c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
   }
   return (c ^ 0xffffffff) >>> 0;
+}
+function pngChunk(type, data) {
+  const chunk = new Uint8Array(data.length + 12),
+    view = new DataView(chunk.buffer);
+  view.setUint32(0, data.length);
+  chunk.set(new TextEncoder().encode(type), 4);
+  chunk.set(data, 8);
+  view.setUint32(chunk.length - 4, crc32(chunk.subarray(4, chunk.length - 4)));
+  return chunk;
+}
+// Only the fixed Adobe color-transform header is retained. Unknown APP14
+// segments, private flags and trailing payloads are stripped entirely.
+function adobeSegment(data) {
+  return (
+    data.length === 12 &&
+    ascii(data.subarray(0, 5)) === "Adobe" &&
+    data[5] === 0 &&
+    [100, 101].includes(data[6]) &&
+    !data[7] &&
+    !data[8] &&
+    !data[9] &&
+    !data[10] &&
+    data[11] <= 2
+  );
 }
 function png(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length),
@@ -115,7 +139,7 @@ function png(bytes) {
         invalid();
     }
     if (seenData && type !== "IDAT") endedData = true;
-    if (["IHDR", "PLTE", "tRNS", "IDAT", "IEND"].includes(type))
+    if (["IHDR", "PLTE", "tRNS"].includes(type))
       parts.push(bytes.slice(pos, end));
     pos = end;
   }
@@ -123,7 +147,8 @@ function png(bytes) {
   const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[color],
     stride = w * channels + 1,
     expected = stride * h,
-    input = join(compressed);
+    input = join(compressed),
+    pixels = new Uint8Array(expected);
   let count = 0,
     a = 1,
     b = 0,
@@ -139,6 +164,7 @@ function png(bytes) {
   };
   const inflater = new Unzlib((chunk) => {
     if (count + chunk.length > expected) invalid();
+    pixels.set(chunk, count);
     for (const value of chunk) {
       if (count % stride === 0 && value > 4) invalid();
       const index = (count % stride) - 1;
@@ -175,8 +201,20 @@ function png(bytes) {
       )
   )
     invalid();
+  // Rebuild one zlib stream from validated scanlines. No original IDAT bytes
+  // survive, including ignored trailing junk or duplicate Adler checksums.
+  const canonical = join([
+    ...parts,
+    pngChunk("IDAT", zlibSync(pixels, { level: 1 })),
+    pngChunk("IEND", new Uint8Array()),
+  ]);
+  if (canonical.length > MAX_IMAGE_BYTES)
+    throw new ImageFailure(
+      413,
+      "Normalized image exceeds 2 MiB. Choose a smaller image.",
+    );
   return {
-    bytes: join(parts),
+    bytes: canonical,
     width: w,
     height: h,
     type: "image/png",
@@ -251,7 +289,8 @@ function jpg(bytes) {
     invalid();
   const parts = [bytes.slice(0, 2)];
   let pos = 2,
-    scans = 0;
+    scans = 0,
+    adobe = false;
   while (pos < bytes.length) {
     const start = pos;
     if (bytes[pos++] !== 255) invalid();
@@ -277,7 +316,12 @@ function jpg(bytes) {
       const orientation = orientationSegment(bytes.subarray(pos + 2, end));
       if (orientation) parts.push(orientation);
     }
-    if (!((code >= 224 && code <= 239) || code === 254) || code === 238)
+    if (code === 238 && adobeSegment(bytes.subarray(pos + 2, end))) {
+      if (adobe) invalid();
+      adobe = true;
+      parts.push(bytes.slice(start, end));
+    }
+    if (!((code >= 224 && code <= 239) || code === 254))
       parts.push(bytes.slice(start, end));
     pos = end;
     if (code === 218) {
@@ -299,7 +343,8 @@ function jpg(bytes) {
       parts.push(bytes.slice(dataStart, pos));
     }
   }
-  const result = jpeg.decode(bytes, {
+  const cleaned = join(parts);
+  const result = jpeg.decode(cleaned, {
     useTArray: true,
     formatAsRGBA: false,
     tolerantDecoding: false,
@@ -308,100 +353,11 @@ function jpg(bytes) {
   });
   dimensions(result.width, result.height);
   return {
-    bytes: join(parts),
+    bytes: cleaned,
     width: result.width,
     height: result.height,
     type: "image/jpeg",
     ext: "jpg",
-  };
-}
-async function webp(bytes) {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
-  if (bytes.length < 20 || view.getUint32(4, true) !== bytes.length - 8)
-    invalid();
-  const parts = [];
-  let pos = 12,
-    w,
-    h,
-    canvas,
-    frame = false,
-    alpha = false,
-    extended = false;
-  while (pos < bytes.length) {
-    if (pos + 8 > bytes.length) invalid();
-    const type = ascii(bytes.subarray(pos, pos + 4)),
-      len = view.getUint32(pos + 4, true),
-      end = pos + 8 + len + (len % 2);
-    if (end > bytes.length || (len % 2 && bytes[end - 1] !== 0)) invalid();
-    const data = bytes.subarray(pos + 8, pos + 8 + len);
-    if (type === "VP8X") {
-      if (
-        pos !== 12 ||
-        len !== 10 ||
-        data[0] & 0xc3 ||
-        data[1] ||
-        data[2] ||
-        data[3]
-      )
-        invalid();
-      extended = true;
-      const u24 = (i) => data[i] | (data[i + 1] << 8) | (data[i + 2] << 16);
-      canvas = [u24(4) + 1, u24(7) + 1];
-      dimensions(...canvas);
-      const part = bytes.slice(pos, end);
-      part[8] &= ~0x2c;
-      parts.push(part);
-    } else if (type === "VP8 ") {
-      if (
-        frame ||
-        len < 10 ||
-        data[0] & 1 ||
-        data[3] !== 0x9d ||
-        data[4] !== 1 ||
-        data[5] !== 0x2a
-      )
-        invalid();
-      frame = true;
-      w = (data[6] | (data[7] << 8)) & 16383;
-      h = (data[8] | (data[9] << 8)) & 16383;
-      parts.push(bytes.slice(pos, end));
-    } else if (type === "VP8L") {
-      if (frame || alpha || len < 5 || data[0] !== 0x2f || data[4] & 0xe0)
-        invalid();
-      frame = true;
-      const bits = new DataView(
-        data.buffer,
-        data.byteOffset,
-        data.length,
-      ).getUint32(1, true);
-      w = (bits & 16383) + 1;
-      h = ((bits >>> 14) & 16383) + 1;
-      parts.push(bytes.slice(pos, end));
-    } else if (type === "ALPH") {
-      if (!extended || frame || alpha || len < 1) invalid();
-      alpha = true;
-      parts.push(bytes.slice(pos, end));
-    } else if (!["EXIF", "XMP ", "ICCP"].includes(type) || !extended) invalid();
-    pos = end;
-  }
-  if (!frame || (canvas && (w !== canvas[0] || h !== canvas[1]))) invalid();
-  dimensions(w, h);
-  const output = join([bytes.slice(0, 12), ...parts]);
-  new DataView(output.buffer).setUint32(4, output.length - 8, true);
-  const { decodeWebP } = await import("./webp-codec.js");
-  const decoded = await decodeWebP(output);
-  if (
-    decoded.width !== w ||
-    decoded.height !== h ||
-    decoded.data.length !== w * h * 4
-  )
-    invalid();
-  return {
-    bytes: output,
-    width: w,
-    height: h,
-    type: "image/webp",
-    ext: "webp",
   };
 }
 export async function validateImage(bytes) {
@@ -414,7 +370,10 @@ export async function validateImage(bytes) {
       ascii(bytes.subarray(0, 4)) === "RIFF" &&
       ascii(bytes.subarray(8, 12)) === "WEBP"
     )
-      return await webp(bytes);
+      throw new ImageFailure(
+        415,
+        "WebP uploads are temporarily disabled. Choose JPEG or PNG.",
+      );
     invalid();
   } catch (e) {
     if (e instanceof ImageFailure) throw e;

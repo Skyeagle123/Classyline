@@ -41,12 +41,7 @@ export default function ImageUpload({ onUploaded, onBusy, disabled = false }) {
         );
       }
     } catch (e) {
-      if (live.current)
-        setMessage(
-          e.name === "AbortError"
-            ? "Upload interrupted. Storage was not confirmed; the product image has not changed."
-            : e.message,
-        );
+      if (live.current) setMessage(e.message);
     } finally {
       pending.current = null;
       if (live.current) {
@@ -63,14 +58,14 @@ export default function ImageUpload({ onUploaded, onBusy, disabled = false }) {
     >
       <h3 className="text-xl">Product image</h3>
       <p className="muted text-sm">
-        Choose a photo from your phone or computer. Still JPEG, PNG or WebP; up
-        to 2 MiB and 4 megapixels. Uploading does not save or publish the
-        product.
+        Choose a photo from your phone or computer. Still JPEG or PNG; up to 2
+        MiB and 4 megapixels. Uploading does not save or publish the product.
+        WebP uploads are temporarily disabled.
       </p>
       <input
         ref={picker}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png"
         disabled={disabled || busy}
         className="input"
         aria-label="Choose product image"
@@ -97,7 +92,7 @@ export default function ImageUpload({ onUploaded, onBusy, disabled = false }) {
             onError={() => {
               setFile(null);
               setMessage(
-                "This file cannot be displayed. Choose another JPEG, PNG or WebP image.",
+                "This file cannot be displayed. Choose another JPEG or PNG image.",
               );
             }}
           />
@@ -123,6 +118,15 @@ export default function ImageUpload({ onUploaded, onBusy, disabled = false }) {
         >
           {busy ? "Uploading…" : "Upload Image"}
         </button>
+        {busy && (
+          <button
+            type="button"
+            className="navchip"
+            onClick={() => pending.current?.abort()}
+          >
+            Cancel upload
+          </button>
+        )}
       </div>
       <p role="status" aria-live="polite">
         {busy ? "Uploading and verifying storage…" : message}

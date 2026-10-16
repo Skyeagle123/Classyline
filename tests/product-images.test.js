@@ -1,10 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { build } from "esbuild";
 import jpeg from "jpeg-js";
-import { zlibSync } from "fflate";
+import { zlibSync, unzlibSync } from "fflate";
 import { database } from "./adapter.js";
 import { digest } from "../server/security.js";
 import {
@@ -20,37 +18,8 @@ import {
 } from "../src/image-upload.js";
 import { MAX_IMAGE_BYTES } from "../shared/product-images.js";
 
-// Pages supplies a precompiled WebAssembly.Module for static .wasm imports.
-// The test loader supplies the same real codec bytes, not a mocked decoder.
-const compiled = await build({
-  stdin: {
-    contents:
-      "export {handle} from './server/api.js'; export {validateImage,crc32} from './server/image-validation.js';",
-    resolveDir: process.cwd(),
-  },
-  bundle: true,
-  write: false,
-  platform: "node",
-  format: "cjs",
-  plugins: [
-    {
-      name: "pages-wasm-module",
-      setup(builder) {
-        builder.onLoad({ filter: /\.wasm$/ }, async ({ path }) => ({
-          loader: "js",
-          contents: `export default new WebAssembly.Module(Uint8Array.from(atob(${JSON.stringify((await readFile(path)).toString("base64"))}),c=>c.charCodeAt(0)));`,
-        }));
-      },
-    },
-  ],
-});
-const module = { exports: {} };
-new Function("require", "module", "exports", compiled.outputFiles[0].text)(
-  createRequire(import.meta.url),
-  module,
-  module.exports,
-);
-const { handle, validateImage, crc32 } = module.exports;
+import { handle } from "../server/api.js";
+import { validateImage, crc32 } from "../server/image-validation.js";
 test("local selected-image previews are allowed by image CSP without weakening scripts or connections", async () => {
   const headers = await readFile(
     new URL("../public/_headers", import.meta.url),
@@ -156,12 +125,11 @@ const read = (env, ref, cookie, method = "GET") =>
     env,
   );
 
-test("real JPEG/PNG/WebP decoding and conditional R2 storage confirm success before returning a reference", async () => {
+test("real JPEG/PNG validation and conditional R2 storage confirm success before returning a reference", async () => {
   const env = await setup();
   for (const [bytes, type, ext] of [
     [png, "image/png", "png"],
     [jpg, "image/jpeg", "jpg"],
-    [webp, "image/webp", "webp"],
   ]) {
     // MIME and filename never select the persisted type.
     const response = await upload(env, bytes, {
@@ -182,7 +150,7 @@ test("real JPEG/PNG/WebP decoding and conditional R2 storage confirm success bef
       ),
     );
   }
-  assert.equal(new Set(env.PRODUCT_IMAGES.puts.map((p) => p.key)).size, 3);
+  assert.equal(new Set(env.PRODUCT_IMAGES.puts.map((p) => p.key)).size, 2);
   assert.equal(
     env.DB.sqlite.prepare("SELECT image FROM products").get().image,
     "/products/original.jpg",
@@ -210,7 +178,7 @@ test("unsupported, empty, truncated and forged image content never reaches R2", 
   const badWebp = webp.slice(0, 32);
   new DataView(badWebp.buffer).setUint32(4, 24, true);
   new DataView(badWebp.buffer).setUint32(16, 12, true);
-  assert.equal((await upload(env, badWebp)).status, 400);
+  assert.equal((await upload(env, badWebp)).status, 415);
   assert.equal(
     (await upload(env, png, { "Content-Type": "image/svg+xml" })).status,
     415,
@@ -275,7 +243,7 @@ test("metadata is stripped without re-encoding pixels; safe JPEG orientation is 
   const cleanedPng = await validateImage(
     concat(png.slice(0, 33), chunk("tEXt", hidden), png.slice(33)),
   );
-  assert.deepEqual(cleanedPng.bytes, png);
+  assert.deepEqual(cleanedPng.bytes, (await validateImage(png)).bytes);
 });
 test("indexed PNG palette references are validated after scanline unfiltering", async () => {
   const header = png.slice(16, 29);
@@ -357,7 +325,10 @@ test("draft/orphan images require an admin session; only actively referenced ima
   const admin = await read(env, result.image, env.cookie);
   assert.equal(admin.status, 200);
   assert.equal(admin.headers.get("Cache-Control"), "private, no-store");
-  assert.deepEqual(new Uint8Array(await admin.arrayBuffer()), png);
+  assert.deepEqual(
+    new Uint8Array(await admin.arrayBuffer()),
+    (await validateImage(png)).bytes,
+  );
   env.DB.sqlite.prepare("UPDATE products SET image=?").run(result.image);
   const catalog = await (await handle(request("/api/catalog"), env)).json();
   assert.equal(catalog.products.length, 0);
@@ -524,4 +495,159 @@ test("client only accepts confirmed 201 references and fails safely for storage/
   } finally {
     globalThis.fetch = original;
   }
+});
+
+test("WebP uploads fail closed for lossy/lossless content and spoofed MIME; no decoder is shipped", async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const lock = JSON.parse(
+    await readFile(new URL("../package-lock.json", import.meta.url), "utf8"),
+  );
+  assert.equal(manifest.dependencies["@jsquash/webp"], undefined);
+  assert.equal(lock.packages["node_modules/@jsquash/webp"], undefined);
+  await assert.rejects(
+    readFile(new URL("../server/webp-codec.js", import.meta.url)),
+    { code: "ENOENT" },
+  );
+  // Includes a VP8L header with a malformed/truncated lossless bitstream.
+  const lossless = Buffer.from(
+    "5249464612000000574542505650384c050000002f0000000000",
+    "hex",
+  );
+  for (const bytes of [webp, lossless, webp.subarray(0, 12)]) {
+    const env = await setup();
+    for (const type of [
+      "image/webp",
+      "image/jpeg",
+      "image/png",
+      "application/octet-stream",
+    ]) {
+      const response = await upload(env, bytes, { "Content-Type": type });
+      assert.equal(response.status, 415);
+      assert.match((await response.json()).error, /WebP.*disabled/);
+    }
+    assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
+  }
+  assert.throws(
+    () =>
+      validateSelection(new File([webp], "photo.webp", { type: "image/webp" })),
+    /WebP.*disabled/,
+  );
+  assert.equal(
+    imageReference("/products/existing.webp"),
+    "/products/existing.webp",
+  );
+});
+
+function pngData(bytes) {
+  const chunks = [];
+  for (let at = 8; at < bytes.length;) {
+    const length = new DataView(
+      bytes.buffer,
+      bytes.byteOffset + at,
+      4,
+    ).getUint32(0);
+    if (Buffer.from(bytes.subarray(at + 4, at + 8)).toString() === "IDAT")
+      chunks.push(bytes.subarray(at + 8, at + 8 + length));
+    at += length + 12;
+  }
+  return concat(...chunks);
+}
+test("PNG canonicalization removes appended junk, duplicate Adler and extra zlib streams without changing pixels", async () => {
+  const original = pngData(png),
+    raw = unzlibSync(original),
+    canonical = (await validateImage(png)).bytes;
+  for (const extra of [
+    original.subarray(-4),
+    concat(Buffer.from("PRIVATE-JUNK"), original.subarray(-4)),
+    zlibSync(raw),
+  ]) {
+    const env = await setup();
+    const response = await upload(
+      env,
+      concat(
+        png.subarray(0, 33),
+        chunk("IDAT", concat(original, extra)),
+        chunk("IEND", []),
+      ),
+    );
+    assert.equal(response.status, 201);
+    const ref = (await response.json()).image;
+    const stored = new Uint8Array(
+      await (await read(env, ref, env.cookie)).arrayBuffer(),
+    );
+    assert.deepEqual(stored, canonical);
+    assert.deepEqual(unzlibSync(pngData(stored)), raw);
+    assert.deepEqual((await validateImage(stored)).bytes, stored);
+  }
+});
+test("JPEG APP14 strips private/trailing payloads and only retains one fixed Adobe transform", async () => {
+  const segment = (data) =>
+    concat([255, 238, (data.length + 2) >> 8, (data.length + 2) & 255], data);
+  const valid = Uint8Array.from([
+    ...Buffer.from("Adobe"),
+    0,
+    100,
+    0,
+    0,
+    0,
+    0,
+    1,
+  ]);
+  for (const payload of [
+    Buffer.from("PRIVATE-METADATA-PROBE"),
+    concat(valid, Buffer.from("SECRET")),
+    concat(valid.subarray(0, 7), [1], valid.subarray(8)),
+  ]) {
+    const result = await validateImage(
+      concat(jpg.subarray(0, 2), segment(payload), jpg.subarray(2)),
+    );
+    assert.deepEqual(result.bytes, (await validateImage(jpg)).bytes);
+  }
+  const approved = segment(valid);
+  const result = await validateImage(
+    concat(jpg.subarray(0, 2), approved, jpg.subarray(2)),
+  );
+  assert.ok(Buffer.from(result.bytes).includes(Buffer.from(approved)));
+  await assert.rejects(
+    validateImage(
+      concat(jpg.subarray(0, 2), approved, approved, jpg.subarray(2)),
+    ),
+    /Invalid/,
+  );
+});
+
+test("disabling new WebP uploads preserves existing WebP delivery, Draft privacy and Excel references", async () => {
+  const env = await setup(),
+    ref = "/api/product-images/12345678-1234-4123-8123-123456789abc.webp";
+  const key = "products/images/v1/" + ref.split("/").at(-1);
+  env.PRODUCT_IMAGES.objects.set(key, {
+    key,
+    size: webp.length,
+    bytes: webp,
+    httpMetadata: { contentType: "image/webp" },
+    customMetadata: { purpose: "classyline-product-image-v1" },
+  });
+  env.DB.sqlite.prepare("UPDATE products SET image=?").run(ref);
+  assert.equal((await read(env, ref)).status, 404);
+  const admin = await read(env, ref, env.cookie);
+  assert.equal(admin.status, 200);
+  assert.equal(admin.headers.get("Cache-Control"), "private, no-store");
+  env.DB.sqlite.exec("UPDATE products SET active=1");
+  const publicImage = await read(env, ref);
+  assert.equal(publicImage.status, 200);
+  assert.equal(publicImage.headers.get("Content-Type"), "image/webp");
+  assert.deepEqual(new Uint8Array(await publicImage.arrayBuffer()), webp);
+  const product = {
+    ...env.DB.sqlite.prepare("SELECT * FROM products").get(),
+    collections: [],
+    variants: env.DB.sqlite.prepare("SELECT * FROM variants").all(),
+  };
+  const rows = validateRows(
+    parseWorkbook(createWorkbook(exportRows([product]))),
+  );
+  assert.deepEqual(rows[0].errors, []);
+  assert.equal(rows[0].product.image, ref);
+  assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
 });
