@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import jpeg from "jpeg-js";
-import { Unzlib, zlibSync, unzlibSync } from "fflate";
+import { zlibSync, unzlibSync } from "fflate";
+import { deflateSync, inflateSync, constants } from "node:zlib";
 import { database } from "./adapter.js";
 import { digest } from "../server/security.js";
 import {
@@ -608,59 +609,215 @@ test("PNG rejects trailing junk, duplicate Adler checksums, extra streams and tr
   ])
     await assert.rejects(validateImage(pngWithData(truncated)), /Invalid/);
 });
-function pngWithData(data) {
-  return concat(png.subarray(0, 33), chunk("IDAT", data), chunk("IEND", []));
+function pngWithData(data, width = 2, height = 2, extra = []) {
+  const header = png.slice(16, 29),
+    view = new DataView(header.buffer);
+  view.setUint32(0, width);
+  view.setUint32(4, height);
+  if (width !== 2 || height !== 2) header[9] = 0;
+  return concat(
+    png.subarray(0, 8),
+    chunk("IHDR", header),
+    ...extra,
+    chunk("IDAT", data),
+    chunk("IEND", []),
+  );
 }
-test("large PNG suffixes fail before fflate can repeatedly copy them", async () => {
-  const original = pngData(png),
-    originalPush = Unzlib.prototype.push;
-  for (const suffixSize of [256 * 1024, 1024 * 1024]) {
-    let pushes = 0,
-      copied = 0;
-    Unzlib.prototype.push = function (data, final) {
-      pushes++;
-      if (this.p.length && data.length) copied += this.p.length + data.length;
-      return originalPush.call(this, data, final);
+
+// Meter application-level copies and bounded native-stream input/output. The
+// native zlib implementation's internal allocations are measured at runtime,
+// not inferred from this counter.
+async function measureDecode(bytes) {
+  const Stream = globalThis.ReadableStream,
+    getReader = Stream.prototype.getReader,
+    set = Uint8Array.prototype.set,
+    work = {
+      pulls: 0,
+      inputBytes: 0,
+      maxInputChunk: 0,
+      outputBytes: 0,
+      maxOutputChunk: 0,
+      copiedBytes: 0,
     };
-    try {
-      const env = await setup(),
-        body = pngWithData(
-          concat(original, new Uint8Array(suffixSize), original.subarray(-4)),
-        );
-      assert.equal((await upload(env, body)).status, 400);
-      assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
-      assert.ok(pushes <= 2, `suffix ${suffixSize}: ${pushes} pushes`);
-      assert.ok(copied <= 128, `suffix ${suffixSize}: ${copied} bytes copied`);
-    } finally {
-      Unzlib.prototype.push = originalPush;
+  globalThis.ReadableStream = class extends Stream {
+    constructor(source, strategy) {
+      super(
+        {
+          ...source,
+          pull(controller) {
+            return source.pull({
+              enqueue(value) {
+                work.pulls++;
+                work.inputBytes += value.length;
+                work.maxInputChunk = Math.max(work.maxInputChunk, value.length);
+                controller.enqueue(value);
+              },
+              close() {
+                controller.close();
+              },
+            });
+          },
+        },
+        strategy,
+      );
     }
-  }
-});
-test("maximum-size PNG suffix is rejected with bounded inflation and no storage write", async () => {
-  const original = pngData(png),
-    maxSuffix = MAX_IMAGE_BYTES - 57 - original.length - 4,
-    bytes = pngWithData(
-      concat(original, new Uint8Array(maxSuffix), original.subarray(-4)),
-    );
-  assert.equal(bytes.length, MAX_IMAGE_BYTES);
-  const env = await setup();
-  const originalPush = Unzlib.prototype.push;
-  let pushes = 0,
-    copied = 0;
-  Unzlib.prototype.push = function (data, final) {
-    pushes++;
-    if (this.p.length && data.length) copied += this.p.length + data.length;
-    return originalPush.call(this, data, final);
+  };
+  Stream.prototype.getReader = function (...args) {
+    const reader = getReader.apply(this, args),
+      read = reader.read.bind(reader);
+    reader.read = async (...params) => {
+      const result = await read(...params);
+      if (result.value instanceof Uint8Array) {
+        work.outputBytes += result.value.length;
+        work.maxOutputChunk = Math.max(
+          work.maxOutputChunk,
+          result.value.length,
+        );
+      }
+      return result;
+    };
+    return reader;
+  };
+  Uint8Array.prototype.set = function (source, ...rest) {
+    work.copiedBytes += source.length;
+    return set.call(this, source, ...rest);
   };
   try {
-    assert.equal((await upload(env, bytes)).status, 400);
+    let result, error;
+    try {
+      result = await validateImage(bytes);
+    } catch (cause) {
+      error = cause;
+    }
+    return { result, error, work };
   } finally {
-    Unzlib.prototype.push = originalPush;
+    globalThis.ReadableStream = Stream;
+    Stream.prototype.getReader = getReader;
+    Uint8Array.prototype.set = set;
   }
-  assert.ok(pushes <= 2, `${pushes} pushes`);
-  assert.ok(copied <= 128, `${copied} bytes copied`);
-  assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
-  await assert.rejects(validateImage(concat(bytes, [0])), { status: 413 });
+}
+function assertBounded({ work }, bytes, expected) {
+  assert.ok(work.inputBytes <= bytes.length);
+  assert.ok(work.pulls <= Math.ceil(bytes.length / 8192) + 1);
+  assert.ok(work.maxInputChunk <= 8192);
+  assert.ok(work.maxOutputChunk <= 64 * 1024);
+  assert.ok(work.outputBytes <= expected + 64 * 1024);
+  assert.ok(work.copiedBytes <= bytes.length * 4 + expected * 2 + 1024 * 1024);
+}
+test("native decoder accepts stored, fixed and dynamic Huffman streams with stable canonical pixels", async () => {
+  const width = 255,
+    height = 128,
+    raw = new Uint8Array((width + 1) * height);
+  for (let y = 0; y < height; y++)
+    for (let x = 1; x <= width; x++)
+      raw[y * (width + 1) + x] = "ababcdedabcdabcde".charCodeAt((x + y) % 17);
+  const variants = [
+    ["stored", { level: 0 }, 0],
+    ["fixed", { strategy: constants.Z_FIXED }, 1],
+    ["dynamic", {}, 2],
+  ];
+  for (const [name, options, type] of variants) {
+    const compressed = deflateSync(raw, options),
+      bytes = pngWithData(compressed, width, height),
+      observed = await measureDecode(bytes);
+    assert.equal((compressed[2] >>> 1) & 3, type, name);
+    assert.equal(observed.error, undefined, name);
+    assert.deepEqual(unzlibSync(pngData(observed.result.bytes)), raw);
+    assert.deepEqual(
+      (await validateImage(observed.result.bytes)).bytes,
+      observed.result.bytes,
+    );
+    assertBounded(observed, bytes, raw.length);
+  }
+});
+test("stored block LEN/NLEN corruption and truncation agree with strict reference decoder", async () => {
+  const raw = new Uint8Array(2),
+    original = deflateSync(raw, { level: 0 }),
+    malformed = Buffer.from(original),
+    truncated = concat(original.subarray(0, -8), original.subarray(-4));
+  malformed[5] ^= 1;
+  for (const compressed of [malformed, truncated]) {
+    assert.throws(() => inflateSync(compressed));
+    const bytes = pngWithData(compressed),
+      observed = await measureDecode(bytes);
+    assert.equal(observed.error?.status, 400);
+    assertBounded(observed, bytes, raw.length);
+  }
+});
+test("multiple stored blocks and near-limit valid PNG avoid growing-buffer copies", async (t) => {
+  const width = 2046,
+    height = 1024,
+    raw = new Uint8Array((width + 1) * height),
+    compressed = deflateSync(raw, { level: 0 }),
+    body = pngWithData(compressed, width, height);
+  assert.ok(compressed.length > 31 * 65535);
+  const remaining = MAX_IMAGE_BYTES - body.length,
+    label = new Uint8Array(remaining - 12).fill(65);
+  label.set(Buffer.from("test\0"));
+  const exact = pngWithData(compressed, width, height, [chunk("tEXt", label)]);
+  assert.equal(exact.length, MAX_IMAGE_BYTES);
+  for (const bytes of [body, exact]) {
+    const observed = await measureDecode(bytes);
+    assert.equal(observed.error, undefined);
+    assert.deepEqual(unzlibSync(pngData(observed.result.bytes)), raw);
+    assertBounded(observed, bytes, raw.length);
+    assert.ok(observed.work.copiedBytes < 32 * 1024 * 1024);
+    t.diagnostic(
+      JSON.stringify({
+        case: "valid-stored",
+        bytes: bytes.length,
+        ...observed.work,
+      }),
+    );
+  }
+  await assert.rejects(validateImage(concat(exact, [0])), { status: 413 });
+});
+test("large suffixes and truncated stored blocks reject with bounded stream work", async (t) => {
+  const original = pngData(png);
+  for (const size of [
+    256 * 1024,
+    1024 * 1024,
+    MAX_IMAGE_BYTES - 57 - original.length - 4,
+  ]) {
+    const bytes = pngWithData(
+        concat(original, new Uint8Array(size), original.subarray(-4)),
+      ),
+      observed = await measureDecode(bytes);
+    assert.equal(observed.error?.status, 400);
+    assertBounded(observed, bytes, 12);
+    t.diagnostic(
+      JSON.stringify({ case: "suffix", bytes: bytes.length, ...observed.work }),
+    );
+  }
+  const width = 2046,
+    height = 1024,
+    raw = new Uint8Array((width + 1) * height),
+    compressed = deflateSync(raw, { level: 0 }),
+    broken = pngWithData(
+      concat(compressed.subarray(0, -20), compressed.subarray(-4)),
+      width,
+      height,
+    ),
+    observed = await measureDecode(broken);
+  assert.throws(() => inflateSync(pngData(broken)));
+  assert.equal(observed.error?.status, 400);
+  assertBounded(observed, broken, raw.length);
+  assert.ok(observed.work.copiedBytes < 32 * 1024 * 1024);
+  t.diagnostic(
+    JSON.stringify({
+      case: "truncated-stored",
+      bytes: broken.length,
+      ...observed.work,
+    }),
+  );
+});
+test("decompression bomb cancels before unbounded output is delivered", async () => {
+  const compressed = deflateSync(new Uint8Array(2 * 1024 * 1024)),
+    bytes = pngWithData(compressed),
+    observed = await measureDecode(bytes);
+  assert.equal(observed.error?.status, 400);
+  assertBounded(observed, bytes, 14);
+  assert.ok(observed.work.inputBytes < 64 * 1024);
 });
 test("JPEG APP14 strips private/trailing payloads and only retains one fixed Adobe transform", async () => {
   const segment = (data) =>

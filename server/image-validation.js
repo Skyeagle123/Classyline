@@ -1,5 +1,5 @@
 import jpeg from "jpeg-js";
-import { Unzlib, zlibSync } from "fflate";
+import { zlibSync } from "fflate";
 import { MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS } from "../shared/product-images.js";
 export class ImageFailure extends Error {
   constructor(status, message) {
@@ -62,7 +62,7 @@ function adobeSegment(data) {
     data[11] <= 2
   );
 }
-function png(bytes) {
+async function png(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length),
     parts = [bytes.slice(0, 8)],
     compressed = [];
@@ -162,52 +162,61 @@ function png(bytes) {
       z = Math.abs(p - corner);
     return x <= y && x <= z ? left : y <= z ? up : corner;
   };
-  const inflater = new Unzlib((chunk) => {
-    if (count + chunk.length > expected) invalid();
-    pixels.set(chunk, count);
-    for (const value of chunk) {
-      if (count % stride === 0 && value > 4) invalid();
-      const index = (count % stride) - 1;
-      if (index < 0) filter = value;
-      else if (color === 3) {
-        const left = index ? row[index - 1] : 0,
-          up = previous[index],
-          corner = index ? previous[index - 1] : 0;
-        const predictor = [
-          0,
-          left,
-          up,
-          Math.floor((left + up) / 2),
-          paeth(left, up, corner),
-        ][filter];
-        row[index] = (value + predictor) & 255;
-        if (row[index] >= palette) invalid();
-        if (index === row.length - 1) [row, previous] = [previous, row];
+  // Native zlib streaming checks stored-block LEN/NLEN, truncated streams and
+  // trailing input. Never buffer decoded chunks: cancel on the first byte
+  // beyond the IHDR-derived output bound, including forged compression bombs.
+  // Workers enables strict compression checks at our compatibility date.
+  let nextInput = 0;
+  const reader = new ReadableStream({
+    pull(controller) {
+      if (nextInput === input.length) {
+        controller.close();
+        return;
       }
-      count++;
-      a = (a + value) % 65521;
-      b = (b + a) % 65521;
-    }
-  });
-  // fflate retains unconsumed bytes in its stream buffer. Continuing to push
-  // after the final DEFLATE block would repeatedly copy an arbitrary suffix.
-  // Its streaming cursor points to the first byte after that block; when the
-  // last push is final, Unzlib has already removed the four-byte Adler trailer.
+      const end = Math.min(nextInput + 8192, input.length);
+      controller.enqueue(input.subarray(nextInput, end));
+      nextInput = end;
+    },
+  })
+    .pipeThrough(new DecompressionStream("deflate"))
+    .getReader();
   let complete = false;
-  for (let i = 0; i < input.length; i += 64) {
-    const end = Math.min(i + 64, input.length),
-      final = end === input.length;
-    inflater.push(input.subarray(i, end), final);
-    if (inflater.s.f && !inflater.s.l) {
-      const compressedEnd =
-        end -
-        (final ? 4 : 0) -
-        inflater.p.length +
-        Number(Boolean(inflater.s.p));
-      if (compressedEnd !== input.length - 4) invalid();
-      complete = true;
-      break;
+  try {
+    while (true) {
+      const { value: chunk, done } = await reader.read();
+      if (done) {
+        complete = true;
+        break;
+      }
+      if (count + chunk.length > expected) invalid();
+      pixels.set(chunk, count);
+      for (const value of chunk) {
+        if (count % stride === 0 && value > 4) invalid();
+        const index = (count % stride) - 1;
+        if (index < 0) filter = value;
+        else if (color === 3) {
+          const left = index ? row[index - 1] : 0,
+            up = previous[index],
+            corner = index ? previous[index - 1] : 0;
+          const predictor = [
+            0,
+            left,
+            up,
+            Math.floor((left + up) / 2),
+            paeth(left, up, corner),
+          ][filter];
+          row[index] = (value + predictor) & 255;
+          if (row[index] >= palette) invalid();
+          if (index === row.length - 1) [row, previous] = [previous, row];
+        }
+        count++;
+        a = (a + value) % 65521;
+        b = (b + a) % 65521;
+      }
     }
+  } finally {
+    if (!complete) await reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
   if (
     !complete ||
@@ -220,7 +229,7 @@ function png(bytes) {
   )
     invalid();
   // Rebuild one zlib stream from validated scanlines; no original IDAT bytes
-  // survive, and extra compressed bytes were rejected above.
+  // survive, and native strict decompression rejected extra compressed bytes.
   const canonical = join([
     ...parts,
     pngChunk("IDAT", zlibSync(pixels, { level: 1 })),
@@ -383,7 +392,8 @@ export async function validateImage(bytes) {
     throw new ImageFailure(413, "Choose an image up to 2 MiB.");
   try {
     if (bytes[0] === 255 && bytes[1] === 216) return jpg(bytes);
-    if (ascii(bytes.subarray(0, 8)) === "\x89PNG\r\n\x1a\n") return png(bytes);
+    if (ascii(bytes.subarray(0, 8)) === "\x89PNG\r\n\x1a\n")
+      return await png(bytes);
     if (
       ascii(bytes.subarray(0, 4)) === "RIFF" &&
       ascii(bytes.subarray(8, 12)) === "WEBP"
