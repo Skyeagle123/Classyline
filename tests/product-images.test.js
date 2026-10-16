@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import jpeg from "jpeg-js";
-import { zlibSync, unzlibSync } from "fflate";
+import { Unzlib, zlibSync, unzlibSync } from "fflate";
 import { database } from "./adapter.js";
 import { digest } from "../server/security.js";
 import {
@@ -554,33 +554,113 @@ function pngData(bytes) {
   }
   return concat(...chunks);
 }
-test("PNG canonicalization removes appended junk, duplicate Adler and extra zlib streams without changing pixels", async () => {
+test("PNG canonicalization preserves validated pixels and produces one stable stream", async () => {
   const original = pngData(png),
     raw = unzlibSync(original),
     canonical = (await validateImage(png)).bytes;
+  assert.deepEqual(unzlibSync(pngData(canonical)), raw);
+  assert.deepEqual((await validateImage(canonical)).bytes, canonical);
+});
+test("multi-chunk PNG DEFLATE completion retains valid scanlines and canonical output", async () => {
+  const width = 256,
+    height = 128,
+    raw = new Uint8Array((width + 1) * height),
+    header = png.slice(16, 29);
+  new DataView(header.buffer).setUint32(0, width);
+  new DataView(header.buffer).setUint32(4, height);
+  header[9] = 0;
+  let value = 1;
+  for (let y = 0; y < height; y++)
+    for (let x = 1; x <= width; x++) {
+      value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
+      raw[y * (width + 1) + x] = value >>> 24;
+    }
+  const original = concat(
+      png.subarray(0, 8),
+      chunk("IHDR", header),
+      chunk("IDAT", zlibSync(raw)),
+      chunk("IEND", []),
+    ),
+    validated = await validateImage(original);
+  assert.ok(pngData(original).length > 64);
+  assert.deepEqual(unzlibSync(pngData(validated.bytes)), raw);
+  assert.deepEqual(
+    (await validateImage(validated.bytes)).bytes,
+    validated.bytes,
+  );
+});
+test("PNG rejects trailing junk, duplicate Adler checksums, extra streams and truncated DEFLATE", async () => {
+  const original = pngData(png),
+    raw = unzlibSync(original);
   for (const extra of [
     original.subarray(-4),
     concat(Buffer.from("PRIVATE-JUNK"), original.subarray(-4)),
     zlibSync(raw),
   ]) {
     const env = await setup();
-    const response = await upload(
-      env,
-      concat(
-        png.subarray(0, 33),
-        chunk("IDAT", concat(original, extra)),
-        chunk("IEND", []),
-      ),
-    );
-    assert.equal(response.status, 201);
-    const ref = (await response.json()).image;
-    const stored = new Uint8Array(
-      await (await read(env, ref, env.cookie)).arrayBuffer(),
-    );
-    assert.deepEqual(stored, canonical);
-    assert.deepEqual(unzlibSync(pngData(stored)), raw);
-    assert.deepEqual((await validateImage(stored)).bytes, stored);
+    const response = await upload(env, pngWithData(concat(original, extra)));
+    assert.equal(response.status, 400);
+    assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
   }
+  for (const truncated of [
+    original.subarray(0, -1),
+    concat(original.subarray(0, -5), original.subarray(-4)),
+  ])
+    await assert.rejects(validateImage(pngWithData(truncated)), /Invalid/);
+});
+function pngWithData(data) {
+  return concat(png.subarray(0, 33), chunk("IDAT", data), chunk("IEND", []));
+}
+test("large PNG suffixes fail before fflate can repeatedly copy them", async () => {
+  const original = pngData(png),
+    originalPush = Unzlib.prototype.push;
+  for (const suffixSize of [256 * 1024, 1024 * 1024]) {
+    let pushes = 0,
+      copied = 0;
+    Unzlib.prototype.push = function (data, final) {
+      pushes++;
+      if (this.p.length && data.length) copied += this.p.length + data.length;
+      return originalPush.call(this, data, final);
+    };
+    try {
+      const env = await setup(),
+        body = pngWithData(
+          concat(original, new Uint8Array(suffixSize), original.subarray(-4)),
+        );
+      assert.equal((await upload(env, body)).status, 400);
+      assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
+      assert.ok(pushes <= 2, `suffix ${suffixSize}: ${pushes} pushes`);
+      assert.ok(copied <= 128, `suffix ${suffixSize}: ${copied} bytes copied`);
+    } finally {
+      Unzlib.prototype.push = originalPush;
+    }
+  }
+});
+test("maximum-size PNG suffix is rejected with bounded inflation and no storage write", async () => {
+  const original = pngData(png),
+    maxSuffix = MAX_IMAGE_BYTES - 57 - original.length - 4,
+    bytes = pngWithData(
+      concat(original, new Uint8Array(maxSuffix), original.subarray(-4)),
+    );
+  assert.equal(bytes.length, MAX_IMAGE_BYTES);
+  const env = await setup();
+  const originalPush = Unzlib.prototype.push;
+  let pushes = 0,
+    copied = 0;
+  Unzlib.prototype.push = function (data, final) {
+    pushes++;
+    if (this.p.length && data.length) copied += this.p.length + data.length;
+    return originalPush.call(this, data, final);
+  };
+  try {
+    assert.equal((await upload(env, bytes)).status, 400);
+  } finally {
+    Unzlib.prototype.push = originalPush;
+  }
+  assert.ok(pushes <= 2, `${pushes} pushes`);
+  assert.ok(copied <= 128, `${copied} bytes copied`);
+  assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
+  await assert.rejects(validateImage(concat(bytes, [0])), { status: 413 });
 });
 test("JPEG APP14 strips private/trailing payloads and only retains one fixed Adobe transform", async () => {
   const segment = (data) =>

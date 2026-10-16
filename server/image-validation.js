@@ -189,10 +189,28 @@ function png(bytes) {
       b = (b + a) % 65521;
     }
   });
-  // Small input chunks bound each inflation output allocation, including forged bombs.
-  for (let i = 0; i < input.length; i += 64)
-    inflater.push(input.subarray(i, i + 64), i + 64 >= input.length);
+  // fflate retains unconsumed bytes in its stream buffer. Continuing to push
+  // after the final DEFLATE block would repeatedly copy an arbitrary suffix.
+  // Its streaming cursor points to the first byte after that block; when the
+  // last push is final, Unzlib has already removed the four-byte Adler trailer.
+  let complete = false;
+  for (let i = 0; i < input.length; i += 64) {
+    const end = Math.min(i + 64, input.length),
+      final = end === input.length;
+    inflater.push(input.subarray(i, end), final);
+    if (inflater.s.f && !inflater.s.l) {
+      const compressedEnd =
+        end -
+        (final ? 4 : 0) -
+        inflater.p.length +
+        Number(Boolean(inflater.s.p));
+      if (compressedEnd !== input.length - 4) invalid();
+      complete = true;
+      break;
+    }
+  }
   if (
+    !complete ||
     count !== expected ||
     input.length < 6 ||
     (b * 65536 + a) >>> 0 !==
@@ -201,8 +219,8 @@ function png(bytes) {
       )
   )
     invalid();
-  // Rebuild one zlib stream from validated scanlines. No original IDAT bytes
-  // survive, including ignored trailing junk or duplicate Adler checksums.
+  // Rebuild one zlib stream from validated scanlines; no original IDAT bytes
+  // survive, and extra compressed bytes were rejected above.
   const canonical = join([
     ...parts,
     pngChunk("IDAT", zlibSync(pixels, { level: 1 })),
