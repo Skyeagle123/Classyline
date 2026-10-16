@@ -89,7 +89,11 @@ test("rendered UI escapes merchandise text and exposes labelled structured contr
     "Add size/color variant",
   ])
     assert.ok(editor.includes(label));
-  assert.doesNotMatch(editor, /type="file"/);
+  assert.match(editor, /type="file"/);
+  assert.match(editor, /aria-label="Choose product image"/);
+  assert.match(editor, /accept="image\/jpeg,image\/png,image\/webp"/);
+  assert.match(editor, /Upload Image/);
+  assert.match(editor, /Uploading does not save or publish/);
   const filters = render(
     React.createElement(Filters, {
       q: "",

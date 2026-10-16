@@ -141,6 +141,20 @@ footer {
 .muted {
   color: #766457;
 }
+.image-upload {
+  border: 1px solid #b8a79a;
+  padding: 1rem;
+  border-radius: 0.75rem;
+}
+.upload-preview {
+  display: block;
+  max-width: 100%;
+  width: 12rem;
+  max-height: 15rem;
+  object-fit: contain;
+  background: #f6f1e8;
+  border-radius: 0.5rem;
+}
 .contact-links {
   display: flex;
   flex-wrap: wrap;

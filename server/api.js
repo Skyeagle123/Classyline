@@ -1,5 +1,7 @@
 import { digest, passwordHash, equal, cookie } from "./security.js";
 import { normalizePhone, expirePendingOrders } from "./checkout.js";
+import { ImageFailure } from "./image-validation.js";
+import { uploadImage, deliverImage } from "./product-images.js";
 import {
   adminCatalog,
   previewImport,
@@ -178,6 +180,19 @@ export async function handle(request, env) {
         );
       fail(503, "Store service is awaiting configuration");
     }
+    if (
+      path.startsWith("/api/product-images/") &&
+      ["GET", "HEAD"].includes(method)
+    )
+      return await deliverImage(request, db, env.PRODUCT_IMAGES, async () => {
+        try {
+          await admin(db, request, now);
+          return true;
+        } catch (e) {
+          if (e.status === 401) return false;
+          throw e;
+        }
+      });
     if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method))
       fail(405, "Method not allowed");
     if (
@@ -247,6 +262,18 @@ export async function handle(request, env) {
     }
     if (path.startsWith("/api/admin/")) {
       await admin(db, request, now);
+      if (path === "/api/admin/product-images" && method === "POST") {
+        if (!env.PRODUCT_IMAGES)
+          fail(503, "Image storage is awaiting configuration");
+        await limit(db, "image-upload:global", 20, now);
+        await limit(
+          db,
+          "image-upload:" + (await digest(cookie(request))),
+          10,
+          now,
+        );
+        return json(await uploadImage(request, env.PRODUCT_IMAGES), 201);
+      }
       if (path.startsWith("/api/admin/catalog")) {
         try {
           await db.prepare("SELECT id FROM catalog_imports LIMIT 1").first();
@@ -637,11 +664,17 @@ export async function handle(request, env) {
     return json(
       {
         error:
-          e instanceof Failure || e instanceof ImportFailure
+          e instanceof Failure ||
+          e instanceof ImportFailure ||
+          e instanceof ImageFailure
             ? e.message
             : "Service unavailable",
       },
-      e instanceof Failure || e instanceof ImportFailure ? e.status : 503,
+      e instanceof Failure ||
+        e instanceof ImportFailure ||
+        e instanceof ImageFailure
+        ? e.status
+        : 503,
     );
   }
 }

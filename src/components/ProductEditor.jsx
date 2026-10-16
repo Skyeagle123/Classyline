@@ -6,11 +6,14 @@ import {
   productPayload,
 } from "../catalog.js";
 import { api } from "../api.js";
+import ImageUpload from "./ImageUpload.jsx";
+import { withUploadedImage } from "../image-upload.js";
 
 export default function ProductEditor({ catalog, refresh, run }) {
   const [draft, setDraft] = React.useState(newProduct),
     [existing, setExisting] = React.useState(false),
-    [saving, setSaving] = React.useState(false);
+    [saving, setSaving] = React.useState(false),
+    [uploading, setUploading] = React.useState(false);
   const change = (key, value) => setDraft((p) => ({ ...p, [key]: value }));
   const variant = (index, key, value) =>
     setDraft((p) => ({
@@ -31,7 +34,7 @@ export default function ProductEditor({ catalog, refresh, run }) {
         Edit a product
         <select
           className="input"
-        disabled={saving}
+          disabled={saving || uploading}
           value={existing ? draft.id : ""}
           onChange={(e) => {
             const p = catalog?.products.find((p) => p.id === e.target.value);
@@ -51,6 +54,7 @@ export default function ProductEditor({ catalog, refresh, run }) {
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
+          if (uploading || saving) return;
           setSaving(true);
           try {
             await run(async () => {
@@ -67,7 +71,15 @@ export default function ProductEditor({ catalog, refresh, run }) {
           }
         }}
       >
-        <fieldset disabled={saving} className="space-y-4">
+        <fieldset disabled={saving || uploading} className="space-y-4">
+          <ImageUpload
+            key={`${existing ? "existing" : "new"}:${draft.id}`}
+            disabled={saving}
+            onBusy={setUploading}
+            onUploaded={(result) =>
+              setDraft((p) => withUploadedImage(p, result))
+            }
+          />
           <div className="grid sm:grid-cols-2 gap-4">
             {[
               ["id", "Product ID"],
@@ -124,6 +136,13 @@ export default function ProductEditor({ catalog, refresh, run }) {
               Available in storefront
             </label>
           </div>
+          {draft.image && (
+            <img
+              className="upload-preview"
+              src={draft.image}
+              alt="Current product image"
+            />
+          )}
           <label className="block">
             Description
             <textarea

@@ -1,3 +1,4 @@
+import { IMAGE_REFERENCE } from "./product-images.js";
 export const HEADERS = [
   "SKU",
   "Product Name",
@@ -25,6 +26,7 @@ const clean = (v) =>
 const validText = (v, max) => v.length <= max && !/[\x00-\x1f\x7f]/.test(v);
 export function imageReference(value) {
   const s = clean(value);
+  if (IMAGE_REFERENCE.test(s)) return s;
   if (!s || s.length > 1000 || /[\s\\<>"'\x00-\x1f]/.test(s))
     throw Error("Enter an image filename, /products/path or HTTPS URL.");
   if (/^[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp|avif)$/i.test(s))
