@@ -1,21 +1,33 @@
-import React from 'react';
-import { useCart } from '../store.jsx';
-export default function ProductCard({ p }){
-  const { add } = useCart();
-  const size = (p.sizes && p.sizes[0]) || 'S';
+import React from "react";
+import { money } from "../api.js";
+export default function ProductCard({ p }) {
   return (
-    <article className="card overflow-hidden flex flex-col">
+    <article className="card product-card overflow-hidden">
       <a href={`/product/${encodeURIComponent(p.id)}`}>
-        <img src={p.image} alt={p.title} className="w-full aspect-[4/5] object-cover" />
-      </a>
-      <div className="p-4 flex-1 flex flex-col">
-        <h3 className="font-semibold mb-1">{p.title}</h3>
-        <div className="text-sm text-zinc-600 mb-2">{p.category}</div>
-        <div className="mt-auto flex items-center justify-between">
-          <span className="font-bold">${(p.price||0).toFixed(2)}</span>
-          <button className="btn" onClick={()=>add({id:p.id, title:p.title, price:p.price, size})}>Add to cart</button>
+        <img
+          loading="lazy"
+          width="640"
+          height="800"
+          src={p.image}
+          alt={p.title}
+          className="w-full aspect-[4/5] object-cover"
+        />
+        <div className="p-4">
+          <p className="eyebrow">{p.category}</p>
+          <h3 className="text-xl mt-1">{p.title}</h3>
+          <p className="mt-2">{money(p.price_cents)}</p>
+          <p className="text-sm mt-2">
+            {p.display_only
+              ? "Preview · ordering unavailable"
+              : p.variants.some((v) => v.stock > 0)
+                ? "Choose size & color"
+                : "Sold out"}
+          </p>
+          <p className="muted text-sm mt-2">
+            {[...new Set(p.variants.map((v) => v.size))].join(" · ")}
+          </p>
         </div>
-      </div>
+      </a>
     </article>
-  )
+  );
 }

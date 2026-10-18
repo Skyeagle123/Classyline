@@ -1,56 +1,96 @@
-import React from 'react';
-
+import React from "react";
+import { cartReady, performCartAction, cartErrorMessage } from "./cart-ui.js";
+import {
+  ATTEMPT_KEY,
+  CART_EVENT,
+  CART_KEY,
+  LEGACY_CART_KEY,
+  cartItems,
+  sharedCart,
+} from "./cart.js";
 const Ctx = React.createContext(null);
-
-function reducer(state, action){
-  switch(action.type){
-    case 'INIT':
-      return action.payload;
-    case 'ADD': {
-      const {id, size, title, price} = action.payload;
-      const next = [...state];
-      const i = next.findIndex(x => x.id===id && x.size===size);
-      if (i >= 0) next[i].qty += 1;
-      else next.push({id, size, title, price, qty:1});
-      return next;
-    }
-    case 'REMOVE': {
-      const {id, size} = action.payload;
-      return state.filter(x => !(x.id===id && x.size===size));
-    }
-    case 'CLEAR':
-      return [];
-    default:
-      return state;
+export function CartProvider({ children }) {
+  const coordinator = React.useMemo(
+    () =>
+      sharedCart({
+        storage: {
+          getItem: (k) => localStorage.getItem(k),
+          setItem: (k, v) => localStorage.setItem(k, v),
+          removeItem: (k) => localStorage.removeItem(k),
+        },
+        lock: navigator.locks
+          ? (name, fn) => navigator.locks.request(name, fn)
+          : null,
+        notify: () => window.dispatchEvent(new Event(CART_EVENT)),
+      }),
+    [],
+  );
+  const [state, setState] = React.useState(null),
+    [actionError, setActionError] = React.useState(""),
+    [fatalError, setFatalError] = React.useState("");
+  function acceptState(s) {
+    setState(s);
+    setFatalError("");
+    setActionError("");
   }
+  React.useEffect(() => {
+    let live = true;
+    const sync = () =>
+      coordinator
+        .refresh()
+        .then((s) => {
+          if (live) {
+            acceptState(s);
+          }
+        })
+        .catch((e) => {
+          if (live) setFatalError(cartErrorMessage(e));
+        });
+    const storageChanged = (e) => {
+      if (
+        e.key === null ||
+        [CART_KEY, ATTEMPT_KEY, LEGACY_CART_KEY].includes(e.key)
+      )
+        sync();
+    };
+    window.addEventListener("storage", storageChanged);
+    window.addEventListener(CART_EVENT, sync);
+    window.addEventListener("focus", sync);
+    sync();
+    return () => {
+      live = false;
+      window.removeEventListener("storage", storageChanged);
+      window.removeEventListener(CART_EVENT, sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, [coordinator]);
+  const mutate = (fn) =>
+    performCartAction(coordinator, fn, {
+      success: acceptState,
+      actionError: setActionError,
+      fatalError: setFatalError,
+    });
+  const cart = state ? cartItems(state.lines) : [];
+  return (
+    <Ctx.Provider
+      value={{
+        cart,
+        coordinator,
+        cartVersion: state?.version,
+        reviewRequired: state?.reviewRequired,
+        ready: cartReady(state, fatalError),
+        error: fatalError || actionError,
+        add: (item) => mutate(() => coordinator.add(item)),
+        remove: (id) => mutate(() => coordinator.remove(id)),
+        review: (version) => mutate(() => coordinator.review(version)),
+        reconcile: () => mutate(() => coordinator.refresh()),
+        count: cart.reduce((n, i) => n + i.qty, 0),
+      }}
+    >
+      {children}
+    </Ctx.Provider>
+  );
 }
-
-export function CartProvider({children}){
-  const [cart, dispatch] = React.useReducer(reducer, []);
-
-  React.useEffect(()=>{
-    try {
-      const raw = localStorage.getItem('CART_V2');
-      if (raw) dispatch({type:'INIT', payload: JSON.parse(raw)});
-    } catch {}
-  }, []);
-
-  React.useEffect(()=>{
-    localStorage.setItem('CART_V2', JSON.stringify(cart));
-  }, [cart]);
-
-  const add    = (item)=>dispatch({type:'ADD', payload:item});
-  const remove = (id,size)=>dispatch({type:'REMOVE', payload:{id,size}});
-  const clear  = ()=>dispatch({type:'CLEAR'});
-
-  const count = cart.reduce((s,x)=>s+x.qty,0);
-  const subtotal = cart.reduce((s,x)=>s+x.qty*x.price,0);
-
-  return <Ctx.Provider value={{cart, add, remove, clear, count, subtotal}}>{children}</Ctx.Provider>;
-}
-
-export function useCart(){
-  const ctx = React.useContext(Ctx);
-  if (!ctx) throw new Error('useCart must be used inside <CartProvider>');
-  return ctx;
+export function useCart() {
+  return React.useContext(Ctx);
 }
