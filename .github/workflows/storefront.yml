@@ -1,7 +1,13 @@
 name: Storefront validation
 on:
   push:
-    branches: [phase/storefront-cod-whatsapp, phase/admin-r2-image-upload, fix/mobile-collection-layout]
+    branches:
+      [
+        phase/storefront-cod-whatsapp,
+        phase/admin-r2-image-upload,
+        fix/mobile-collection-layout,
+        fix/image-processing-limit-messages,
+      ]
   pull_request:
     branches: [main]
   workflow_dispatch:

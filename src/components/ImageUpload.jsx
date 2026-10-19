@@ -58,9 +58,11 @@ export default function ImageUpload({ onUploaded, onBusy, disabled = false }) {
     >
       <h3 className="text-xl">Product image</h3>
       <p className="muted text-sm">
-        Choose a photo from your phone or computer. Still JPEG or PNG; up to 2
-        MiB and 4 megapixels. Uploading does not save or publish the product.
-        WebP uploads are temporarily disabled.
+        Choose a still JPEG or PNG up to 2 MiB (2,097,152 bytes), with no side
+        longer than 4096 pixels. JPEG: up to 4,000,000 pixels total; PNG: up to
+        4,194,304 pixels total. Some JPEGs within these limits need resizing to
+        fit the processing budget. Uploading does not save or publish the
+        product. WebP uploads are temporarily disabled.
       </p>
       <input
         ref={picker}

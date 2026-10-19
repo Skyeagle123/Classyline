@@ -246,6 +246,43 @@ test("metadata is stripped without re-encoding pixels; safe JPEG orientation is 
   );
   assert.deepEqual(cleanedPng.bytes, (await validateImage(png)).bytes);
 });
+test("JPEG pixel-limit rejection explains the limit before decoding or storage", async (t) => {
+  const env = await setup(),
+    oversized = Uint8Array.from(jpg);
+  const frame = oversized.findIndex(
+    (value, index) => value === 255 && oversized[index + 1] === 192,
+  );
+  assert.ok(frame >= 0);
+  const view = new DataView(oversized.buffer, oversized.byteOffset);
+  view.setUint16(frame + 5, 1024);
+  view.setUint16(frame + 7, 4096);
+  let decodes = 0;
+  t.mock.method(jpeg, "decode", () => {
+    decodes++;
+    throw Error("Decoder must not run for oversized dimensions");
+  });
+  const response = await upload(env, oversized);
+  assert.equal(response.status, 400);
+  assert.match(
+    (await response.json()).error,
+    /JPEG limit: 4096 pixels per side and 4,000,000 pixels total/,
+  );
+  assert.equal(decodes, 0);
+  assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
+});
+test("JPEG decoder-budget rejection is actionable and never writes an image", async (t) => {
+  const env = await setup();
+  t.mock.method(jpeg, "decode", () => {
+    throw Error("maxMemoryUsageInMB limit exceeded by at least 4MB");
+  });
+  const response = await upload(env, jpg);
+  assert.equal(response.status, 400);
+  const { error } = await response.json();
+  assert.match(error, /needs too much memory to process/);
+  assert.match(error, /Resize/);
+  assert.doesNotMatch(error, /maxMemoryUsageInMB|4MB/);
+  assert.equal(env.PRODUCT_IMAGES.puts.length, 0);
+});
 test("indexed PNG palette references are validated after scanline unfiltering", async () => {
   const header = png.slice(16, 29);
   header[9] = 3;
