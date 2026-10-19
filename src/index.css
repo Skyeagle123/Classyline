@@ -293,7 +293,7 @@ body:has(dialog[open]) .floating-contact {
 }
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   margin-top: 1.5rem;
 }
@@ -330,6 +330,11 @@ body:has(dialog[open]) .floating-contact {
 }
 .variant-editor legend {
   padding: 0 0.5rem;
+}
+@media (min-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (min-width: 900px) {
   .product-grid {
