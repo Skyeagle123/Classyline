@@ -14,8 +14,6 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  const list = products;
-
   return (
     <>
       <section className="hero">
@@ -52,26 +50,18 @@ export default function Home() {
             {error ||
               (loading
                 ? "Loading collection…"
-                : !list.length
+                : !products.length
                   ? "No products to show yet."
-                  : `${list.length} pieces`)}
+                  : `${products.length} ${products.length === 1 ? "piece" : "pieces"}`)}
           </p>
-          {!loading && !error && !list.length && (
+          {!loading && !error && !products.length && (
             <div className="empty-state">
-              <h3>
-                {products.length
-                  ? "A little room to explore"
-                  : "The collection is on its way"}
-              </h3>
-              <p>
-                {products.length
-                  ? "Please check back for available pieces."
-                  : "Please check back for available pieces."}
-              </p>
+              <h3>The collection is on its way</h3>
+              <p>Please check back for available pieces.</p>
             </div>
           )}
           <div className="product-grid">
-            {list.map((p) => (
+            {products.map((p) => (
               <ProductCard key={p.id} p={p} />
             ))}
           </div>
