@@ -4,6 +4,7 @@ on:
     branches: [phase/storefront-cod-whatsapp, phase/admin-r2-image-upload, fix/mobile-collection-layout]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
