@@ -1,6 +1,6 @@
 # Product Studio image uploads
 
-Implementation only: no bucket, binding, upload, migration or deployment has been activated.
+This document describes the source contract. Environment-specific acceptance evidence and the proposed Production procedure are recorded in [Production release preparation](PRODUCTION-RELEASE-PREPARATION.md); configuration and activation require separate authorization.
 
 ## Administrator workflow
 
@@ -8,7 +8,18 @@ In Product Studio, choose a JPEG or PNG from a phone or computer. Review the loc
 
 If upload fails, the previous image field remains unchanged. If the connection fails after storage but before acknowledgement, an unused object may remain. There is no automatic retry, object deletion or product publication. Retrying creates a new object. Replacing an image does not delete its predecessor.
 
-Limits: 2 MiB compressed, 4096 pixels per side, 4 megapixels, still images only. The 2 MiB limit also applies after PNG normalization. PNG currently accepts non-interlaced 8-bit images; convert unsupported PNG/HEIC/animated formats before upload. JPEG is decoded for validation after sanitization. PNG chunks, checksums, decompression length and scanline filters are validated; validated scanlines are recompressed into a new, single zlib stream. Native strict zlib decompression rejects trailing junk, duplicate checksums, extra streams, truncated streams and stored blocks with invalid LEN/NLEN complements. Input is fed in bounded 8 KiB slices, decoded chunks are checked against the dimensions-derived output size before copying, and the reader is cancelled on excess output. No JavaScript decoder accumulates incomplete DEFLATE blocks; original compressed bytes are never stored and PNG pixel values are unchanged. JPEG metadata is stripped except a minimal EXIF orientation tag and at most one fixed 12-byte Adobe APP14 color-transform header (version 100/101, zero flags, transform 0–2). Unknown, extended or private APP14 payloads are stripped; duplicate recognized Adobe headers are rejected. GPS, device, timestamp and thumbnail metadata are not retained.
+Limits apply to still images only:
+
+| Limit                         | JPEG                    | PNG                               |
+| ----------------------------- | ----------------------- | --------------------------------- |
+| Input file size               | 2 MiB (2,097,152 bytes) | 2 MiB (2,097,152 bytes)           |
+| Width and height, each        | 4096 pixels             | 4096 pixels                       |
+| Total pixels (width × height) | 4,000,000               | 4,194,304                         |
+| Stored file size              | At most 2 MiB           | At most 2 MiB after normalization |
+
+These are ceilings, not a promise that every file below them is supported. JPEG decoding retains its existing 48 MiB allocation-accounting budget and strict decoding. Component layout and sampling can exhaust that budget below the pixel ceiling; resize or re-export the image when the processing-memory message appears. The 48 MiB budget does not include every JavaScript object, request buffer, or other invocation in the Worker isolate, and is not a measured peak-memory value. JPEG 4096 × 1024 is 4,194,304 pixels and is deliberately rejected before decoding; a PNG of those dimensions is within the PNG pixel ceiling. No decoder memory limit has been raised.
+
+PNG currently accepts non-interlaced 8-bit images; convert unsupported PNG/HEIC/animated formats before upload. JPEG is decoded for validation after sanitization. PNG chunks, checksums, decompression length and scanline filters are validated; validated scanlines are recompressed into a new, single zlib stream. Native strict zlib decompression rejects trailing junk, duplicate checksums, extra streams, truncated streams and stored blocks with invalid LEN/NLEN complements. Input is fed in bounded 8 KiB slices, decoded chunks are checked against the dimensions-derived output size before copying, and the reader is cancelled on excess output. No JavaScript decoder accumulates incomplete DEFLATE blocks; original compressed bytes are never stored and PNG pixel values are unchanged. JPEG metadata is stripped except a minimal EXIF orientation tag and at most one fixed 12-byte Adobe APP14 color-transform header (version 100/101, zero flags, transform 0–2). Unknown, extended or private APP14 payloads are stripped; duplicate recognized Adobe headers are rejected. GPS, device, timestamp and thumbnail metadata are not retained.
 
 ## WebP security fallback and provenance
 

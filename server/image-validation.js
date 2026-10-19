@@ -13,11 +13,12 @@ const invalid = () => {
     "Invalid or unsupported image. Choose a still JPEG or PNG image.",
   );
 };
-const dimensions = (w, h) => {
-  if (!w || !h || w > 4096 || h > 4096 || w * h > MAX_IMAGE_PIXELS)
+const dimensions = (w, h, format = "PNG") => {
+  const maximum = format === "JPEG" ? 4_000_000 : MAX_IMAGE_PIXELS;
+  if (!w || !h || w > 4096 || h > 4096 || w * h > maximum)
     throw new ImageFailure(
       400,
-      "Image dimensions exceed the limit: 4096 per side and 4 megapixels. Choose a smaller image.",
+      `Image dimensions exceed the ${format} limit: 4096 pixels per side and ${format === "JPEG" ? "4,000,000" : "4,194,304"} pixels total. Resize the image and try again.`,
     );
 };
 const join = (parts) => {
@@ -337,6 +338,7 @@ function jpg(bytes) {
       dimensions(
         (bytes[pos + 5] << 8) | bytes[pos + 6],
         (bytes[pos + 3] << 8) | bytes[pos + 4],
+        "JPEG",
       );
     }
     if (code === 225) {
@@ -371,14 +373,24 @@ function jpg(bytes) {
     }
   }
   const cleaned = join(parts);
-  const result = jpeg.decode(cleaned, {
-    useTArray: true,
-    formatAsRGBA: false,
-    tolerantDecoding: false,
-    maxResolutionInMP: 4,
-    maxMemoryUsageInMB: 48,
-  });
-  dimensions(result.width, result.height);
+  let result;
+  try {
+    result = jpeg.decode(cleaned, {
+      useTArray: true,
+      formatAsRGBA: false,
+      tolerantDecoding: false,
+      maxResolutionInMP: 4,
+      maxMemoryUsageInMB: 48,
+    });
+  } catch (error) {
+    if (/^maxMemoryUsageInMB limit exceeded/.test(error?.message || ""))
+      throw new ImageFailure(
+        400,
+        "This JPEG needs too much memory to process. Resize it or save a simpler JPEG, then try again. Some images within the file and pixel limits still need resizing.",
+      );
+    throw error;
+  }
+  dimensions(result.width, result.height, "JPEG");
   return {
     bytes: cleaned,
     width: result.width,
