@@ -288,6 +288,22 @@ jobs:
               d.is_skipped !== true && d.latest_stage?.name === 'deploy' &&
               d.latest_stage.status === 'success', 'Deployment identity/status mismatch');
           }
+          function deploymentBindings(d) {
+            function exactBinding(map, name, field, expected) {
+              check(map !== null && typeof map === 'object' && !Array.isArray(map) &&
+                Object.keys(map).length === 1 && Object.hasOwn(map, name),
+                'Missing, additional or unverifiable deployed binding');
+              const binding = map[name];
+              check(binding !== null && typeof binding === 'object' && !Array.isArray(binding) &&
+                Object.hasOwn(binding, field) && binding[field] === expected,
+                'Deployed binding identity mismatch');
+            }
+            exactBinding(d.d1_databases, 'DB', 'id', '10c800b1-ddf7-427b-8354-9cf8529782b6');
+            exactBinding(d.r2_buckets, 'PRODUCT_IMAGES', 'name', 'classyline-storefront-production-images');
+            // Use only this deployment's own binding snapshot, never project defaults.
+            return {DB: {id: d.d1_databases.DB.id},
+              PRODUCT_IMAGES: {name: d.r2_buckets.PRODUCT_IMAGES.name}};
+          }
           async function history() {
             const all = [];
             for (let page = 1; page <= 10; page++) {
@@ -340,6 +356,17 @@ jobs:
           check(!finalHistory.some(d => d.deployment_trigger?.metadata?.commit_hash === candidate),
             'Candidate Production attempt appeared during preflight');
           const knownIDs = new Set(finalHistory.map(d => d.id));
+          function reconcile(list, acceptedID) {
+            noActive(list);
+            const ids = list.map(d => d.id);
+            check(ids.every(id => typeof id === 'string' && id.length > 0) &&
+              new Set(ids).size === ids.length, 'Unverifiable deployment history IDs');
+            check([...knownIDs].every(id => ids.includes(id)), 'Baseline history changed during release');
+            const fresh = list.filter(d => !knownIDs.has(d.id));
+            check(fresh.length === 1 && fresh[0].id === acceptedID,
+              'Final new deployment set differs from the accepted deployment');
+            identity(fresh[0], acceptedID, candidate);
+          }
           save('preflight.json', {baseline, baseline_sha: baselineSHA, bindings,
             known_production_deployments: [...knownIDs], workflow_sha: e.GITHUB_SHA});
           save('attempt.json', {candidate, run_id: e.GITHUB_RUN_ID, attempt: 1,
@@ -376,6 +403,7 @@ jobs:
           check(deployed, 'No deployment identified; outcome uncertain, no retry');
           const d = (await cf(root + '/deployments/' + deployed.id)).result;
           identity(d, deployed.id, candidate);
+          const deployedBindings = deploymentBindings(d);
           check(d.uses_functions === true, 'Pages Functions missing');
           check(d.deployment_trigger.metadata.commit_dirty === false, 'Dirty deployment metadata');
           check(d.compatibility_date === '2025-11-13' && Array.isArray(d.compatibility_flags) &&
@@ -386,13 +414,25 @@ jobs:
           identity(after.canonical_deployment, d.id, candidate);
           check(JSON.stringify(afterBindings) === JSON.stringify(bindings), 'Bindings changed');
           identity((await cf(root + '/deployments/' + baseline)).result, baseline, baselineSHA);
-          noActive(await history());
+          // Completed competing deployments are forbidden too, not only active ones.
+          reconcile(await history(), d.id);
+          // Read canonical state again AFTER final history reconciliation.
+          const finalState = (await cf(root)).result;
+          check(JSON.stringify(project(finalState)) === JSON.stringify(bindings), 'Final configuration drift');
+          identity(finalState.canonical_deployment, d.id, candidate);
+          deploymentBindings(finalState.canonical_deployment);
           await mainUnchanged();
-          save('verified-deployment.json', {id: d.id, url: d.url, sha: candidate,
-            environment: 'production', uses_functions: true, bindings: afterBindings,
-            rollback_deployment: baseline, cli_exit_code: result.status});
+          save('observed-verification.json', {id: d.id, url: d.url, sha: candidate,
+            environment: 'production', uses_functions: true, deployment_bindings: deployedBindings,
+            project_bindings: afterBindings, rollback_deployment: baseline,
+            cli_exit_code: result.status, accepted: false});
           check(result.status === 0 && !result.error && !result.signal,
             'Deployment observed but CLI outcome uncertain; manual review required, no retry');
+          // Acceptance is written only after every required check, including CLI certainty.
+          save('accepted-deployment.json', {id: d.id, url: d.url, sha: candidate,
+            environment: 'production', uses_functions: true, deployment_bindings: deployedBindings,
+            project_bindings: afterBindings, rollback_deployment: baseline,
+            cli_exit_code: result.status, accepted: true});
           console.log(`Verified closed Production deployment: ${d.id} ${d.url}`);
           NODE
 

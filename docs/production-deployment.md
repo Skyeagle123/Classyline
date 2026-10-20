@@ -55,6 +55,11 @@ Owner-approved change to the retry policy would be a separate decision, not a
 technical resolution of strict no-retry. Do not remove the blocks merely because
 the other checks pass.
 
+The proposed permanent replacement is documented in
+[the Direct Upload design](pages-direct-upload-design.md). That document and its
+offline contract model do not add a network client, wire one into this workflow,
+or establish transport readiness. All live-use blockers remain in place.
+
 ## Implemented acceptance controls (inactive behind both blocks)
 
 - Manual dispatch only; no release inputs; exact repository/Owner names and IDs,
@@ -77,7 +82,17 @@ the other checks pass.
   `classyline2-production` does not cancel an in-progress deployment.
 - Independent bounded post-deployment GETs verify one new deployment, successful
   deploy stage, canonical Production identity, SHA, clean metadata, Functions,
-  URL, runtime, bindings, preserved Preview configuration and retained rollback.
+  URL, runtime, preserved Preview configuration and retained rollback. D1/R2 maps
+  are checked directly on the returned deployment AND final canonical snapshot:
+  exactly `DB` with the approved Production UUID and `PRODUCT_IMAGES` with the
+  approved Production bucket. Missing, extra, renamed, mismatched or unverifiable
+  deployment bindings are rejected even when project settings remain correct.
+- Final complete history reconciliation requires the new deployment ID set to
+  equal exactly the accepted deployment, rejecting completed/failed/skipped
+  competitors too. Missing baseline history and duplicate IDs fail closed. The
+  workflow rereads canonical identity, terminal success, bindings and project
+  configuration after that reconciliation. External operator freeze remains
+  necessary because separate API reads cannot provide an atomic global lock.
 - CLI failures/timeouts still lead only to read-only history inspection. Unknown
   status, extra deployments, drift or a nonzero/uncertain CLI outcome fail closed.
   There is no workflow rerun, second invocation, automatic rollback or data restore.
@@ -101,6 +116,13 @@ deployment identities. The token, response bodies, environment dumps, debug logs
 and private database records are excluded. Retention is 14 days; approved release
 operators must download and preserve the evidence before expiry. Artifact upload
 failure is a failed release record and needs manual review.
+
+`observed-deployment.json` reports a seen deployment, not acceptance.
+`observed-verification.json` explicitly records `accepted: false`, even when the
+observed deployed code matches but CLI status is uncertain. Only after every
+identity, Functions, deployment/project binding, history, canonical, rollback,
+freeze and CLI-certainty check passes is `accepted-deployment.json` written with
+`accepted: true`. The old ambiguous `verified-deployment.json` is not generated.
 
 The separate Functions build hashes are build-validation evidence. Wrangler
 rebuilds the root `functions/` directory during deployment; these hashes are not
@@ -174,6 +196,7 @@ Run from this PR checkout:
 
 ```sh
 node --test ops/production-workflow.test.mjs
+node --test ops/direct-upload-design.test.mjs
 ```
 
 The tests execute extracted workflow scripts with mocked GitHub/Cloudflare reads
@@ -183,6 +206,15 @@ artifact drift, Functions, source mismatch and uncertain responses. Tests exerci
 acceptance logic behind a **test-only** substitution of the literal block; the
 committed workflow keeps it false. No live credentials, API calls or deployment
 are used. Bash/inline JavaScript syntax and YAML structure are also checked locally.
+
+The corrected workflow suite has 81 cases, including the two independent-review
+counterexamples (incorrect deployment bindings despite correct project settings;
+a second completed deployment appearing only in final history). It also checks
+missing/extra/unverifiable deployment bindings, final canonical drift and that no
+failure produces final acceptance evidence. The separate 26-case Direct Upload
+design suite tests abstract operation budgets and uncertainty handling with
+fake I/O only. It does not test an HTTP client, multipart/hash compatibility or
+real Cloudflare behavior. Passing these suites is not deployment authorization.
 
 The manual-only workflow has not been dispatched. Application CI `39297195087`
 is accepted evidence for the unchanged application; it is not CI validation of
