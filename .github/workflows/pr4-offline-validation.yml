@@ -20,7 +20,7 @@ jobs:
     env:
       WRANGLER_SEND_METRICS: 'false'
       CLASSYLINE_TEST_APPLICATION: ${{ github.workspace }}/app
-      CLASSYLINE_VALIDATION_TOOLS: ${{ runner.temp }}/classyline-validation-tools
+      CLASSYLINE_VALIDATION_TOOLS: ${{ github.workspace }}/classyline-validation-tools
     steps:
       - name: Check out the exact controller commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

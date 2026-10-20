@@ -18,6 +18,21 @@ function checkSyntax(command, args) {
   try { execFileSync(command, args, {stdio: 'pipe', timeout: 10000}); }
   catch { throw new Error(`${command} syntax validation failed: ${args.at(-1)}`); }
 }
+// The runner context exists in steps, but not in workflow/job-level env.
+// GitHub rejects that schema before creating any jobs, so YAML syntax alone
+// cannot catch it. Validate the official context sets for both env locations.
+// https://docs.github.com/en/actions/reference/workflows-and-actions/contexts
+function checkEnvContexts(env, allowed, location) {
+  for (const value of Object.values(env ?? {})) {
+    if (typeof value !== 'string') continue;
+    for (const expression of value.matchAll(/\$\{\{([\s\S]*?)\}\}/g)) {
+      const unquoted = expression[1].replace(/'(?:[^']|'')*'/g, "''");
+      for (const reference of unquoted.matchAll(/(?<![\w.])([A-Za-z_][A-Za-z_0-9]*)\s*(?=\.|\[)/g)) {
+        assert(allowed.includes(reference[1]), `${location}: unavailable expression context ${reference[1]}`);
+      }
+    }
+  }
+}
 try {
   for (const name of readdirSync('.github/workflows').filter(n => /\.ya?ml$/.test(n)).sort()) {
     const text = readFileSync(join('.github/workflows', name), 'utf8');
@@ -25,8 +40,10 @@ try {
     assert.equal(document.errors.length, 0, `Invalid or duplicate-key YAML: ${name}`);
     const workflow = document.toJS();
     assert(workflow && typeof workflow === 'object' && workflow.jobs, `Missing workflow jobs: ${name}`);
+    checkEnvContexts(workflow.env, ['github', 'secrets', 'inputs', 'vars'], `${name}: env`);
     workflows.set(name, {text, workflow}); counts.yaml++;
-    for (const job of Object.values(workflow.jobs)) {
+    for (const [jobId, job] of Object.entries(workflow.jobs)) {
+      checkEnvContexts(job.env, ['github', 'needs', 'strategy', 'matrix', 'vars', 'secrets', 'inputs'], `${name}: jobs.${jobId}.env`);
       for (const step of job.steps ?? []) {
         if (step.uses) assert.match(step.uses, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+@[a-f0-9]{40}$/, 'Unpinned external Action');
         if (step.run === undefined) continue;

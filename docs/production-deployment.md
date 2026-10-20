@@ -263,6 +263,13 @@ with EUSAGE because this controller branch is based on the older Production tree
 and has no root dependency lockfile. Node setup succeeded; tests were skipped.
 This was a checkout/dependency-location defect, not unavailable Actions execution.
 
+The first recovery push (`610e9666`, run `39498416906`) exposed a separate GitHub
+workflow-expression error: `runner.temp` is unavailable in job-level `env`.
+That run created no jobs. The parser directory now uses the supported
+`github.workspace` context, and local validation explicitly rejects the invalid
+job-level context. Generic YAML parsing alone does not validate GitHub's context
+availability rules; the final hosted offline result must be checked as well.
+
 The corrected offline workflow checks out its exact controller commit and the
 fixed application SHA in separate directories. Only the application's existing
 lockfile supplies Wrangler 4.150.0 and BLAKE3. A separate integrity-locked YAML
