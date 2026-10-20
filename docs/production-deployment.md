@@ -59,7 +59,7 @@ Astra acceptance and separate installation/activation authorization.
 See [the implemented transport and proof boundaries](pages-direct-upload-design.md).
 No hosted upload or deployment test has been performed by this package.
 
-## Implemented acceptance controls (inactive behind both blocks)
+## Implemented acceptance controls (inactive behind all three blocks)
 
 - Manual dispatch only; no release inputs; exact repository/Owner names and IDs,
   main ref, initial actor and triggering actor checks; run attempt must be 1.
@@ -215,10 +215,10 @@ design suite tests abstract operation budgets and uncertainty handling with
 fake I/O only. It does not test an HTTP client, multipart/hash compatibility or
 real Cloudflare behavior. Passing these suites is not deployment authorization.
 
-The manual-only workflow has not been dispatched. Application CI `39297195087`
-is accepted evidence for the unchanged application; it is not CI validation of
-this remediation commit. New hosted workflow execution remains unverified and
-unauthorized. Review readiness does not mean deployment readiness.
+The manual Production workflow has not been dispatched. Application CI
+`39297195087` is accepted evidence for the unchanged application; it is not CI
+validation of this remediation commit. The separate, credential-free PR4 offline
+validation workflow is authorized. Review readiness does not mean deployment readiness.
 
 ## Offline implementation validation
 
@@ -254,3 +254,45 @@ CLASSYLINE_TEST_APPLICATION=/absolute/path/to/locked-application \
 No deployment token is needed. Fault tests bind only 127.0.0.1. Compiler fixture
 execution clears credentials and disables Wrangler metrics. A failed test is not
 a reason to change the release identities or remove any deployment block.
+
+## Recovery of PR4 offline CI
+
+[Run 39493794751](https://github.com/Skyeagle123/Classyline/actions/runs/39493794751)
+did start for `d8ed31eef6fb0d5a4fca0e304fceece9d49640ae`. Its `npm ci` step failed
+with EUSAGE because this controller branch is based on the older Production tree
+and has no root dependency lockfile. Node setup succeeded; tests were skipped.
+This was a checkout/dependency-location defect, not unavailable Actions execution.
+
+The corrected offline workflow checks out its exact controller commit and the
+fixed application SHA in separate directories. Only the application's existing
+lockfile supplies Wrangler 4.150.0 and BLAKE3. A separate integrity-locked YAML
+parser supports syntax validation without changing application dependencies.
+Neither checkout persists Git credentials. The job has read-only contents
+permission, no release environment and no Cloudflare secret or deployment step.
+
+The current regression suite additionally validates complete manifest coverage,
+per-path content keys, exact special-file bytes, and a real nonempty JavaScript
+Functions entry distinct from metadata. Integrated tests extract the committed
+workflow preflight callback and run it with the real native transport against
+loopback HTTP. They cover drift before and after asset staging, D1/R2 mismatch,
+competing deployments, invalid rollback, unavailable/denied/uncertain checkpoints,
+and uncertain creation outcomes. Reconciliation is read-only; uncertain outcomes
+remain failures even when a deployment is observed. Hosted API compatibility is
+not established by these tests.
+
+Run all relevant tests and syntax checks with Node 24.19.0:
+
+```bash
+CLASSYLINE_TEST_APPLICATION=/absolute/path/to/locked-application \
+  node --test ops/*.test.mjs
+CLASSYLINE_VALIDATION_TOOLS=/absolute/path/to/isolated-parser \
+  node ops/validate-offline-workflows.mjs
+```
+
+See the [qualified checkpoint primitive and remaining implementation gate](pages-direct-upload-design.md).
+No durable live adapter exists. All three Production blocks remain byte-for-byte
+unchanged. Installing on main also remains separately gated: the authenticated
+recovery inspection found automatic Production deployments enabled and the exact
+accepted baseline still canonical. A merge could start Cloudflare's automatic
+build regardless of the manual workflow's hard stops. Do not install until the
+Owner separately authorizes and verifies the installation freeze described above.

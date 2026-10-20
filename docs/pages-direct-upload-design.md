@@ -108,6 +108,50 @@ ambiguous checkpoint outcomes, and never reset authorization from absent/lagging
 Cloudflare history. Any new permission or storage mutation requires separate Owner
 approval. Do not remove the blocks as a substitute for this proof.
 
+### Cross-runner checkpoint qualification (2026-10-20)
+
+**Qualified storage primitive; deployment adapter still BLOCKED.** The official
+[R2 consistency contract](https://developers.cloudflare.com/r2/reference/consistency/#conditional-writes)
+and [S3 conditional-write contract](https://developers.cloudflare.com/r2/api/s3/extensions/#conditional-operations-in-putobject)
+explicitly guarantee atomic `PutObject` with `If-None-Match: *`: concurrent claims
+for one absent key have at most one successful writer; competitors receive `412`.
+This is sufficient for a create-once claim design, not proof that this repository
+already implements or has provisioned that mechanism.
+
+The smallest candidate uses a dedicated private checkpoint bucket, separate from
+application D1/R2, with one permanent key derived from fixed project, environment
+and approved application SHA. Run ID, controller SHA and payload hash belong in
+the allowlisted evidence body, not in a key that changes automatically on rerun.
+One positively acknowledged conditional claim from the current execution is
+required before any upload. Existing claims, denial, timeout, lost connection or
+uncertain acknowledgement must stop without a deployment POST. Reading a matching
+claim after restart never grants permission to resume. A negative read is also
+not permission: Cloudflare documents that an earlier unknown write can still
+commit after a `404`.
+
+Claims must remain consumed forever, with no expiry, reset or automatic recovery.
+An [indefinite bucket lock](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
+can protect existing and future claim objects against overwrite, deletion and
+lifecycle removal while allowing first creation. Runtime credentials must be
+bucket-scoped and unable to edit lock configuration. Administrators can remove
+locks, so this still depends on explicit administrative change control; it is not
+administrator-proof immutability. Lost acknowledgement may consume an attempt
+without deploying. The guarantee sought is at-most-once submission, not eventual
+success or exactly-once server processing.
+
+GitHub artifacts are supporting evidence, not atomic cross-run claim storage;
+[deleting a run deletes its artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts#artifacts-from-deleted-workflow-runs).
+Git refs were not qualified for the complete atomicity/retention contract.
+Durable Objects transactional storage is another possible primitive but requires
+an additional authenticated service and deployment.
+
+No checkpoint bucket, lock, credentials or live adapter has been created or
+verified. Next: independently review an offline adapter and fault tests, then
+separately authorize isolated checkpoint-only hosted qualification. Preserve both
+original workflow hard stops and `checkpoint: async () => false` until that evidence
+exists. No existing permission or deployment authorization silently covers the
+new storage or credentials.
+
 ## Validation and remaining proof boundaries
 
 The tests distinguish three layers:

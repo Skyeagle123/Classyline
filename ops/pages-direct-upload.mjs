@@ -37,6 +37,16 @@ const MIME = Object.freeze({'.html':'text/html', '.css':'text/css', '.js':'appli
   '.mjs':'application/javascript', '.json':'application/json', '.txt':'text/plain',
   '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg',
   '.webp':'image/webp', '.ico':'image/x-icon', '.woff':'font/woff', '.woff2':'font/woff2'});
+const SPECIAL = Object.freeze(['_headers', '_redirects', '_routes.json']);
+const JAVASCRIPT = Object.freeze(['application/javascript+module', 'text/javascript+module',
+  'application/javascript', 'text/javascript']);
+function ordinaryMIME(path) {
+  check(!path.split('/').some(p => ['functions','node_modules','_worker.js','_worker.bundle'].includes(p)),
+    'Unexpected build override');
+  const type = MIME[extname(path).toLowerCase()];
+  check(type, 'Unreviewed asset MIME type');
+  return type;
+}
 export function pagesKey(bytes, path, blake3) {
   check(pathOK(path), 'Unsafe asset path');
   const hash = blake3(Buffer.from(bytes).toString('base64') + extname(path).slice(1));
@@ -96,18 +106,24 @@ export async function verifyFunctions(bundle, routing, routes) {
   const metadata = json(Buffer.from(typeof rawMetadata === 'string' ? rawMetadata : await rawMetadata.arrayBuffer()));
   // Current no-config compiler emits only main_module (optional empty flags/date
   // accepted only at the exact approved runtime). No binding/resource overrides.
-  check(Object.keys(metadata).every(k => ['main_module','compatibility_date','compatibility_flags'].includes(k)),
+  check(metadata && typeof metadata === 'object' && !Array.isArray(metadata) &&
+    Object.keys(metadata).every(k => ['main_module','compatibility_date','compatibility_flags'].includes(k)),
     'Functions metadata override');
-  check(typeof metadata.main_module === 'string' && metadata.main_module !== 'metadata' && names.includes(metadata.main_module), 'Functions main module missing');
+  check(pathOK(metadata.main_module) && metadata.main_module !== 'metadata' &&
+    names.includes(metadata.main_module), 'Functions main module missing');
+  const entry = form.get(metadata.main_module);
+  check(typeof entry !== 'string' && JAVASCRIPT.includes(entry.type) && entry.size > 0,
+    'Functions main module is not executable JavaScript');
   check(metadata.compatibility_date === undefined || metadata.compatibility_date === RELEASE.date, 'Functions date mismatch');
   check(metadata.compatibility_flags === undefined || (Array.isArray(metadata.compatibility_flags) && !metadata.compatibility_flags.length), 'Functions flags mismatch');
   const modules = [];
   for (const name of names.filter(n => n !== 'metadata').sort()) {
     const part = form.get(name);
     check(pathOK(name) && typeof part !== 'string' &&
-      ['application/javascript+module','application/javascript','text/javascript','application/wasm',
-        'application/octet-stream','text/plain'].includes(part.type), 'Unexpected Functions module');
-    modules.push({name, type:part.type, sha256:sha256(Buffer.from(await part.arrayBuffer()))});
+      [...JAVASCRIPT,'application/wasm','application/octet-stream','text/plain'].includes(part.type),
+      'Unexpected Functions module');
+    const bytes = Buffer.from(await part.arrayBuffer());
+    modules.push({name, type:part.type, size:bytes.length, sha256:sha256(bytes)});
   }
   const r = json(routes), config = json(routing);
   check(r.version === 1 && JSON.stringify(r.include) === '["/api/*"]' &&
@@ -128,9 +144,8 @@ export async function prepare({identity, files, bundle, routing, blake3}) {
       !paths.has(f.path) && !folded.has(f.path.toLowerCase()), 'Invalid/duplicate static asset');
     paths.add(f.path); folded.add(f.path.toLowerCase()); total += f.bytes.length;
     check(total <= MAX_TOTAL, 'Artifact total limit');
-    if (['_headers','_redirects','_routes.json'].includes(f.path)) {special[f.path]=Buffer.from(f.bytes); continue;}
-    check(!f.path.split('/').some(p => ['functions','node_modules','_worker.js','_worker.bundle'].includes(p)), 'Unexpected build override');
-    const contentType = MIME[extname(f.path).toLowerCase()]; check(contentType, 'Unreviewed asset MIME type');
+    if (SPECIAL.includes(f.path)) {special[f.path]=Buffer.from(f.bytes); continue;}
+    const contentType = ordinaryMIME(f.path);
     const bytes = Buffer.from(f.bytes), key = pagesKey(bytes, f.path, blake3);
     const item = {path:f.path, key, sha256:sha256(bytes), contentType, bytes};
     const previous = keys.get(key);
@@ -148,18 +163,34 @@ export async function prepare({identity, files, bundle, routing, blake3}) {
   const payload = multipart(parts);
   const evidence = {identity:{...RELEASE}, functions, manifest,
     parts:parts.map(p=>({name:p.name,type:p.type,file:Boolean(p.file),sha256:sha256(p.bytes)})),
-    files:files.map(f=>({path:f.path,sha256:sha256(f.bytes)})),
+    files:files.map(f=>({path:f.path,size:f.bytes.length,sha256:sha256(f.bytes)})),
     assets:assets.map(({path,key,sha256,contentType})=>({path,key,sha256,contentType})),
     body_sha256:sha256(payload.body), body_bytes:payload.body.length, content_type:payload.contentType};
   return {identity:{...RELEASE}, assets, manifest, parts, payload, evidence, planHash:sha256(JSON.stringify(evidence))};
 }
 export function verifyPlan(plan, blake3) {
   fixedIdentity(plan.identity);
+  fixedIdentity(plan.evidence.identity);
   check(sha256(JSON.stringify(plan.evidence)) === plan.planHash &&
+    Buffer.isBuffer(plan.payload.body) && plan.payload.body.length === plan.evidence.body_bytes &&
     sha256(plan.payload.body) === plan.evidence.body_sha256 &&
     plan.payload.contentType === plan.evidence.content_type &&
     JSON.stringify(plan.manifest) === JSON.stringify(plan.evidence.manifest), 'Payload/manifest provenance mismatch');
-  check(plan.assets.length === plan.evidence.assets.length, 'Asset inventory mismatch');
+  check(Array.isArray(plan.evidence.files) && plan.evidence.files.length > 0 &&
+    plan.evidence.files.length <= 20000, 'Invalid recorded file inventory');
+  const files = new Map(), folded = new Set(); let total = 0;
+  for (const f of plan.evidence.files) {
+    check(f && pathOK(f.path) && !files.has(f.path) && !folded.has(f.path.toLowerCase()) &&
+      Number.isInteger(f.size) && f.size >= 0 && f.size <= MAX_FILE &&
+      typeof f.sha256 === 'string' && /^[a-f0-9]{64}$/.test(f.sha256), 'Invalid/duplicate recorded file');
+    files.set(f.path, f); folded.add(f.path.toLowerCase()); total += f.size;
+    if (!SPECIAL.includes(f.path)) ordinaryMIME(f.path);
+  }
+  check(files.has('index.html') && files.has('_routes.json'), 'Missing index/routes');
+  check(plan.manifest && typeof plan.manifest === 'object' && !Array.isArray(plan.manifest),
+    'Invalid static manifest');
+  check(Array.isArray(plan.assets) && Array.isArray(plan.evidence.assets) &&
+    plan.assets.length === plan.evidence.assets.length, 'Asset inventory mismatch');
   check(Array.isArray(plan.parts) && plan.parts.length===plan.evidence.parts.length &&
     new Set(plan.parts.map(p=>p.name)).size===plan.parts.length, 'Payload part inventory mismatch');
   for(const [i,p] of plan.parts.entries()) {
@@ -170,20 +201,48 @@ export function verifyPlan(plan, blake3) {
   const rebuilt=multipart(plan.parts);
   check(rebuilt.body.equals(plan.payload.body) && rebuilt.contentType===plan.payload.contentType,'Payload serialization mismatch');
   const part=name=>{const p=plan.parts.find(p=>p.name===name);check(p,'Required payload part missing');return p.bytes;};
-  check(JSON.stringify(json(part('manifest')))===JSON.stringify(plan.manifest) &&
+  // Canonical bytes reject duplicate JSON member names, not just duplicate keys
+  // surviving JSON.parse(). The preparer always emits this exact serialization.
+  check(part('manifest').equals(Buffer.from(JSON.stringify(plan.manifest))) &&
     part('branch').toString()==='main' && part('commit_hash').toString()===RELEASE.sha &&
     part('commit_dirty').toString()==='false', 'Payload release/manifest mismatch');
   check(sha256(part('_worker.bundle'))===plan.evidence.functions.bundle_sha256 &&
     sha256(part('functions-filepath-routing-config.json'))===plan.evidence.functions.routing_sha256 &&
     sha256(part('_routes.json'))===plan.evidence.functions.routes_sha256,'Functions payload mismatch');
+  const expectedParts = new Map([
+    ['manifest', ['application/json', false]], ['branch', ['text/plain', false]],
+    ['commit_hash', ['text/plain', false]], ['commit_dirty', ['text/plain', false]],
+    ['_worker.bundle', ['multipart/form-data', true]],
+    ['functions-filepath-routing-config.json', ['application/json', true]],
+    ...SPECIAL.filter(name => files.has(name)).map(name =>
+      [name, [name === '_routes.json' ? 'application/json' : 'text/plain', true]])
+  ]);
+  check(plan.parts.length === expectedParts.size && plan.parts.every(p =>
+    expectedParts.has(p.name) && p.type === expectedParts.get(p.name)[0] &&
+    Boolean(p.file) === expectedParts.get(p.name)[1]), 'Unexpected payload part inventory');
+  for (const name of SPECIAL.filter(name => files.has(name))) {
+    const bytes = part(name), recorded = files.get(name);
+    check(bytes.length === recorded.size && sha256(bytes) === recorded.sha256,
+      'Special file provenance mismatch');
+  }
+  total += part('_worker.bundle').length + part('functions-filepath-routing-config.json').length;
+  check(total <= MAX_TOTAL && part('_worker.bundle').length > 0 &&
+    part('_worker.bundle').length <= MAX_FILE, 'Artifact total/bundle limit');
+  const assetKeys = new Set(), assetPaths = new Set();
   for (const [i,a] of plan.assets.entries()) {
     const recorded = plan.evidence.assets[i];
-    check(pagesKey(a.bytes,a.path,blake3) === a.key && sha256(a.bytes) === a.sha256 &&
+    check(Buffer.isBuffer(a.bytes) && a.bytes.length <= MAX_FILE && pathOK(a.path) &&
+      files.has(a.path) && !SPECIAL.includes(a.path) &&
+      !assetKeys.has(a.key) && !assetPaths.has(a.path) &&
+      a.contentType === ordinaryMIME(a.path) &&
+      plan.manifest['/' + a.path] === a.key &&
+      pagesKey(a.bytes,a.path,blake3) === a.key && sha256(a.bytes) === a.sha256 &&
       ['path','key','sha256','contentType'].every(k=>a[k]===recorded[k]), 'Asset hash mismatch');
+    assetKeys.add(a.key); assetPaths.add(a.path);
   }
   // Require exact ordinary-file coverage, not merely self-consistent recorded hashes.
   const ordinaryFiles = plan.evidence.files.filter(f =>
-    !['_headers', '_redirects', '_routes.json'].includes(f.path));
+    !SPECIAL.includes(f.path));
   const expectedPaths = ordinaryFiles.map(f => '/' + f.path);
   check(new Set(expectedPaths).size === expectedPaths.length &&
     Object.keys(plan.manifest).length === expectedPaths.length &&
@@ -194,7 +253,9 @@ export function verifyPlan(plan, blake3) {
     [...keys].every(k=>Object.values(plan.manifest).includes(k)), 'Manifest key mismatch');
   for(const [path,key] of Object.entries(plan.manifest)) {
     const file=plan.evidence.files.find(f=>'/'+f.path===path),asset=plan.assets.find(a=>a.key===key);
-    check(file && asset && file.sha256===asset.sha256,'Manifest file provenance mismatch');
+    check(file && asset && file.sha256===asset.sha256 && file.size===asset.bytes.length &&
+      ordinaryMIME(file.path)===asset.contentType && pagesKey(asset.bytes,file.path,blake3)===key,
+      'Manifest file provenance mismatch');
   }
 }
 
@@ -271,6 +332,18 @@ export class DirectUpload {
     check(!this.#started,'Release instance already consumed');this.#started=true;
     check(process.versions.node==='24.19.0','Unreviewed transport runtime');
     verifyPlan(plan,blake3);
+    const verifiedPlanHash = plan.planHash;
+    // Reloaded/self-consistent plans must pass semantic bundle validation too.
+    // This happens before consuming a journal or making any network request.
+    const part = name => plan.parts.find(p => p.name === name).bytes;
+    const functions = await verifyFunctions(part('_worker.bundle'),
+      part('functions-filepath-routing-config.json'), part('_routes.json'));
+    check(JSON.stringify(functions) === JSON.stringify(plan.evidence.functions),
+      'Functions module evidence mismatch');
+    // The multipart parser yields. Reject changes during that await before
+    // copying the final immutable network bytes or recording the attempt.
+    verifyPlan(plan,blake3);
+    check(plan.planHash === verifiedPlanHash, 'Plan changed during Functions validation');
     // Copy all network bytes before calling any caller-supplied read/checkpoint.
     const payload=Buffer.from(plan.payload.body), contentType=plan.payload.contentType;
     const assets=plan.assets.map(a=>({...a,bytes:Buffer.from(a.bytes)}));

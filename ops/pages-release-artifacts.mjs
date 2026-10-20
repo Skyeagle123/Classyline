@@ -41,7 +41,7 @@ export function loadPlan(application, output) {
   plan.parts=plan.parts.map(p=>({...p,bytes:Buffer.from(p.bytes,'base64')}));
   plan.payload.body=Buffer.from(plan.payload.body,'base64');
   verifyPlan(plan,pinnedHash(application));
-  const actual=inventory(join(application,'dist')).map(f=>({path:f.path,sha256:sha256(f.bytes)}));
+  const actual=inventory(join(application,'dist')).map(f=>({path:f.path,size:f.bytes.length,sha256:sha256(f.bytes)}));
   check(JSON.stringify(actual)===JSON.stringify(plan.evidence.files),'Static file set changed after preparation');
   check(sha256(readFileSync(join(output,'worker.bundle')))===plan.evidence.functions.bundle_sha256 &&
     sha256(readFileSync(join(output,'routing.json')))===plan.evidence.functions.routing_sha256,'Functions changed after preparation');
