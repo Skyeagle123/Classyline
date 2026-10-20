@@ -47,14 +47,16 @@ module uses official APIs and one native HTTP request per operation; local fault
 servers verify no resubmission. Wrangler 4.150.0 remains an offline compiler only.
 
 Both unconditional blocks remain: first-step `exit 1` and literal
-`NO_RETRY_TRANSPORT_VERIFIED = false`. A third boundary refuses the missing durable
-remote checkpoint. Inputs, environment variables or secrets cannot enable them.
+`NO_RETRY_TRANSPORT_VERIFIED = false`. A third boundary supplies the literal
+`checkpoint: async () => false`. Inputs, environment variables or secrets cannot
+enable them. The new R2 adapter is connected only in offline integration tests.
 
 Local exclusive/fsynced attempt consumption survives demonstrated process kills,
 including a kill after the creation POST reached a mock server. It does not prove
 persistence after destruction of an ephemeral Actions runner. Deployment remains
-BLOCKED pending a reviewed cross-runner checkpoint implementation, independent
-Astra acceptance and separate installation/activation authorization.
+BLOCKED pending independent review, hosted checkpoint qualification, resolution
+of the unreceived-write uncertainty boundary and separate installation/activation
+authorization.
 
 See [the implemented transport and proof boundaries](pages-direct-upload-design.md).
 No hosted upload or deployment test has been performed by this package.
@@ -68,8 +70,9 @@ No hosted upload or deployment test has been performed by this package.
   and no root Wrangler or local environment overrides.
 - Approved CI run and job identity/success checks; tests, security check, audit,
   static build, Functions build and `/api/*` routing validation.
-- A second first-dispatch check scoped to the **reviewed workflow commit** using
-  `head_sha`: exactly one dispatch and the current run ID must match.
+- A second first-dispatch check across the fixed-release workflow's entire retained
+  dispatch history: exactly one dispatch and the current run ID and commit must
+  match. A new controller commit does not reset this gate.
 - Exact account/project, Git source, disabled automatic Production builds,
   baseline and successful rollback source/status; Production and Preview D1/R2
   identities, runtime date/flags/placement and encrypted Admin-secret presence.
@@ -129,7 +132,11 @@ and frozen multipart body sent by the transport; it performs no upload-time rebu
 
 Use only an account-scoped **Cloudflare Pages Edit / Pages Write** token. No D1,
 R2 data-write, Access, billing, DNS or token-administration grants are required.
-Pages permission is account-wide, not a verified project-only boundary. Provision
+Pages permission is account-wide, not a verified project-only boundary. This
+paragraph describes the Pages token only. The disabled R2 adapter would require
+separate bucket-scoped S3 credentials for the dedicated checkpoint bucket, with
+no product-image access or authority to change retention configuration. No such
+credentials are provisioned or consumed by the committed workflow. Provision
 the short-lived token privately through the Owner's own browser, never through
 chat, tool outputs or committed files. Revoke it in Cloudflare after completion
 or failure and delete the GitHub environment secret; deleting the secret alone
@@ -170,11 +177,12 @@ An empty catalog and NULL delivery fees are not a complete API checkout kill swi
 
 ## First dispatch, uncertainty and recovery
 
-The `head_sha` dispatch gate permits one dispatch per reviewed control commit.
+The dispatch-history gate permits only the first dispatch of this fixed-release workflow.
 Any attempted dispatch, including an unarmed or preflight-failed run, is retained
-in Actions history. A repeat dispatch of that same control commit must fail. A
-new reviewed control commit and explicit Owner approval are required to reset
-this gate; never delete run history to make a check pass. Reruns are always denied.
+in Actions history. A repeat dispatch must fail even after a new controller commit.
+Never delete run history or rename the workflow to make this check pass. Reruns
+are always denied. History is not an atomic R2 checkpoint and cannot guarantee
+refusal if privileged operators delete it; preserve that administrative boundary.
 
 After any uncertain result: stop; inspect deployment history and current canonical
 identity before another action. A recorded Production attempt of the candidate
@@ -206,7 +214,7 @@ acceptance logic behind a **test-only** substitution of the literal block; the
 committed workflow keeps it false. No live credentials, API calls or deployment
 are used. Bash/inline JavaScript syntax and YAML structure are also checked locally.
 
-The corrected workflow suite has 82 cases, including the two independent-review
+The corrected workflow suite has 83 cases, including the two independent-review
 counterexamples (incorrect deployment bindings despite correct project settings;
 a second completed deployment appearing only in final history). It also checks
 missing/extra/unverifiable deployment bindings, final canonical drift and that no
@@ -296,10 +304,45 @@ CLASSYLINE_VALIDATION_TOOLS=/absolute/path/to/isolated-parser \
   node ops/validate-offline-workflows.mjs
 ```
 
-See the [qualified checkpoint primitive and remaining implementation gate](pages-direct-upload-design.md).
-No durable live adapter exists. All three Production blocks remain byte-for-byte
-unchanged. Installing on main also remains separately gated: the authenticated
+See the [implemented checkpoint and remaining qualification gates](pages-direct-upload-design.md).
+The R2 adapter is implemented and tested offline; its production callback remains
+disabled. All three literal Production hard stops remain intact. Installing on
+main also remains separately gated: the authenticated
 recovery inspection found automatic Production deployments enabled and the exact
 accepted baseline still canonical. A merge could start Cloudflare's automatic
 build regardless of the manual workflow's hard stops. Do not install until the
 Owner separately authorizes and verifies the installation freeze described above.
+
+## R2 checkpoint implementation and qualification boundary
+
+Node 24.19.0 completed **257/257** offline tests with zero failures or skips:
+the existing 206 cases, one cross-controller dispatch regression, 40 R2 signing/
+claim/fault cases and 10 real preflight/checkpoint/transport integration cases.
+YAML (2 files), Bash (14 scripts), embedded JavaScript (4 scripts) and module
+syntax (11 files) passed validation; all three deployment hard stops were checked.
+These are local results. The exact published commit's Actions result must be
+verified separately and recorded in PR #4 before review.
+
+The fixed proposed bucket is `classyline-release-checkpoints`, separate from both
+product-image buckets. The permanent release key, account and payload evidence are
+specified in the Direct Upload design. The adapter permits one conditional PUT and
+requires positive acknowledgement plus exact readback; an existing or uncertain
+claim never grants permission to resume. No deletion, overwrite or expiry path
+exists. Concurrent tests use different controller/payload identities at the same
+key to ensure a changed build cannot bypass an already consumed release.
+
+Hosted qualification must separately establish: the exact account/bucket and
+bucket-scoped credential restrictions; an indefinite lock covering future and
+existing claim objects; absence of a lifecycle path that removes claims; positive
+and competing conditional-write behavior; SigV4/ETag/readback compatibility; and
+operator controls against lock removal, object deletion or history deletion.
+Bucket administrators can remove locks. This is retained administrative control,
+not administrator-proof immutability. Any checkpoint-only hosted test needs new
+explicit authorization and must not invoke Pages deployment or product storage.
+
+The current offline tests also demonstrate the remaining limitation: if an
+uncertain request never reached R2 and runner-local state is lost, the absent
+object cannot preserve that uncertainty. Retained first-dispatch history narrows
+this risk, but is not a substitute for proving the complete orchestration boundary.
+Deployment stays blocked; do not silently treat an absent checkpoint as a new
+authorization. No new hosted measurements, R2 writes or credentials were used.

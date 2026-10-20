@@ -14,6 +14,9 @@ controls. Both original unconditional workflow blocks remain. A third boundary,
 - `ops/pages-release-artifacts.mjs`: exact application HEAD/tree/cleanliness checks,
   locked BLAKE3 2.1.5 loading, offline payload preparation, complete static inventory
   revalidation and Functions/routing byte hashes. It has no upload entry point.
+- `ops/pages-r2-checkpoint.mjs`: fixed-key conditional claim, native single-request
+  SigV4 transport and exact readback. Integrated with the real preflight and upload
+  transport in offline tests only; the production callback still returns `false`.
 - `ops/pages-direct-upload.test.mjs`: actual loopback HTTP fault servers and
   independent child-process interruption/restart tests, plus packaging checks.
 - The manual workflow checks out its own exact controller commit separately from
@@ -28,12 +31,15 @@ bucket and compatibility are constants. Dispatch accepts no release inputs.
 
 ## Official request contract
 
-All live addresses would be fixed under `https://api.cloudflare.com/client/v4`.
-No Cloudflare credentials from the Plugin are used by this transport.
+The Pages requests below use fixed addresses under
+`https://api.cloudflare.com/client/v4`. The checkpoint uses the separate fixed
+account R2 S3 hostname documented below. No Cloudflare credentials from the Plugin
+are used by either transport.
 
 | Order | Request | Credential / body |
 | --- | --- | --- |
 | 1 | Read-only project/main/baseline/history preflight | Separate account/GitHub tokens |
+| 1a | Conditional checkpoint PUT, then exact GET readback | Separate bucket-scoped S3 credentials; before any Pages mutation |
 | 2 | GET `/accounts/{account}/pages/projects/classyline2/upload-token` | Account token; short-lived upload JWT returned |
 | 3 | POST `/pages/assets/check-missing` once | JWT; planned content keys |
 | 4 | POST `/pages/assets/upload` once per sequential frozen batch | JWT; base64 bytes, content key and MIME metadata |
@@ -99,35 +105,55 @@ ephemeral. An Actions artifact uploaded by `always()` after execution is too lat
 to prove pre-POST persistence. The transport requires a successful durable external
 checkpoint callback before any API request; the workflow deliberately supplies
 `false`. Even a fresh runner without the local journal therefore sends zero
-requests. No live remote checkpoint adapter is implemented or implicitly trusted.
-
-A future revision must implement and independently validate an append-only,
-single-use remote intent/receipt mechanism and restart refusal across replacement
-runners. It must bind release SHA, control/run identity and payload hash, refuse
-ambiguous checkpoint outcomes, and never reset authorization from absent/lagging
-Cloudflare history. Any new permission or storage mutation requires separate Owner
-approval. Do not remove the blocks as a substitute for this proof.
+requests. The new R2 adapter is implemented but is not wired to live execution or
+qualified against hosted R2. Any new permission or storage mutation requires
+separate Owner approval. Do not remove the blocks as a substitute for this proof.
 
 ### Cross-runner checkpoint qualification (2026-10-20)
 
-**Qualified storage primitive; deployment adapter still BLOCKED.** The official
+**Qualified storage primitive; implemented adapter still BLOCKED for live use.** The official
 [R2 consistency contract](https://developers.cloudflare.com/r2/reference/consistency/#conditional-writes)
 and [S3 conditional-write contract](https://developers.cloudflare.com/r2/api/s3/extensions/#conditional-operations-in-putobject)
 explicitly guarantee atomic `PutObject` with `If-None-Match: *`: concurrent claims
 for one absent key have at most one successful writer; competitors receive `412`.
-This is sufficient for a create-once claim design, not proof that this repository
-already implements or has provisioned that mechanism.
+This supports the conditional-create algorithm. Offline mocks do not independently
+prove hosted atomicity, credentials, bucket retention or wire compatibility.
 
-The smallest candidate uses a dedicated private checkpoint bucket, separate from
-application D1/R2, with one permanent key derived from fixed project, environment
-and approved application SHA. Run ID, controller SHA and payload hash belong in
-the allowlisted evidence body, not in a key that changes automatically on rerun.
+The adapter fixes account `4bfa1a9c849c3da50520f7a4bcccccab`, proposed dedicated
+private bucket `classyline-release-checkpoints` and permanent key
+`pages/classyline2/production/b64e078ee6ecfc5f4e124fe6d68129164f521b8a/attempt.json`.
+This bucket is separate from product images and has not been provisioned here.
+The allowlisted body binds application SHA/tree, controller SHA, account, bucket,
+key, plan hash and frozen deployment-body hash. Controller or payload changes do
+not change the key. GitHub run identity remains in the separate workflow evidence.
 One positively acknowledged conditional claim from the current execution is
 required before any upload. Existing claims, denial, timeout, lost connection or
 uncertain acknowledgement must stop without a deployment POST. Reading a matching
 claim after restart never grants permission to resume. A negative read is also
 not permission: Cloudflare documents that an earlier unknown write can still
 commit after a `404`.
+
+The adapter signs `If-None-Match: *`, the full body SHA-256 and `Content-MD5`
+using SigV4 (`auto` region, `s3` service). It issues exactly one conditional PUT,
+then only after a complete successful acknowledgement, one authenticated GET.
+Only exact body bytes and the expected quoted single-part MD5 ETag grant a claim.
+That ETag shape is a conservative hosted-compatibility assumption still requiring
+qualification; a different representation fails closed. No HTTP retry, redirect,
+SDK, credential logging, delete, overwrite or expiry operation is implemented.
+Response bodies are bounded to 8 KiB and request deadlines to at most 20 seconds.
+Evidence exposes only fixed identities, hashes, status and request counts.
+
+**Unreceived-write limitation:** R2 cannot record a request it never receives.
+After an uncertain failure, the current adapter and retained local journal refuse
+replay. If that request never committed and all local context is destroyed, a new
+standalone adapter could claim the absent key. A regression test demonstrates this
+boundary rather than claiming a permanent tombstone exists. The workflow now
+rejects any second dispatch of this fixed-release workflow across controller
+commits, and rejects run attempts greater than one. Retained GitHub history is a
+defense in depth, not an atomic remote checkpoint or proof against history deletion
+or arbitrary process restart. No negative R2 read may authorize resubmission.
+The stronger requirement that every uncertainty permanently blocks all future
+execution remains unresolved without a trusted orchestration/retention boundary.
 
 Claims must remain consumed forever, with no expiry, reset or automatic recovery.
 An [indefinite bucket lock](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
@@ -145,8 +171,9 @@ Git refs were not qualified for the complete atomicity/retention contract.
 Durable Objects transactional storage is another possible primitive but requires
 an additional authenticated service and deployment.
 
-No checkpoint bucket, lock, credentials or live adapter has been created or
-verified. Next: independently review an offline adapter and fault tests, then
+No checkpoint bucket, lock or credentials have been created or verified.
+Next: independently review the adapter and fault tests, resolve the unreceived-write
+boundary, then
 separately authorize isolated checkpoint-only hosted qualification. Preserve both
 original workflow hard stops and `checkpoint: async () => false` until that evidence
 exists. No existing permission or deployment authorization silently covers the
@@ -154,7 +181,7 @@ new storage or credentials.
 
 ## Validation and remaining proof boundaries
 
-The tests distinguish three layers:
+The tests distinguish four layers:
 
 1. Existing workflow regression tests use mocked read APIs/transport to exercise
    authorization, exact bindings, final history, canonical status and evidence order.
@@ -164,6 +191,14 @@ The tests distinguish three layers:
    replies, asset failure and binding failures; child processes test crash reuse.
    It also compiles a synthetic Functions fixture with actual Wrangler 4.150.0 and
    round-trips exact multipart bytes. No application acceptance tests are repeated.
+4. The R2 suite reconstructs SigV4 independently from loopback HTTP bytes, models
+   atomic create, and tests concurrent claims, denial, lost acknowledgements,
+   malformed/partial/oversized responses, cancellation and SIGKILL. A replacement
+   process with a new filesystem cannot reuse a committed remote claim. Integrated
+   tests combine the actual workflow preflight, R2 adapter and Direct Upload client:
+   one deployment POST on success; zero after denied/uncertain claims or preflight
+   drift; no replay after an uncertain deployment response. The mock store models
+   the documented contract; it does not empirically establish R2's implementation.
 
 No hosted Cloudflare upload/JWT/deployment or Actions dispatch has occurred. Live
 TLS/API compatibility, the exact candidate's new packaging run, cross-runner remote

@@ -5,12 +5,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {once} from 'node:events';
-import {readFileSync, mkdtempSync, rmSync} from 'node:fs';
+import {mkdtempSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {RELEASE, ROOT, prepare, multipart, verifyPlan, AttemptJournal,
   DirectUpload, requestOnce, deploymentIdentity} from './pages-direct-upload.mjs';
 import {pinnedHash} from './pages-release-artifacts.mjs';
+import {preflightFactory} from './fixtures/pages-workflow-preflight.mjs';
 
 const blake3 = pinnedHash(resolve(process.env.CLASSYLINE_TEST_APPLICATION ?? process.cwd()));
 const CONTROL = 'd8ed31eef6fb0d5a4fca0e304fceece9d49640ae';
@@ -18,18 +19,6 @@ const BASELINE = '5824179f-af77-4a18-9a23-ab22019e8ccc';
 const BASELINE_SHA = '393ff88e76dcca226de7f83e148554699e85ca01';
 const CREATED = '12345678-0000-4000-8000-000000000001';
 const FAKE_TOKEN = 'OFFLINE_TEST_TOKEN_NOT_A_CREDENTIAL';
-const yaml = readFileSync(new URL('../.github/workflows/classyline-production-manual.yml', import.meta.url), 'utf8');
-const scripts = [...yaml.matchAll(/node --input-type=module <<'NODE'\n([\s\S]*?)^          NODE/gm)]
-  .map(m => m[1].replace(/^          /gm, ''));
-assert.equal(scripts.length, 4);
-const release = scripts.at(-1);
-const helpers = release.slice(release.indexOf('async function cf(path) {'), release.indexOf('await mainUnchanged();'));
-assert(helpers.includes('function project(p)') && helpers.includes('function noActive(list)'));
-const callbacks = [...release.matchAll(/preflight:async \(\) => \{\n([\s\S]*?)\n\s*\}\}\);/g)];
-assert.equal(callbacks.length, 1, 'Must exercise the actual committed transport preflight');
-const preflightFactory = new Function('fetch', 'e', 'projectID', 'root', 'baseline', 'baselineSHA',
-  'knownIDs', 'check', 'loadPlan', 'process', 'output', 'initialProject',
-  helpers + '\nconst bindings=project(initialProject); return async()=>{\n' + callbacks[0][1] + '\n};');
 
 function deployment(id, sha) {
   return {id, project_id: RELEASE.projectID, project_name: RELEASE.project,

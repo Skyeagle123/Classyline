@@ -349,8 +349,9 @@ export class DirectUpload {
     const assets=plan.assets.map(a=>({...a,bytes:Buffer.from(a.bytes)}));
     const evidence={plan_sha256:plan.planHash,body_sha256:sha256(payload),accepted:false,uncertain:false,creation_requests:0};
     const intent=journal.claim(plan,controlSHA);
-    // Callback must durably commit intent outside the runner BEFORE any API
-    // mutation. There is intentionally no live checkpoint adapter in this PR.
+    // Callback must durably commit intent outside the runner BEFORE any Pages API
+    // mutation. R2Checkpoint.claim binds this interface to the permanent R2 key;
+    // the Production workflow still supplies an unconditional false callback.
     check(await checkpoint(intent)===true,'Durable checkpoint unavailable; stop before upload');
     const known=await preflight();
     const once=async(path,method='GET',body=Buffer.alloc(0),token=this.#token,type='application/json')=>

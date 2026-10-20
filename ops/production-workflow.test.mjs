@@ -90,6 +90,17 @@ for (const scenario of ciCases) test(`identity and approved CI: ${scenario}`, ()
   assert.equal(r.status === 0, scenario === 'success', r.stderr);
 });
 
+test('new controller commits cannot hide an earlier fixed-release dispatch', () => {
+  assert.doesNotMatch(scripts[0], /event=workflow_dispatch&head_sha=/);
+  assert.match(scripts[0], /event=workflow_dispatch&per_page=100/);
+  const mock = ciMock.replace("if(url.includes('/actions/workflows/')){body=",
+    "if(url.includes('/actions/workflows/')){if(url.includes('head_sha='))throw Error('Unsafe history filter');body=");
+  const denied = run(scripts[0], mock, 'prior-dispatch');
+  assert.notEqual(denied.status, 0);
+  const initial = run(scripts[0], mock, 'success');
+  assert.equal(initial.status, 0, initial.stderr);
+});
+
 // Counterexamples from the independent review, plus missing/unverifiable snapshots.
 const bindingFailures = {
   'wrong deployed D1 UUID': "fresh.d1_databases.DB.id='staging';",

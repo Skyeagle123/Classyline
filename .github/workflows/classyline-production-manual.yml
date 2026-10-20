@@ -98,10 +98,11 @@ jobs:
           assert.equal(jobs.jobs[0].name, 'check');
           assert.equal(jobs.jobs[0].status, 'completed');
           assert.equal(jobs.jobs[0].conclusion, 'success');
-          // One dispatch per reviewed workflow commit, not one for all time.
-          // Even a preflight failure needs a new reviewed control commit to retry.
+          // Fixed-release refusal fence: changing the controller commit must not
+          // reset an uncertain attempt. Keep all dispatch history; never delete it
+          // to make this gate pass. A rerun is separately rejected above.
           const runs = await get('/actions/workflows/classyline-production-manual.yml/runs' +
-            '?event=workflow_dispatch&head_sha=' + encodeURIComponent(e.GITHUB_SHA) + '&per_page=100');
+            '?event=workflow_dispatch&per_page=100');
           assert.equal(runs.total_count, 1);
           assert.equal(runs.workflow_runs.length, 1);
           assert.equal(String(runs.workflow_runs[0].id), e.GITHUB_RUN_ID);
@@ -412,8 +413,9 @@ jobs:
           const transport = new DirectUpload({token:e.CLOUDFLARE_API_TOKEN});
           const creation = await transport.stageAndCreate({plan, blake3:pinnedHash(process.cwd()),
             journal:new AttemptJournal(join(evidence,'attempt-journal')), controlSHA:e.GITHUB_SHA,
-            // Third fail-closed boundary: no live durable checkpoint adapter yet.
-            // An Actions artifact uploaded at job end cannot prove pre-POST durability.
+            // Third unconditional boundary remains: R2Checkpoint.claim(intent)
+            // is integration-tested offline, but NOT wired to live credentials.
+            // Hosted retention, API and never-received-write uncertainty need review.
             checkpoint:async () => false,
             preflight:async () => {
               loadPlan(process.cwd(), output);
