@@ -25,7 +25,7 @@ dispatch, credential provisioning, configuration changes or deployment.
 The application is checked out separately from the workflow. No application
 commit, dependency lock or migration is changed by this PR.
 
-## Unresolved no-retry transport blocker
+## Deployment transport and remaining blocker
 
 Wrangler **4.150.0** retries the Pages deployment-creation POST when Cloudflare
 returns `ApiErrorCodes.UNKNOWN_ERROR`. `MAX_DEPLOYMENT_ATTEMPTS` is 3. One CLI
@@ -42,29 +42,28 @@ review established no supported switch to disable that POST retry loop. The CLI
 can also return normally when final deployment status is unknown, so exit code
 zero is insufficient acceptance evidence.
 
-This PR does **not** patch Wrangler, intercept authenticated requests, replace the
-upload protocol, assume server-side idempotency, or relax Owner authorization.
-There are two unconditional blocks: the first workflow step exits with failure,
-and the deployment script checks a literal `NO_RETRY_TRANSPORT_VERIFIED = false`
-before credential validation, API reads or subprocess execution. No input,
-repository/environment variable, release arm or secret can clear either block.
+Stock Wrangler deployment is no longer invoked. The replacement Direct Upload
+module uses official APIs and one native HTTP request per operation; local fault
+servers verify no resubmission. Wrangler 4.150.0 remains an offline compiler only.
 
-Deployment requires a separately reviewed supported no-retry solution and a new
-reviewed workflow commit. If none can be established, it remains BLOCKED. An
-Owner-approved change to the retry policy would be a separate decision, not a
-technical resolution of strict no-retry. Do not remove the blocks merely because
-the other checks pass.
+Both unconditional blocks remain: first-step `exit 1` and literal
+`NO_RETRY_TRANSPORT_VERIFIED = false`. A third boundary refuses the missing durable
+remote checkpoint. Inputs, environment variables or secrets cannot enable them.
 
-The proposed permanent replacement is documented in
-[the Direct Upload design](pages-direct-upload-design.md). That document and its
-offline contract model do not add a network client, wire one into this workflow,
-or establish transport readiness. All live-use blockers remain in place.
+Local exclusive/fsynced attempt consumption survives demonstrated process kills,
+including a kill after the creation POST reached a mock server. It does not prove
+persistence after destruction of an ephemeral Actions runner. Deployment remains
+BLOCKED pending a reviewed cross-runner checkpoint implementation, independent
+Astra acceptance and separate installation/activation authorization.
+
+See [the implemented transport and proof boundaries](pages-direct-upload-design.md).
+No hosted upload or deployment test has been performed by this package.
 
 ## Implemented acceptance controls (inactive behind both blocks)
 
 - Manual dispatch only; no release inputs; exact repository/Owner names and IDs,
   main ref, initial actor and triggering actor checks; run attempt must be 1.
-- Reviewed immutable official action commits, Node 24, locked dependencies,
+- Reviewed immutable official action commits, Node 24.19.0, locked dependencies,
   explicit Wrangler version check, exact application SHA/tree, clean checkout,
   and no root Wrangler or local environment overrides.
 - Approved CI run and job identity/success checks; tests, security check, audit,
@@ -77,7 +76,7 @@ or establish transport readiness. All live-use blockers remain in place.
 - Paginated bounded Production history inspection rejects queued, running or
   unknown-state deployments and any existing Production attempt for this
   application SHA. Final main, canonical baseline, configuration and history
-  reads occur immediately before the one CLI invocation.
+  reads occur immediately before the one creation POST.
 - Main must remain at the dispatch commit throughout. Concurrency group
   `classyline2-production` does not cancel an in-progress deployment.
 - Independent bounded post-deployment GETs verify one new deployment, successful
@@ -93,8 +92,8 @@ or establish transport readiness. All live-use blockers remain in place.
   workflow rereads canonical identity, terminal success, bindings and project
   configuration after that reconciliation. External operator freeze remains
   necessary because separate API reads cannot provide an atomic global lock.
-- CLI failures/timeouts still lead only to read-only history inspection. Unknown
-  status, extra deployments, drift or a nonzero/uncertain CLI outcome fail closed.
+- Creation failures/timeouts still lead only to read-only history inspection. Unknown
+  status, extra deployments, drift or a nonzero/uncertain creation outcome fail closed.
   There is no workflow rerun, second invocation, automatic rollback or data restore.
 
 GitHub concurrency is not an account-wide Cloudflare lock. The Owner must freeze
@@ -105,9 +104,9 @@ window. Rechecking state narrows races; it cannot replace that freeze.
 
 The token is referenced only by the final preflight/deployment/verification step.
 Before that step, no Cloudflare credential is passed to dependency installation,
-builds, tests or hashing. Checkout credentials are not persisted. The deployment
-subprocess is not passed the GitHub API credential. Raw Wrangler output is held in
-memory, never printed or uploaded; structured evidence contains allowlisted data.
+builds, tests or hashing. Checkout credentials are not persisted. The Direct Upload adapter is not passed the GitHub API credential. Raw HTTP
+responses and upload JWTs are never printed or uploaded; structured evidence
+contains allowlisted data.
 
 The evidence artifact retains source SHA/tree, workflow commit, run ID/attempt,
 Node/Wrangler versions, SHA-256 hashes of tracked source, static output and the
@@ -119,14 +118,14 @@ failure is a failed release record and needs manual review.
 
 `observed-deployment.json` reports a seen deployment, not acceptance.
 `observed-verification.json` explicitly records `accepted: false`, even when the
-observed deployed code matches but CLI status is uncertain. Only after every
+observed deployed code matches but creation status is uncertain. Only after every
 identity, Functions, deployment/project binding, history, canonical, rollback,
-freeze and CLI-certainty check passes is `accepted-deployment.json` written with
+freeze and creation-certainty check passes is `accepted-deployment.json` written with
 `accepted: true`. The old ambiguous `verified-deployment.json` is not generated.
 
-The separate Functions build hashes are build-validation evidence. Wrangler
-rebuilds the root `functions/` directory during deployment; these hashes are not
-claimed to be a hash of the exact multipart bundle transmitted by Wrangler.
+The separate Functions validation build remains validation evidence. The new
+Direct Upload provenance additionally hashes the exact serialized bundle, routing
+and frozen multipart body sent by the transport; it performs no upload-time rebuild.
 
 Use only an account-scoped **Cloudflare Pages Edit / Pages Write** token. No D1,
 R2 data-write, Access, billing, DNS or token-administration grants are required.
@@ -200,14 +199,14 @@ node --test ops/direct-upload-design.test.mjs
 ```
 
 The tests execute extracted workflow scripts with mocked GitHub/Cloudflare reads
-and a mocked Wrangler subprocess. They cover immutable blocks, identity/CI,
+and a mocked Direct Upload boundary. They cover immutable blocks, identity/CI,
 dispatch history, baseline/rollback, bindings, unsafe flags, active builds,
 artifact drift, Functions, source mismatch and uncertain responses. Tests exercise
 acceptance logic behind a **test-only** substitution of the literal block; the
 committed workflow keeps it false. No live credentials, API calls or deployment
 are used. Bash/inline JavaScript syntax and YAML structure are also checked locally.
 
-The corrected workflow suite has 81 cases, including the two independent-review
+The corrected workflow suite has 82 cases, including the two independent-review
 counterexamples (incorrect deployment bindings despite correct project settings;
 a second completed deployment appearing only in final history). It also checks
 missing/extra/unverifiable deployment bindings, final canonical drift and that no
@@ -220,3 +219,38 @@ The manual-only workflow has not been dispatched. Application CI `39297195087`
 is accepted evidence for the unchanged application; it is not CI validation of
 this remediation commit. New hosted workflow execution remains unverified and
 unauthorized. Review readiness does not mean deployment readiness.
+
+## Offline implementation validation
+
+On 2026-10-20, Node 24.19.0 completed **150/150** offline tests:
+82 workflow regressions, 26 architecture-model cases and 42 native transport,
+packaging and process-interruption cases. YAML, Bash and JavaScript syntax checks
+passed. These results are local evidence; no Actions dispatch or Cloudflare write
+was performed.
+
+The loopback server counted exactly one deployment-creation POST for success,
+timeout, reset, 503, redirect, malformed/partial/oversized/ambiguous response and
+post-deployment binding-rejection cases. Asset reset or an unplanned missing key
+produced zero creation POSTs. After creation, all observed requests were GETs.
+A killed child whose POST had reached the server was replaced by an independent
+process: the retained journal prevented a second POST. Fresh-directory runner-loss
+simulation with the unavailable remote checkpoint produced zero requests.
+
+The actual pinned compiler fixture, not the application release, was compiled
+and its serialized Functions bundle accepted and round-tripped. The exact
+application packaging run is a future blocked workflow operation. No evidence
+here establishes hosted API/TLS compatibility or remote checkpoint durability.
+
+
+Run controller/design tests and native loopback fault tests with the approved
+application's locked dependency installation available:
+
+```bash
+CLASSYLINE_TEST_APPLICATION=/absolute/path/to/locked-application \
+  node --test ops/production-workflow.test.mjs ops/direct-upload-design.test.mjs \
+  ops/pages-direct-upload.test.mjs
+```
+
+No deployment token is needed. Fault tests bind only 127.0.0.1. Compiler fixture
+execution clears credentials and disables Wrangler metrics. A failed test is not
+a reason to change the release identities or remove any deployment block.

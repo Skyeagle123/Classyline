@@ -1,8 +1,8 @@
 name: Controlled ClassyLine Production deployment
 run-name: Closed release b64e078 by @${{ github.actor }}
 
-# BLOCKED: stock Wrangler 4.150.0 retries deployment POSTs on UNKNOWN_ERROR.
-# No verified supported no-retry mode exists. Both unconditional blocks below
+# BLOCKED: Direct Upload awaits independent acceptance and durable runner-loss recovery.
+# Runner-loss durability and independent transport acceptance are unresolved. Both blocks
 # require a separately reviewed source change; inputs/variables cannot enable them.
 # Installation is NOT deployment authorization. See docs/production-deployment.md.
 # Before installation, separately disable automatic Production builds, drain
@@ -50,7 +50,7 @@ jobs:
     steps:
       - name: Block unresolved deployment transport
         run: |
-          echo 'BLOCKED: Wrangler 4.150.0 can retry deployment creation. Strict no-retry is unresolved.'
+          echo 'BLOCKED: Direct Upload requires independent acceptance and durable runner-loss proof.'
           exit 1
 
       - name: Require separately armed release window
@@ -109,6 +109,17 @@ jobs:
           console.log('Approved candidate CI and Owner dispatch verified.');
           NODE
 
+      - name: Check out reviewed release controller
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: Skyeagle123/Classyline
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+
       - name: Check out approved application only
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, reviewed official commit
         with:
@@ -120,10 +131,16 @@ jobs:
           submodules: false
           lfs: false
 
+      - name: Verify reviewed controller checkout
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C control status --porcelain=v1 --untracked-files=all)"
+
       - name: Set up Node 24
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '24'
+          node-version: '24.19.0'
 
       - name: Verify source and locked tooling
         working-directory: app
@@ -140,7 +157,7 @@ jobs:
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
-          assert.equal(process.versions.node.split('.')[0], '24');
+          assert.equal(process.versions.node, '24.19.0');
           const p = JSON.parse(readFileSync('package.json'));
           const w = JSON.parse(readFileSync('node_modules/wrangler/package.json'));
           assert.equal(p.devDependencies.wrangler, '4.150.0');
@@ -157,6 +174,17 @@ jobs:
           npm audit --audit-level=high
           npm run build
           npm run build:functions
+
+      - name: Prepare exact static and Functions transport payload offline
+        working-directory: app
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/classyline-direct-upload"
+          npx --no-install wrangler pages functions build \
+            --outfile "$RUNNER_TEMP/classyline-direct-upload/worker.bundle" \
+            --output-config-path "$RUNNER_TEMP/classyline-direct-upload/routing.json" \
+            --build-output-directory dist --compatibility-date 2025-11-13
+          node "$GITHUB_WORKSPACE/control/ops/pages-release-artifacts.mjs"
 
       - name: Record source and artifact provenance
         working-directory: app
@@ -193,6 +221,11 @@ jobs:
           const tracked = execFileSync('git', ['ls-files', '-z'], {encoding: 'utf8'}).split('\0').filter(Boolean);
           for (const path of tracked) files.push({path: `source/${path}`,
             sha256: createHash('sha256').update(readFileSync(path)).digest('hex')});
+          const control = join(process.env.GITHUB_WORKSPACE, 'control');
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {cwd: control, encoding: 'utf8'}).trim(), process.env.GITHUB_SHA);
+          const controlFiles = execFileSync('git', ['ls-files', '-z'], {cwd: control, encoding: 'utf8'}).split('\0').filter(Boolean);
+          for (const path of controlFiles) files.push({path: `control-source/${path}`,
+            sha256: createHash('sha256').update(readFileSync(join(control, path))).digest('hex')});
           const provenance = {
             application_sha: 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a',
             application_tree: '123889f9fd27b3f0b2138ea057efa2e762a231b1',
@@ -204,7 +237,7 @@ jobs:
           console.log(`Recorded ${files.length} source and build hashes. No credentials included.`);
           NODE
 
-      - name: Preflight, one Wrangler invocation, and read-only verification
+      - name: Preflight, single-use Direct Upload, and read-only verification
         working-directory: app
         timeout-minutes: 8
         env:
@@ -213,7 +246,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
-          import {spawnSync, execFileSync} from 'node:child_process';
+          import {execFileSync} from 'node:child_process';
           import {readFileSync, writeFileSync} from 'node:fs';
           import {join} from 'node:path';
           const e = process.env;
@@ -336,11 +369,12 @@ jobs:
           assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(), candidate);
           assert.equal(execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'],
             {encoding: 'utf8'}), '');
-          // Rehash the actual deploy inputs immediately before the single invocation.
+          // Rehash source/build/controller inputs before transport preparation.
           const {createHash} = await import('node:crypto');
           const provenance = JSON.parse(readFileSync(join(evidence, 'provenance.json')));
           for (const f of provenance.files) {
-            const path = f.path.startsWith('source/') ? f.path.slice(7) :
+            const path = f.path.startsWith('control-source/') ? join(e.GITHUB_WORKSPACE, 'control', f.path.slice(15)) :
+              f.path.startsWith('source/') ? f.path.slice(7) :
               f.path.startsWith('functions-build-check/') ?
                 '/tmp/classyline-functions-build/' + f.path.slice('functions-build-check/'.length) : f.path;
             check(createHash('sha256').update(readFileSync(path)).digest('hex') === f.sha256,
@@ -371,17 +405,34 @@ jobs:
             known_production_deployments: [...knownIDs], workflow_sha: e.GITHUB_SHA});
           save('attempt.json', {candidate, run_id: e.GITHUB_RUN_ID, attempt: 1,
             started_at: new Date().toISOString(), retry_permitted: false});
-          // Raw Wrangler stdout/stderr are held in memory only, never logged or uploaded.
-          // No GH credential is passed to the Wrangler subprocess.
-          const childEnv = {...e};
-          delete childEnv.GH_TOKEN;
-          const result = spawnSync('npx', ['--no-install', 'wrangler', 'pages', 'deploy', 'dist',
-            '--project-name', 'classyline2', '--branch', 'main', '--commit-hash', candidate,
-            '--commit-dirty=false'], {env: childEnv, encoding: 'utf8', timeout: 240000,
-              maxBuffer: 8 * 1024 * 1024});
+          const {DirectUpload, AttemptJournal} = await import('file://' + e.GITHUB_WORKSPACE + '/control/ops/pages-direct-upload.mjs');
+          const {loadPlan, pinnedHash} = await import('file://' + e.GITHUB_WORKSPACE + '/control/ops/pages-release-artifacts.mjs');
+          const output = join(e.RUNNER_TEMP, 'classyline-direct-upload');
+          const plan = loadPlan(process.cwd(), output);
+          const transport = new DirectUpload({token:e.CLOUDFLARE_API_TOKEN});
+          const creation = await transport.stageAndCreate({plan, blake3:pinnedHash(process.cwd()),
+            journal:new AttemptJournal(join(evidence,'attempt-journal')), controlSHA:e.GITHUB_SHA,
+            // Third fail-closed boundary: no live durable checkpoint adapter yet.
+            // An Actions artifact uploaded at job end cannot prove pre-POST durability.
+            checkpoint:async () => false,
+            preflight:async () => {
+              loadPlan(process.cwd(), output);
+              await mainUnchanged();
+              const current=(await cf(root)).result;
+              check(JSON.stringify(project(current))===JSON.stringify(bindings),'Pre-upload configuration drift');
+              identity(current.canonical_deployment,baseline,baselineSHA);
+              identity((await cf(root+'/deployments/'+baseline)).result,baseline,baselineSHA);
+              const list=await history();noActive(list);
+              check(list.length===knownIDs.size && new Set(list.map(d=>d.id)).size===knownIDs.size && list.every(d=>knownIDs.has(d.id)),
+                'Production history changed before creation');
+              return list;
+            }});
+          save('creation-observation.json', creation.evidence);
+          const result={status:creation.evidence.uncertain?null:0,
+            error:creation.evidence.uncertain,signal:null};
           save('command-result.json', {exit_code: result.status, signal: result.signal,
             uncertain: Boolean(result.error || result.signal || result.status !== 0)});
-          // Observe history even after CLI failure; NEVER invoke Wrangler a second time.
+          // Observe history after uncertain creation; NEVER issue a second creation POST.
           let deployed;
           for (let attempt = 0; attempt < 6; attempt++) {
             const list = await history();
@@ -403,6 +454,8 @@ jobs:
           check(deployed, 'No deployment identified; outcome uncertain, no retry');
           const d = (await cf(root + '/deployments/' + deployed.id)).result;
           identity(d, deployed.id, candidate);
+          check(creation.returned === undefined || creation.returned === d.id,
+            'Creation response ID differs from observed deployment');
           const deployedBindings = deploymentBindings(d);
           check(d.uses_functions === true, 'Pages Functions missing');
           check(d.deployment_trigger.metadata.commit_dirty === false, 'Dirty deployment metadata');
@@ -425,14 +478,14 @@ jobs:
           save('observed-verification.json', {id: d.id, url: d.url, sha: candidate,
             environment: 'production', uses_functions: true, deployment_bindings: deployedBindings,
             project_bindings: afterBindings, rollback_deployment: baseline,
-            cli_exit_code: result.status, accepted: false});
+            creation_confirmed: result.status === 0, accepted: false});
           check(result.status === 0 && !result.error && !result.signal,
-            'Deployment observed but CLI outcome uncertain; manual review required, no retry');
-          // Acceptance is written only after every required check, including CLI certainty.
+            'Deployment observed but creation outcome uncertain; manual review required, no retry');
+          // Acceptance is written only after every required check, including creation certainty.
           save('accepted-deployment.json', {id: d.id, url: d.url, sha: candidate,
             environment: 'production', uses_functions: true, deployment_bindings: deployedBindings,
             project_bindings: afterBindings, rollback_deployment: baseline,
-            cli_exit_code: result.status, accepted: true});
+            creation_confirmed: result.status === 0, accepted: true});
           console.log(`Verified closed Production deployment: ${d.id} ${d.url}`);
           NODE
 
@@ -441,7 +494,10 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: classyline-production-evidence-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/classyline-evidence/*.json
+          path: |
+            ${{ runner.temp }}/classyline-evidence/*.json
+            ${{ runner.temp }}/classyline-evidence/attempt-journal/*.json
+            ${{ runner.temp }}/classyline-direct-upload/direct-upload-provenance.json
           if-no-files-found: ignore
           retention-days: 14
 
