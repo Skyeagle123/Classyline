@@ -1,180 +1,409 @@
-name: ClassyLine reviewed Production upload
+name: Controlled ClassyLine Production deployment
+run-name: Closed release b64e078 by @${{ github.actor }}
 
+# BLOCKED: stock Wrangler 4.150.0 retries deployment POSTs on UNKNOWN_ERROR.
+# No verified supported no-retry mode exists. Both unconditional blocks below
+# require a separately reviewed source change; inputs/variables cannot enable them.
+# Installation is NOT deployment authorization. See docs/production-deployment.md.
+# Before installation, separately disable automatic Production builds, drain
+# pending builds and verify the baseline. Configure the environment:
+# owner-only required reviewer, main-only deployment branch, no admin bypass,
+# CLOUDFLARE_API_TOKEN as an ENVIRONMENT secret (never a repository secret).
+# Keep environment variable CLASSYLINE_RELEASE_ARMED absent/false until the
+# Owner approves the exact installed workflow and release window.
+# Freeze main pushes/merges and all other deployment operators for the run.
+# Concurrency below cannot lock Cloudflare Git builds or other repositories.
 on:
   workflow_dispatch:
-    inputs:
-      approved_sha:
-        description: Exact reviewed application commit
-        required: true
-        type: string
-      expected_production_deployment:
-        description: Current Production deployment ID
-        required: true
-        type: string
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: classyline2-reviewed-production-upload
+  group: classyline2-production
   cancel-in-progress: false
 
 jobs:
-  upload:
+  deploy:
     if: >-
       github.event_name == 'workflow_dispatch' &&
+      github.repository == 'Skyeagle123/Classyline' &&
+      github.repository_id == '1096008352' &&
+      github.repository_owner_id == '125151458' &&
       github.ref == 'refs/heads/main' &&
-      github.run_attempt == 1 &&
       github.actor == 'Skyeagle123' &&
-      github.triggering_actor == 'Skyeagle123'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+      github.actor_id == '125151458' &&
+      github.triggering_actor == 'Skyeagle123' &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     environment: classyline-production
+    defaults:
+      run:
+        shell: bash
     env:
-      APPROVED_SHA: b64e078ee6ecfc5f4e124fe6d68129164f521b8a
-      APPROVED_TREE: 123889f9fd27b3f0b2138ea057efa2e762a231b1
-      APPROVED_CI_RUN: '39297195087'
-      PRODUCTION_SOURCE: 393ff88e76dcca226de7f83e148554699e85ca01
-      PRODUCTION_DEPLOYMENT: 5824179f-af77-4a18-9a23-ab22019e8ccc
-      CLOUDFLARE_EXPECTED_ACCOUNT: 4bfa1a9c849c3da50520f7a4bcccccab
+      CI: 'true'
       WRANGLER_SEND_METRICS: 'false'
+      CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+
     steps:
-      - name: Require explicit release intent and installed environment
+      - name: Block unresolved deployment transport
+        run: |
+          echo 'BLOCKED: Wrangler 4.150.0 can retry deployment creation. Strict no-retry is unresolved.'
+          exit 1
+
+      - name: Require separately armed release window
         env:
           RELEASE_ARMED: ${{ vars.CLASSYLINE_RELEASE_ARMED }}
-          INPUT_SHA: ${{ inputs.approved_sha }}
-          INPUT_DEPLOYMENT: ${{ inputs.expected_production_deployment }}
         run: |
-          set -euo pipefail
           test "$RELEASE_ARMED" = true
-          test "$INPUT_SHA" = "$APPROVED_SHA"
-          test "$INPUT_DEPLOYMENT" = "$PRODUCTION_DEPLOYMENT"
 
-      - name: Verify workflow ref, single dispatch and accepted CI
+      - name: Verify approved CI and dispatch identity
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 - <<'PY'
-          import json, os, urllib.request
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const e = process.env;
+          assert.equal(e.GITHUB_REPOSITORY, 'Skyeagle123/Classyline');
+          assert.equal(e.GITHUB_REPOSITORY_ID, '1096008352');
+          assert.equal(e.GITHUB_REPOSITORY_OWNER_ID, '125151458');
+          assert.equal(e.GITHUB_REF, 'refs/heads/main');
+          assert.equal(e.GITHUB_EVENT_NAME, 'workflow_dispatch');
+          assert.equal(e.GITHUB_ACTOR, 'Skyeagle123');
+          assert.equal(e.GITHUB_ACTOR_ID, '125151458');
+          assert.equal(e.GITHUB_TRIGGERING_ACTOR, 'Skyeagle123');
+          assert.equal(e.GITHUB_RUN_ATTEMPT, '1');
+          const base = 'https://api.github.com/repos/Skyeagle123/Classyline';
+          async function get(path) {
+            const r = await fetch(base + path, {redirect: 'error',
+              headers: {Authorization: `Bearer ${e.GH_TOKEN}`, Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28'}, signal: AbortSignal.timeout(20000)});
+            if (!r.ok) throw new Error(`GitHub read failed: HTTP ${r.status}`);
+            return r.json();
+          }
+          const r = await get('/actions/runs/39297195087');
+          assert.equal(r.repository.full_name, 'Skyeagle123/Classyline');
+          assert.equal(r.head_sha, 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a');
+          assert.equal(r.head_branch, 'fix/image-processing-limit-messages');
+          assert.equal(r.path, '.github/workflows/storefront.yml');
+          assert.equal(r.event, 'push');
+          assert.equal(r.run_attempt, 1);
+          assert.equal(r.status, 'completed');
+          assert.equal(r.conclusion, 'success');
+          const jobs = await get('/actions/runs/39297195087/attempts/1/jobs?per_page=100');
+          assert.equal(jobs.total_count, 1);
+          assert.equal(jobs.jobs.length, 1);
+          assert.equal(jobs.jobs[0].name, 'check');
+          assert.equal(jobs.jobs[0].status, 'completed');
+          assert.equal(jobs.jobs[0].conclusion, 'success');
+          // One dispatch per reviewed workflow commit, not one for all time.
+          // Even a preflight failure needs a new reviewed control commit to retry.
+          const runs = await get('/actions/workflows/classyline-production-manual.yml/runs' +
+            '?event=workflow_dispatch&head_sha=' + encodeURIComponent(e.GITHUB_SHA) + '&per_page=100');
+          assert.equal(runs.total_count, 1);
+          assert.equal(runs.workflow_runs.length, 1);
+          assert.equal(String(runs.workflow_runs[0].id), e.GITHUB_RUN_ID);
+          assert.equal(runs.workflow_runs[0].head_sha, e.GITHUB_SHA);
+          console.log('Approved candidate CI and Owner dispatch verified.');
+          NODE
 
-          base = 'https://api.github.com/repos/Skyeagle123/Classyline'
-          def get(path):
-              req = urllib.request.Request(base + path, headers={
-                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
-                  'Accept': 'application/vnd.github+json',
-                  'X-GitHub-Api-Version': '2022-11-28'})
-              with urllib.request.urlopen(req, timeout=15) as response:
-                  return json.load(response)
-
-          def require(ok, label):
-              if not ok:
-                  raise SystemExit('Release gate failed: ' + label)
-
-          require(get('/branches/main')['commit']['sha'] == os.environ['GITHUB_SHA'], 'workflow branch drift')
-          runs = get('/actions/workflows/classyline-production-manual.yml/runs?event=workflow_dispatch&per_page=100')
-          require(runs['total_count'] == 1 and len(runs['workflow_runs']) == 1 and
-                  runs['workflow_runs'][0]['id'] == int(os.environ['GITHUB_RUN_ID']),
-                  'release already attempted or run identity changed')
-          ci = get('/actions/runs/' + os.environ['APPROVED_CI_RUN'])
-          require(ci['head_sha'] == os.environ['APPROVED_SHA'] and
-                  ci['head_commit']['tree_id'] == os.environ['APPROVED_TREE'] and
-                  ci['event'] == 'push' and ci['run_attempt'] == 1 and
-                  ci['status'] == 'completed' and ci['conclusion'] == 'success',
-                  'approved source CI')
-          print('First dispatch, current main and exact approved CI verified')
-          PY
-
-      - uses: actions/checkout@v4
+      - name: Check out approved application only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, reviewed official commit
         with:
+          repository: Skyeagle123/Classyline
           ref: b64e078ee6ecfc5f4e124fe6d68129164f521b8a
+          path: app
           persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
-          cache: npm
+          node-version: '24'
 
-      - name: Verify exact application checkout
+      - name: Verify source and locked tooling
+        working-directory: app
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
-          test "$(git rev-parse HEAD^{tree})" = "$APPROVED_TREE"
-          test -z "$(git status --porcelain=v1)"
-          test -z "$(find . -maxdepth 1 -type f -name 'wrangler.*' -print)"
-
-      - name: Revalidate the reviewed application
-        run: |
-          set -euo pipefail
+          test "$(git rev-parse HEAD)" = b64e078ee6ecfc5f4e124fe6d68129164f521b8a
+          test "$(git rev-parse 'HEAD^{tree}')" = 123889f9fd27b3f0b2138ea057efa2e762a231b1
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+          test -f package-lock.json
+          for config in wrangler.toml wrangler.json wrangler.jsonc .env .env.local .dev.vars; do
+            test ! -e "$config"
+          done
           npm ci --ignore-scripts
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          assert.equal(process.versions.node.split('.')[0], '24');
+          const p = JSON.parse(readFileSync('package.json'));
+          const w = JSON.parse(readFileSync('node_modules/wrangler/package.json'));
+          assert.equal(p.devDependencies.wrangler, '4.150.0');
+          assert.equal(w.version, '4.150.0');
+          NODE
+          npx --no-install wrangler --version
+
+      - name: Validate and build complete application
+        working-directory: app
+        run: |
+          set -euo pipefail
           npm test
           npm run security:check
+          npm audit --audit-level=high
           npm run build
           npm run build:functions
-          npm audit --audit-level=high
-          test -f 'functions/api/[[path]].js'
-          test -f dist/_routes.json
-          test -f /tmp/classyline-functions-build/index.js
-          test -z "$(git status --porcelain=v1)"
-          find dist -type f -print0 | sort -z | xargs -0 sha256sum
-          sha256sum /tmp/classyline-functions-build/index.js
 
-      - name: Verify current Production and retained rollback deployment
+      - name: Record source and artifact provenance
+        working-directory: app
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {execFileSync} from 'node:child_process';
+          import {createHash} from 'node:crypto';
+          import {lstatSync, readdirSync, readFileSync, mkdirSync, writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          const evidence = join(process.env.RUNNER_TEMP, 'classyline-evidence');
+          mkdirSync(evidence, {recursive: true});
+          assert.equal(execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'],
+            {encoding: 'utf8'}), '');
+          const files = [];
+          function collect(root, label) {
+            for (const name of readdirSync(root).sort()) {
+              const path = join(root, name), stat = lstatSync(path);
+              assert(!stat.isSymbolicLink(), 'Symlink in build output');
+              if (stat.isDirectory()) collect(path, `${label}/${name}`);
+              else {
+                assert(stat.isFile(), 'Unexpected build output type');
+                files.push({path: `${label}/${name}`, bytes: stat.size,
+                  sha256: createHash('sha256').update(readFileSync(path)).digest('hex')});
+              }
+            }
+          }
+          collect('dist', 'dist');
+          collect('/tmp/classyline-functions-build', 'functions-build-check');
+          const routes = JSON.parse(readFileSync('dist/_routes.json'));
+          assert(routes.include.includes('/api/*'), 'Missing Functions routing');
+          assert(lstatSync('functions/api/[[path]].js').isFile());
+          assert(files.some(f => f.path.startsWith('functions-build-check/')), 'Missing Functions build');
+          const tracked = execFileSync('git', ['ls-files', '-z'], {encoding: 'utf8'}).split('\0').filter(Boolean);
+          for (const path of tracked) files.push({path: `source/${path}`,
+            sha256: createHash('sha256').update(readFileSync(path)).digest('hex')});
+          const provenance = {
+            application_sha: 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a',
+            application_tree: '123889f9fd27b3f0b2138ea057efa2e762a231b1',
+            workflow_sha: process.env.GITHUB_SHA, run_id: process.env.GITHUB_RUN_ID,
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT, node: process.version,
+            wrangler: '4.150.0', approved_ci: 39297195087, files
+          };
+          writeFileSync(join(evidence, 'provenance.json'), JSON.stringify(provenance, null, 2));
+          console.log(`Recorded ${files.length} source and build hashes. No credentials included.`);
+          NODE
+
+      - name: Preflight, one Wrangler invocation, and read-only verification
+        working-directory: app
+        timeout-minutes: 8
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          python3 - <<'PY'
-          import json, os, urllib.request
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {spawnSync, execFileSync} from 'node:child_process';
+          import {readFileSync, writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          const e = process.env;
+          const candidate = 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a';
+          const baseline = '5824179f-af77-4a18-9a23-ab22019e8ccc';
+          const baselineSHA = '393ff88e76dcca226de7f83e148554699e85ca01';
+          const projectID = '25d5c0d3-f248-4d69-b5a3-feacfcb66dec';
+          const root = '/accounts/4bfa1a9c849c3da50520f7a4bcccccab/pages/projects/classyline2';
+          const evidence = join(e.RUNNER_TEMP, 'classyline-evidence');
+          function save(name, data) {
+            writeFileSync(join(evidence, name), JSON.stringify(data, null, 2));
+          }
+          function check(ok, message) { if (!ok) throw new Error(message); }
+          // A second immutable gate remains if workflow step ordering is changed.
+          const NO_RETRY_TRANSPORT_VERIFIED = false;
+          check(NO_RETRY_TRANSPORT_VERIFIED, 'BLOCKED: no verified supported no-retry deployment transport');
+          check(Boolean(e.CLOUDFLARE_API_TOKEN), 'Missing protected environment token; stop');
+          assert.equal(e.CLOUDFLARE_ACCOUNT_ID, '4bfa1a9c849c3da50520f7a4bcccccab');
+          // Read-only calls have bounded timeouts and no automatic retry. Never log bodies.
+          async function cf(path) {
+            const r = await fetch('https://api.cloudflare.com/client/v4' + path, {
+              redirect: 'error', headers: {Authorization: `Bearer ${e.CLOUDFLARE_API_TOKEN}`},
+              signal: AbortSignal.timeout(20000)});
+            if (!r.ok) throw new Error(`Cloudflare read failed: HTTP ${r.status}`);
+            const body = await r.json();
+            check(body.success === true, 'Cloudflare read failed');
+            return body;
+          }
+          async function mainUnchanged() {
+            const r = await fetch('https://api.github.com/repos/Skyeagle123/Classyline/git/ref/heads/main', {
+              redirect: 'error', headers: {Authorization: `Bearer ${e.GH_TOKEN}`,
+                Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'},
+              signal: AbortSignal.timeout(20000)});
+            check(r.ok, 'Cannot verify main release freeze');
+            const ref = await r.json();
+            check(ref.object?.sha === e.GITHUB_SHA, 'main changed after dispatch; stop');
+          }
+          function config(c, database, bucket) {
+            check(c?.compatibility_date === '2025-11-13', 'Unexpected compatibility date');
+            check(Array.isArray(c.compatibility_flags) && c.compatibility_flags.length === 0,
+              'Unexpected compatibility flags');
+            check(c.usage_model === 'standard', 'Unexpected runtime usage model');
+            check(!c.placement?.mode || c.placement.mode === 'off', 'Unexpected placement');
+            check(Object.keys(c.d1_databases ?? {}).length === 1 && c.d1_databases.DB?.id === database,
+              'Unexpected D1 binding');
+            check(Object.keys(c.r2_buckets ?? {}).length === 1 && c.r2_buckets.PRODUCT_IMAGES?.name === bucket,
+              'Unexpected R2 binding');
+            for (const key of ['ADMIN_PASSWORD_HASH', 'ADMIN_PASSWORD_SALT'])
+              check(c.env_vars?.[key]?.type === 'secret_text', 'Missing encrypted Admin secret');
+            return {d1_id: database, r2_bucket: bucket, compatibility_date: c.compatibility_date,
+              compatibility_flags: c.compatibility_flags, usage_model: c.usage_model,
+              placement: c.placement?.mode ?? 'default', encrypted_admin_secrets_present: true};
+          }
+          function project(p) {
+            check(p.id === projectID && p.name === 'classyline2' && p.production_branch === 'main',
+              'Wrong Cloudflare project or Production branch');
+            check(p.source?.type === 'github' && p.source.config?.owner === 'Skyeagle123' &&
+              p.source.config.repo_name === 'Classyline' &&
+              p.source.config.production_deployments_enabled === false,
+              'Automatic Production builds must be disabled and independently verified before installation');
+            return {
+              production: config(p.deployment_configs?.production,
+                '10c800b1-ddf7-427b-8354-9cf8529782b6', 'classyline-storefront-production-images'),
+              preview: config(p.deployment_configs?.preview,
+                'ce1d28f3-f20b-485d-9799-619a7fc52ade', 'classyline-storefront-preview-images')
+            };
+          }
+          function identity(d, id, sha) {
+            const m = d?.deployment_trigger?.metadata;
+            check(d?.id === id && d.project_id === projectID && d.project_name === 'classyline2' &&
+              d.environment === 'production' && m?.branch === 'main' && m.commit_hash === sha &&
+              d.is_skipped !== true && d.latest_stage?.name === 'deploy' &&
+              d.latest_stage.status === 'success', 'Deployment identity/status mismatch');
+          }
+          async function history() {
+            const all = [];
+            for (let page = 1; page <= 10; page++) {
+              const b = await cf(root + `/deployments?env=production&per_page=100&page=${page}`);
+              check(Array.isArray(b.result), 'Missing deployment history');
+              check(b.result.every(d => d.environment === 'production'), 'Unexpected history environment');
+              all.push(...b.result);
+              if (b.result_info?.total_pages != null) {
+                if (page >= b.result_info.total_pages) return all;
+              } else if (b.result.length < 100) return all;
+            }
+            throw new Error('Deployment history exceeds verification bound');
+          }
+          function noActive(list) {
+            for (const d of list) {
+              const s = d.latest_stage;
+              check(d.is_skipped === true || ['failure', 'canceled', 'cancelled'].includes(s?.status) ||
+                (s?.name === 'deploy' && s.status === 'success'), 'Competing/unknown Production deployment');
+            }
+          }
+          await mainUnchanged();
+          const p = (await cf(root)).result;
+          const bindings = project(p);
+          identity(p.canonical_deployment, baseline, baselineSHA);
+          identity((await cf(root + '/deployments/' + baseline)).result, baseline, baselineSHA);
+          const before = await history();
+          noActive(before);
+          check(!before.some(d => d.deployment_trigger?.metadata?.commit_hash === candidate),
+            'Candidate already has a Production attempt; inspect history instead of retrying');
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(), candidate);
+          assert.equal(execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'],
+            {encoding: 'utf8'}), '');
+          // Rehash the actual deploy inputs immediately before the single invocation.
+          const {createHash} = await import('node:crypto');
+          const provenance = JSON.parse(readFileSync(join(evidence, 'provenance.json')));
+          for (const f of provenance.files) {
+            const path = f.path.startsWith('source/') ? f.path.slice(7) :
+              f.path.startsWith('functions-build-check/') ?
+                '/tmp/classyline-functions-build/' + f.path.slice('functions-build-check/'.length) : f.path;
+            check(createHash('sha256').update(readFileSync(path)).digest('hex') === f.sha256,
+              'Build/source changed after provenance recording');
+          }
+          await mainUnchanged();
+          // Final canonical/history check narrows the race; external operator freeze is still mandatory.
+          const finalProject = (await cf(root)).result;
+          project(finalProject);
+          identity(finalProject.canonical_deployment, baseline, baselineSHA);
+          const finalHistory = await history();
+          noActive(finalHistory);
+          check(!finalHistory.some(d => d.deployment_trigger?.metadata?.commit_hash === candidate),
+            'Candidate Production attempt appeared during preflight');
+          const knownIDs = new Set(finalHistory.map(d => d.id));
+          save('preflight.json', {baseline, baseline_sha: baselineSHA, bindings,
+            known_production_deployments: [...knownIDs], workflow_sha: e.GITHUB_SHA});
+          save('attempt.json', {candidate, run_id: e.GITHUB_RUN_ID, attempt: 1,
+            started_at: new Date().toISOString(), retry_permitted: false});
+          // Raw Wrangler stdout/stderr are held in memory only, never logged or uploaded.
+          // No GH credential is passed to the Wrangler subprocess.
+          const childEnv = {...e};
+          delete childEnv.GH_TOKEN;
+          const result = spawnSync('npx', ['--no-install', 'wrangler', 'pages', 'deploy', 'dist',
+            '--project-name', 'classyline2', '--branch', 'main', '--commit-hash', candidate,
+            '--commit-dirty=false'], {env: childEnv, encoding: 'utf8', timeout: 240000,
+              maxBuffer: 8 * 1024 * 1024});
+          save('command-result.json', {exit_code: result.status, signal: result.signal,
+            uncertain: Boolean(result.error || result.signal || result.status !== 0)});
+          // Observe history even after CLI failure; NEVER invoke Wrangler a second time.
+          let deployed;
+          for (let attempt = 0; attempt < 6; attempt++) {
+            const list = await history();
+            const fresh = list.filter(d => !knownIDs.has(d.id));
+            check(fresh.length <= 1, 'Multiple Production deployments appeared; stop and investigate');
+            if (fresh.length === 1) {
+              deployed = fresh[0];
+              save('observed-deployment.json', {id: deployed.id, environment: deployed.environment,
+                sha: deployed.deployment_trigger?.metadata?.commit_hash,
+                status: deployed.latest_stage?.status});
+              check(deployed.deployment_trigger?.metadata?.commit_hash === candidate,
+                'Unexpected new Production source; stop');
+              if (deployed.latest_stage?.name === 'deploy' && deployed.latest_stage.status === 'success') break;
+              check(!['failure', 'canceled', 'cancelled'].includes(deployed.latest_stage?.status),
+                'Production deployment failed; inspect before emergency rollback');
+            }
+            if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+          check(deployed, 'No deployment identified; outcome uncertain, no retry');
+          const d = (await cf(root + '/deployments/' + deployed.id)).result;
+          identity(d, deployed.id, candidate);
+          check(d.uses_functions === true, 'Pages Functions missing');
+          check(d.deployment_trigger.metadata.commit_dirty === false, 'Dirty deployment metadata');
+          check(d.compatibility_date === '2025-11-13' && Array.isArray(d.compatibility_flags) &&
+            d.compatibility_flags.length === 0, 'Deployed runtime differs');
+          check(d.url === `https://${d.id.slice(0, 8)}.classyline2.pages.dev`, 'Unexpected deployment URL');
+          const after = (await cf(root)).result;
+          const afterBindings = project(after);
+          identity(after.canonical_deployment, d.id, candidate);
+          check(JSON.stringify(afterBindings) === JSON.stringify(bindings), 'Bindings changed');
+          identity((await cf(root + '/deployments/' + baseline)).result, baseline, baselineSHA);
+          noActive(await history());
+          await mainUnchanged();
+          save('verified-deployment.json', {id: d.id, url: d.url, sha: candidate,
+            environment: 'production', uses_functions: true, bindings: afterBindings,
+            rollback_deployment: baseline, cli_exit_code: result.status});
+          check(result.status === 0 && !result.error && !result.signal,
+            'Deployment observed but CLI outcome uncertain; manual review required, no retry');
+          console.log(`Verified closed Production deployment: ${d.id} ${d.url}`);
+          NODE
 
-          def require(ok, label):
-              if not ok:
-                  raise SystemExit('Production gate failed: ' + label)
+      - name: Retain credential-free release evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: classyline-production-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/classyline-evidence/*.json
+          if-no-files-found: ignore
+          retention-days: 14
 
-          account = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '')
-          token = os.environ.get('CLOUDFLARE_API_TOKEN', '')
-          require(account == os.environ['CLOUDFLARE_EXPECTED_ACCOUNT'] and bool(token), 'credential configuration')
-          base = 'https://api.cloudflare.com/client/v4/accounts/' + account + '/pages/projects/classyline2'
-          def get(path):
-              req = urllib.request.Request(base + path, headers={'Authorization': 'Bearer ' + token})
-              with urllib.request.urlopen(req, timeout=15) as response:
-                  body = json.load(response)
-              require(body.get('success') is True and isinstance(body.get('result'), dict), 'API response')
-              return body['result']
-
-          project = get('')
-          require(project.get('name') == 'classyline2' and project.get('production_branch') == 'main', 'project identity')
-          source = project.get('source') or {}
-          config = source.get('config') or {}
-          require(source.get('type') == 'github' and config.get('owner') == 'Skyeagle123' and
-                  config.get('repo_name') == 'Classyline' and
-                  config.get('production_deployments_enabled') is False,
-                  'Git integration must not deploy main automatically')
-          live = project.get('canonical_deployment') or {}
-          require(live.get('id') == os.environ['PRODUCTION_DEPLOYMENT'] and
-                  live.get('environment') == 'production' and
-                  (live.get('deployment_trigger') or {}).get('metadata', {}).get('commit_hash') == os.environ['PRODUCTION_SOURCE'],
-                  'Production baseline changed')
-          prod = (project.get('deployment_configs') or {}).get('production') or {}
-          require((prod.get('d1_databases') or {}).get('DB', {}).get('id') == '10c800b1-ddf7-427b-8354-9cf8529782b6' and
-                  (prod.get('r2_buckets') or {}).get('PRODUCT_IMAGES', {}).get('name') == 'classyline-storefront-production-images' and
-                  str(prod.get('compatibility_date', '')).split('T')[0] == '2025-11-13' and
-                  prod.get('compatibility_flags') == [], 'Production bindings or compatibility changed')
-          retained = get('/deployments/' + os.environ['PRODUCTION_DEPLOYMENT'])
-          require(retained.get('id') == live['id'] and retained.get('environment') == 'production', 'rollback deployment unavailable')
-          print('Exact Production source, deployment, bindings and rollback identity verified')
-          PY
-
-      - name: Upload exact reviewed application once
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
-          test -z "$(git status --porcelain=v1)"
-          npx --no-install wrangler pages deploy dist \
-            --project-name classyline2 --branch main \
-            --commit-hash "$APPROVED_SHA" --commit-dirty=false
-          # An uncertain response requires manual deployment-history inspection.
-          # No automatic retry, rollback, data migration or second upload occurs here.
+      # No automatic rollback, rerun, migration, data restore, application login,
+      # catalog/checkout request, or D1/R2 write. Failure requires history review.
