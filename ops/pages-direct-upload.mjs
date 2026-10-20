@@ -98,7 +98,7 @@ export async function verifyFunctions(bundle, routing, routes) {
   // accepted only at the exact approved runtime). No binding/resource overrides.
   check(Object.keys(metadata).every(k => ['main_module','compatibility_date','compatibility_flags'].includes(k)),
     'Functions metadata override');
-  check(typeof metadata.main_module === 'string' && names.includes(metadata.main_module), 'Functions main module missing');
+  check(typeof metadata.main_module === 'string' && metadata.main_module !== 'metadata' && names.includes(metadata.main_module), 'Functions main module missing');
   check(metadata.compatibility_date === undefined || metadata.compatibility_date === RELEASE.date, 'Functions date mismatch');
   check(metadata.compatibility_flags === undefined || (Array.isArray(metadata.compatibility_flags) && !metadata.compatibility_flags.length), 'Functions flags mismatch');
   const modules = [];
@@ -181,6 +181,14 @@ export function verifyPlan(plan, blake3) {
     check(pagesKey(a.bytes,a.path,blake3) === a.key && sha256(a.bytes) === a.sha256 &&
       ['path','key','sha256','contentType'].every(k=>a[k]===recorded[k]), 'Asset hash mismatch');
   }
+  // Require exact ordinary-file coverage, not merely self-consistent recorded hashes.
+  const ordinaryFiles = plan.evidence.files.filter(f =>
+    !['_headers', '_redirects', '_routes.json'].includes(f.path));
+  const expectedPaths = ordinaryFiles.map(f => '/' + f.path);
+  check(new Set(expectedPaths).size === expectedPaths.length &&
+    Object.keys(plan.manifest).length === expectedPaths.length &&
+    expectedPaths.every(path => Object.hasOwn(plan.manifest, path)),
+    'Incomplete static manifest coverage');
   const keys = new Set(plan.assets.map(a=>a.key));
   check(Object.values(plan.manifest).every(k=>keys.has(k)) &&
     [...keys].every(k=>Object.values(plan.manifest).includes(k)), 'Manifest key mismatch');
