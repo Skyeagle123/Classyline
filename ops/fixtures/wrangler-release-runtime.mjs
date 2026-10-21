@@ -36,6 +36,9 @@ Object.assign(process.env, {
   NODE_OPTIONS: '--require=/forbidden', CLASSYLINE_RELEASE_ARMED: 'true', RELEASE_ARMED: 'true',
 });
 if (scenario === 'missing-arm') delete process.env.RELEASE_ARMED;
+if (scenario === 'false-arm') process.env.RELEASE_ARMED = 'false';
+if (scenario === 'empty-arm') process.env.RELEASE_ARMED = '';
+if (scenario === 'uppercase-arm') process.env.RELEASE_ARMED = 'TRUE';
 const evidence = join(temp, 'classyline-evidence');
 mkdirSync(evidence);
 const app = join(temp, 'app');

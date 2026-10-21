@@ -1,19 +1,22 @@
 # ClassyLine closed Production release — preparation only
 
-**DEPLOYMENT BLOCKED.** The Owner authorized simplifying PR #4, not installing,
-merging, dispatching or deploying it. No credential provisioning, Cloudflare
-configuration change or D1/R2 operation is authorized by this package.
+**PREPARATION ONLY.** This candidate removes the final source-review blocker;
+it does not authorize merge, release-arm activation, dispatch or deployment.
+No credential provisioning, Cloudflare configuration change or D1/R2 operation
+is authorized by this package. After installation, the runtime arm and protected
+environment are the operative release gates; no unconditional blocker remains.
 
 ## Installed controller and activation preparation
 
-The Owner installed the reviewed disabled controller on `main` at
-`d1f4b4fc55838e71bf2f4dcb9e0caadfb2a0d240`. Its tree
-`c0be2b408ec17dc00004b2993bc9b7bb9066ab14` exactly matches reviewed PR #4.
-This installation did not replace the baseline application deployment.
+The starting `main` is `d22ea0be89a2dd18ae5418391f008062761bf36e`, tree
+`a02b5145af9ce6dcd7f9186b1dd7ccb3c51b6202`, which installed reviewed PR #6.
+The obsolete first-step exit is already removed. This candidate changes only
+the remaining `RELEASE_IMPLEMENTATION_REVIEWED` literal from false to true in
+executable Production workflow code, with related comments, tests and documentation.
+It does not change the approved application or the served baseline deployment.
 
-The activation-preparation candidate retains **both** unconditional review stops.
-No gate change is necessary to prepare the real compatibility correction: the
-authenticated Pages deployment-history endpoint rejects `per_page=100` with
+The accepted pagination correction remains unchanged. The authenticated Pages
+deployment-history endpoint rejects `per_page=100` with
 HTTP 400 / error `8000024`, while `per_page=10` succeeds. The controller now
 reads ten records per page and refuses histories exceeding ten complete pages
 (100 records). It requires all five observed Pages `result_info` fields:
@@ -40,18 +43,21 @@ it receives no deployment credentials and cannot deploy.
 Authenticated read-only preflight confirmed the fixed baseline deployment and
 rollback candidate are successful, automatic Production builds are disabled,
 and Production/Preview D1/R2 identities and runtime settings match this document.
-The complete 16-entry Production history contained no active non-skipped build.
-The installed-controller commit has a skipped Pages record; it is not an active
-build or a replacement for the canonical baseline. No configuration was changed.
+The complete 18-entry Production history contained no active non-skipped build.
+The three installed-controller commits have explicitly skipped Pages records;
+none replaces the canonical baseline. No configuration was changed.
 
-The GitHub Plugin does not expose the environment rules, secret metadata or
-environment variable endpoints. Therefore the actual reviewer, self-review,
-administrator-bypass and main-only branch settings, token-secret presence and
-release-arm value remain **unverified** by this preparation package. Do not infer
-them from workflow YAML or the environment name. Their saved state must be
-verified before any later authorized enablement or release. Do not dispatch this
-blocked workflow merely to test the environment: any attempted dispatch consumes
-the one approved workflow execution operationally.
+Owner-provided screenshots establish reviewer `Skyeagle123`, self-review allowed,
+administrator bypass disabled, main-only deployment branches, the environment
+secret name `CLOUDFLARE_API_TOKEN` and no environment variables. These are Owner
+evidence, not independent API readback. The GitHub Plugin rejects environment and
+repository-variable endpoints, so the effective `CLASSYLINE_RELEASE_ARMED` value
+remains unverified. GitHub reports the repository owner as type `User`; organization
+variable inheritance does not apply to this personal repository. Repository
+variables may still supply the arm when no environment override exists. Verify
+the effective arm is absent/false before any merge of this candidate. Do not
+dispatch merely to test the environment: any attempted dispatch consumes the one
+approved workflow execution operationally.
 
 ## Fixed release identities
 
@@ -114,11 +120,15 @@ Version-specific and official references:
 
 ## Guarded workflow
 
-`.github/workflows/classyline-production-manual.yml` remains disabled by an
-unconditional first-step `exit 1` and a second literal
-`RELEASE_IMPLEMENTATION_REVIEWED = false` check. Passing tests, adding secrets or
-arming an environment cannot enable deployment. Removing these review stops
-requires a separately reviewed and authorized source change.
+`.github/workflows/classyline-production-manual.yml` now proposes
+`RELEASE_IMPLEMENTATION_REVIEWED = true`. No unconditional deployment stop remains
+in this candidate. Both the first shell step and the deployment script require
+the effective runtime `RELEASE_ARMED` to equal the exact string `true`; absent,
+empty, false and other values are refused. The runtime check precedes Cloudflare
+requests and the deployment invocation. Setting a true inherited repository arm
+would satisfy these checks, so an empty environment-variable list alone does not
+establish that the workflow is unarmed. Separate review, merge and release-window
+authorization remain required.
 
 The guarded path retains:
 
@@ -209,8 +219,9 @@ secret. Deleting the GitHub secret alone does not revoke the Cloudflare token.
 Each mutation below requires separate Owner authorization; none is performed by
 this preparation package.
 
-1. Independently review the exact simplified PR SHA/tree and its offline CI. Keep
-   both unconditional review stops until a separately reviewed enablement change.
+1. Independently review this exact final-gate candidate SHA/tree and its offline
+   CI. Verify the effective release arm is absent/false before separately
+   authorizing merge; this candidate removes the last unconditional source stop.
 2. Freeze main updates, merges and other deployment operators. Separately disable
    automatic Production Git builds, read back the setting, drain pending builds
    and verify the accepted baseline. Actions gates cannot stop Cloudflare's
@@ -270,8 +281,10 @@ customer records must be preserved and reconciled under separate authorization.
 
 The credential-free PR4 validation workflow runs syntax checks and the relevant
 controller tests. Extracted workflow scripts execute only against mocked APIs and
-an intercepted CLI boundary. Test-only enablement does not change the committed
-hard stops. Cases must cover one deployment invocation, uncertainty without replay,
+an intercepted CLI boundary. Tests do not flip the source-review flag; they run
+the proposed enabled script with mocked API/process boundaries. Explicit absent,
+false, empty and uppercase arm regressions require zero Cloudflare calls and zero
+deployment invocations. Cases also cover one invocation, uncertainty without replay,
 multiple deployments, drift, binding mismatch, rollback failure, unauthorized
 identity, absent arm and credential-safe evidence.
 

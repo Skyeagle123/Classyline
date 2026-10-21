@@ -1,7 +1,7 @@
 name: Controlled ClassyLine Production deployment
 run-name: Closed release b64e078 by @${{ github.actor }}
 
-# BLOCKED: the remaining source-level review gate requires a separately reviewed change.
+# Release execution requires separate Owner approval and an explicitly armed window.
 # Owner policy: one workflow execution / one pages deploy invocation; Wrangler's
 # internal UNKNOWN_ERROR retries are accepted. This is NOT a single-HTTP-POST guarantee.
 # Installation is NOT deployment authorization. See docs/production-deployment.md.
@@ -245,8 +245,8 @@ jobs:
             writeFileSync(join(evidence, name), JSON.stringify(data, null, 2));
           }
           function check(ok, message) { if (!ok) throw new Error(message); }
-          // A second immutable gate remains if workflow step ordering is changed.
-          const RELEASE_IMPLEMENTATION_REVIEWED = false;
+          // Source-review gate; the independent runtime release arm must also pass.
+          const RELEASE_IMPLEMENTATION_REVIEWED = true;
           check(RELEASE_IMPLEMENTATION_REVIEWED, 'BLOCKED: Wrangler release implementation awaits independent review');
           check(e.RELEASE_ARMED === 'true', 'Release window is not armed');
           check(Boolean(e.CLOUDFLARE_API_TOKEN), 'Missing protected environment token; stop');

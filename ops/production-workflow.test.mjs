@@ -1,5 +1,5 @@
 // Tests execute the committed workflow script with read-only APIs and CLI mocked.
-// Only the immutable review gate is instrumented; release checks stay unchanged.
+// The source-review flag is not instrumented; release checks stay unchanged.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdtempSync, rmSync} from 'node:fs';
@@ -15,9 +15,8 @@ const release = scripts.at(-1).replace("import {execFileSync, spawn} from 'node:
   .replaceAll('/tmp/classyline-functions-build', './functions-build')
   .replace("setTimeout(() => finish(null, 'SIGKILL', true), 180000)", "setTimeout(() => finish(null, 'SIGKILL', true), 20)");
 assert.notEqual(release, scripts.at(-1), 'Real subprocess import must be mocked');
-const instrumented = release.replace('const RELEASE_IMPLEMENTATION_REVIEWED = false;',
-  'const RELEASE_IMPLEMENTATION_REVIEWED = true;');
-assert.notEqual(release, instrumented, 'Immutable review gate must remain');
+assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = true;/);
+const instrumented = release; // Only API/process boundaries and deadlines are mocked.
 const releaseMock = readFileSync(new URL('./fixtures/wrangler-release-runtime.mjs', import.meta.url), 'utf8');
 const ciMock = "\nconst scenario=process.argv[2];\nObject.assign(process.env,{GITHUB_REPOSITORY:'Skyeagle123/Classyline',GITHUB_REPOSITORY_ID:'1096008352',GITHUB_REPOSITORY_OWNER_ID:'125151458',GITHUB_REF:'refs/heads/main',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_ACTOR:'Skyeagle123',GITHUB_ACTOR_ID:'125151458',GITHUB_TRIGGERING_ACTOR:'Skyeagle123',GITHUB_RUN_ATTEMPT:'1',GITHUB_SHA:'workflow-commit',GITHUB_RUN_ID:'123'});\nif(scenario==='foreign-repo')process.env.GITHUB_REPOSITORY='other/Classyline';\nif(scenario==='foreign-repo-id')process.env.GITHUB_REPOSITORY_ID='other';\nif(scenario==='foreign-owner')process.env.GITHUB_REPOSITORY_OWNER_ID='other';\nif(scenario==='wrong-ref')process.env.GITHUB_REF='refs/heads/feature';\nif(scenario==='push-event')process.env.GITHUB_EVENT_NAME='push';\nif(scenario==='wrong-actor')process.env.GITHUB_ACTOR='other';\nif(scenario==='wrong-actor-id')process.env.GITHUB_ACTOR_ID='other';\nif(scenario==='wrong-trigger')process.env.GITHUB_TRIGGERING_ACTOR='other';\nif(scenario==='rerun')process.env.GITHUB_RUN_ATTEMPT='2';\nglobalThis.fetch=async(url)=>{let body;\n if(url.includes('/actions/workflows/')){body={total_count:scenario==='prior-dispatch'?2:1,workflow_runs:[{id:123,head_sha:'workflow-commit'}]};if(scenario==='wrong-dispatch-id')body.workflow_runs[0].id=124;}else if(url.includes('/jobs?')){body={total_count:1,jobs:[{name:'check',status:'completed',conclusion:'success'}]};if(scenario==='failed-job')body.jobs[0].conclusion='failure';if(scenario==='extra-job')body.total_count=2;}\n else{body={repository:{full_name:'Skyeagle123/Classyline'},head_sha:'b64e078ee6ecfc5f4e124fe6d68129164f521b8a',head_branch:'fix/image-processing-limit-messages',path:'.github/workflows/storefront.yml',event:'push',run_attempt:1,status:'completed',conclusion:'success'};\n if(scenario==='wrong-ci-sha')body.head_sha='bad';if(scenario==='failed-ci')body.conclusion='failure';if(scenario==='running-ci')body.status='in_progress';if(scenario==='ci-rerun')body.run_attempt=2;if(scenario==='wrong-ci-repo')body.repository.full_name='bad';if(scenario==='wrong-workflow')body.path='other.yml';}\n return {ok:scenario!=='api-denied',status:403,json:async()=>body};};\n";
 function run(script, mock, scenario) {
@@ -55,18 +54,18 @@ test('manual only, fixed identity, protected environment, minimal permissions an
   assert.equal((scripts.at(-1).match(/spawn\('npx'/g) || []).length, 1);
   assert.doesNotMatch(yaml, /DirectUpload|AttemptJournal|stageAndCreate|pages-r2-|pages-qualification-|pages-release-artifacts/);
 });
-test('first workflow step requires the release arm, while the independent source gate remains false', () => {
+test('first workflow step requires the release arm, while the source-review gate is enabled', () => {
   const steps = yaml.slice(yaml.indexOf('    steps:'));
   const first = steps.slice(0, steps.indexOf('      - name:', steps.indexOf('      - name:') + 1));
   assert.match(first, /- name: Require separately armed release window/);
   assert.match(first, /test "\$RELEASE_ARMED" = true/);
   assert.doesNotMatch(first, /\bexit 1\b/);
-  assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = false;/);
+  assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = true;/);
 });
-for (const scenario of ['success', 'uncertain-but-deployed', 'missing-arm']) test(`unmodified release gate blocks ${scenario} before any API or deployment invocation`, () => {
+for (const scenario of ['missing-arm', 'false-arm', 'empty-arm', 'uppercase-arm']) test(`runtime release arm blocks ${scenario} before any API or deployment invocation`, () => {
   const r = run(release, releaseMock, scenario), info = report(r);
   assert.notEqual(r.status, 0);
-  assert.match(r.stderr, /BLOCKED/);
+  assert.match(r.stderr, /Release window is not armed/);
   assert.equal(info.calls, 0);
   assert.equal(info.historyReads, 0);
   assert.equal(info.projectReads, 0);
