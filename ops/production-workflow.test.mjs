@@ -55,14 +55,16 @@ test('manual only, fixed identity, protected environment, minimal permissions an
   assert.equal((scripts.at(-1).match(/spawn\('npx'/g) || []).length, 1);
   assert.doesNotMatch(yaml, /DirectUpload|AttemptJournal|stageAndCreate|pages-r2-|pages-qualification-|pages-release-artifacts/);
 });
-test('first workflow step unconditionally stops before checkout or secret use', () => {
+test('first workflow step requires the release arm, while the independent source gate remains false', () => {
   const steps = yaml.slice(yaml.indexOf('    steps:'));
   const first = steps.slice(0, steps.indexOf('      - name:', steps.indexOf('      - name:') + 1));
-  assert.match(first, /^          exit 1$/m);
-  assert(yaml.indexOf('exit 1') < yaml.indexOf('uses: actions/checkout'));
+  assert.match(first, /- name: Require separately armed release window/);
+  assert.match(first, /test "\$RELEASE_ARMED" = true/);
+  assert.doesNotMatch(first, /\bexit 1\b/);
+  assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = false;/);
 });
-test('unmodified release script blocks before any API or deployment invocation', () => {
-  const r = run(release, releaseMock, 'success'), info = report(r);
+for (const scenario of ['success', 'uncertain-but-deployed', 'missing-arm']) test(`unmodified release gate blocks ${scenario} before any API or deployment invocation`, () => {
+  const r = run(release, releaseMock, scenario), info = report(r);
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /BLOCKED/);
   assert.equal(info.calls, 0);

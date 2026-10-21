@@ -1,8 +1,7 @@
 name: Controlled ClassyLine Production deployment
 run-name: Closed release b64e078 by @${{ github.actor }}
 
-# BLOCKED: simplified Wrangler release requires independent review and installation approval.
-# Both unconditional stops require a separately reviewed source change.
+# BLOCKED: the remaining source-level review gate requires a separately reviewed change.
 # Owner policy: one workflow execution / one pages deploy invocation; Wrangler's
 # internal UNKNOWN_ERROR retries are accepted. This is NOT a single-HTTP-POST guarantee.
 # Installation is NOT deployment authorization. See docs/production-deployment.md.
@@ -49,11 +48,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
 
     steps:
-      - name: Block deployment pending independent review
-        run: |
-          echo 'BLOCKED: Wrangler simplification requires independent review and separate installation approval.'
-          exit 1
-
       - name: Require separately armed release window
         env:
           RELEASE_ARMED: ${{ vars.CLASSYLINE_RELEASE_ARMED }}
