@@ -331,14 +331,16 @@ jobs:
           }
           async function history() {
             const all = [];
+            // Pages rejects per_page=100. Use the live-verified page size;
+            // refuse histories exceeding ten complete pages rather than truncate.
             for (let page = 1; page <= 10; page++) {
-              const b = await cf(root + `/deployments?env=production&per_page=100&page=${page}`);
+              const b = await cf(root + `/deployments?env=production&per_page=10&page=${page}`);
               check(Array.isArray(b.result), 'Missing deployment history');
               check(b.result.every(d => d.environment === 'production'), 'Unexpected history environment');
               all.push(...b.result);
               if (b.result_info?.total_pages != null) {
                 if (page >= b.result_info.total_pages) return all;
-              } else if (b.result.length < 100) return all;
+              } else if (b.result.length < 10) return all;
             }
             throw new Error('Deployment history exceeds verification bound');
           }

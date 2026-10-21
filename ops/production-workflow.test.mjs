@@ -79,7 +79,9 @@ for (const arm of [undefined, '', 'false', 'TRUE', 'true']) test(`explicit arm $
 const afterInvoke = new Set(['success', 'wrong-source', 'missing-functions', 'failed-deployment',
   'unknown-status', 'dirty-metadata', 'wrong-deployed-flags', 'multiple-new',
   'uncertain-no-deployment', 'uncertain-but-deployed', 'nonzero-cli', 'signal-cli', 'spawn-throws',
-  'timeout-cli', 'parent-cancelled', 'post-config-drift']);
+  'timeout-cli', 'parent-cancelled', 'post-config-drift',
+  'paginated-success', 'paginated-no-info-success', 'paginated-late-competitor']);
+const acceptedCases = new Set(['success', 'paginated-success', 'paginated-no-info-success']);
 const releaseCases = [...afterInvoke, 'missing-arm', 'missing-token', 'main-changed', 'wrong-project', 'wrong-baseline',
   'wrong-d1', 'wrong-r2', 'missing-d1', 'missing-r2', 'extra-d1', 'extra-r2', 'unsafe-flags', 'wrong-date',
   'missing-secret', 'unexpected-placement', 'wrong-preview', 'rollback-missing', 'rollback-source-mismatch',
@@ -88,16 +90,27 @@ const releaseCases = [...afterInvoke, 'missing-arm', 'missing-token', 'main-chan
   'late-competing-build', 'late-completed-competitor', 'late-rollback-failure',
   'extra-dist', 'omitted-dist', 'duplicate-dist-record', 'symlink-dist', 'wrong-dist-size',
   'extra-functions', 'omitted-functions', 'duplicate-functions-record', 'symlink-functions',
-  'local-override', 'late-added-dist', 'late-local-override', 'late-modified-functions'];
+  'local-override', 'late-added-dist', 'late-local-override', 'late-modified-functions',
+  'paginated-competing', 'paginated-no-info-competing', 'paginated-bound-exceeded'];
 for (const scenario of releaseCases) test(`actual workflow preflight / single invocation / verification: ${scenario}`, () => {
   const r = run(instrumented, releaseMock, scenario), info = report(r);
-  assert.equal(Boolean(info.artifacts['accepted-deployment.json']), scenario === 'success');
+  assert.equal(Boolean(info.artifacts['accepted-deployment.json']), acceptedCases.has(scenario));
   assert.equal(info.artifacts['verified-deployment.json'], undefined);
   assert.equal(info.calls, afterInvoke.has(scenario) ? 1 : 0, r.stderr);
-  assert.equal(r.status === 0, scenario === 'success', r.stderr);
+  assert.equal(r.status === 0, acceptedCases.has(scenario), r.stderr);
+  if (acceptedCases.has(scenario) && scenario.startsWith('paginated-')) {
+    assert.equal(info.historyReads, 10, 'All five history snapshots must read both pages');
+    assert.equal(info.artifacts['preflight.json'].known_production_deployments.length, 11);
+  }
   if (['uncertain-but-deployed', 'nonzero-cli', 'signal-cli', 'spawn-throws', 'timeout-cli', 'parent-cancelled'].includes(scenario))
     assert.equal(info.artifacts['observed-verification.json'].accepted, false);
   if (info.calls && scenario !== 'spawn-throws') assert.equal(info.kills, 1);
+});
+test('Pages deployment-history pagination uses the live-supported bounded page size', () => {
+  assert.match(scripts.at(-1), /deployments\?env=production&per_page=10&page=/);
+  assert.doesNotMatch(scripts.at(-1), /deployments\?env=production&per_page=100/);
+  assert.match(scripts.at(-1), /else if \(b\.result\.length < 10\) return all;/);
+  assert.match(scripts.at(-1), /Deployment history exceeds verification bound/);
 });
 const ciCases = ['success','foreign-repo','foreign-repo-id','foreign-owner','wrong-ref','push-event',
  'wrong-actor','wrong-actor-id','wrong-trigger','rerun','failed-job','extra-job','wrong-ci-sha',

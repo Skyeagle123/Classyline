@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - phase/manual-production-deployment-preparation
+      - phase/production-activation-preparation
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +11,8 @@ jobs:
   offline:
     if: >-
       github.repository == 'Skyeagle123/Classyline' &&
-      github.ref == 'refs/heads/phase/manual-production-deployment-preparation'
+      (github.ref == 'refs/heads/phase/manual-production-deployment-preparation' ||
+       github.ref == 'refs/heads/phase/production-activation-preparation')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
