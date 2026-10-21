@@ -78,7 +78,8 @@ try {
   assert.deepEqual(Object.keys(production.on), ['workflow_dispatch'], 'Production workflow must be manual only');
   assert.deepEqual(production.permissions, {contents: 'read', actions: 'read'});
   assert.equal(production.jobs.deploy.environment, 'classyline-production');
-  assert.match(production.jobs.deploy.steps[0].run, /^exit 1$/m, 'Missing first unconditional deployment block');
+  assert.equal(production.jobs.deploy.steps[0].name, 'Require separately armed release window');
+  assert.doesNotMatch(production.jobs.deploy.steps[0].run, /\bexit 1\b/, 'Obsolete first-step exit returned');
   assert.match(productionText, /const RELEASE_IMPLEMENTATION_REVIEWED = false;/, 'Missing independent-review block');
   assert.doesNotMatch(productionText, /DirectUpload|AttemptJournal|pages-r2-|qualification|stageAndCreate/,
     'Retired custom transport must not be executable');
@@ -87,7 +88,7 @@ try {
   const {text: offlineText, workflow: offline} = workflows.get('pr4-offline-validation.yml');
   assert.deepEqual(Object.keys(offline.on).sort(), ['push', 'workflow_dispatch']);
   assert.deepEqual(offline.on.push.branches, ['phase/manual-production-deployment-preparation',
-    'phase/production-activation-preparation']);
+    'phase/production-activation-preparation', 'phase/production-release-enablement-review']);
   assert.deepEqual(offline.permissions, {contents: 'read'});
   assert.deepEqual(Object.keys(offline.jobs), ['offline']);
   assert.equal(offline.jobs.offline.environment, undefined, 'Offline validation must not enter a protected release environment');
@@ -99,5 +100,5 @@ try {
   assert.doesNotMatch(offlineText, /npm test|security:check|build:functions|CLASSYLINE_TEST_APPLICATION/,
     'Do not repeat unrelated accepted application suites');
   assert(offline.jobs.offline.steps.some(s => s.run === 'node --test ops/*.test.mjs'), 'Missing complete offline suite');
-  console.log(JSON.stringify({status: 'PASS', ...counts, deployment_blocks: 2, offline_credentials: 'none'}));
+  console.log(JSON.stringify({status: 'PASS', ...counts, deployment_blocks: 1, offline_credentials: 'none'}));
 } finally { rmSync(temp, {recursive: true, force: true}); }
