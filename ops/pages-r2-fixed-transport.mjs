@@ -72,6 +72,17 @@ function requestFor(target, {hostname = target.hostname, port, secure = true, pa
     Number.isInteger(maxResponse) && maxResponse > 0 && maxResponse <= MAX_BYTES,
     'Invalid checkpoint HTTP request');
   const bytes = Buffer.from(body), frozenHeaders = Object.freeze({...headers});
+  const expected = ['authorization', 'content-length', 'host', 'x-amz-content-sha256', 'x-amz-date',
+    ...(method === 'PUT' ? ['content-md5', 'content-type', 'if-none-match'] : [])].sort();
+  check(Object.getPrototypeOf(headers) === Object.prototype &&
+    JSON.stringify(Object.keys(frozenHeaders).sort()) === JSON.stringify(expected) &&
+    Object.entries(frozenHeaders).every(([name, value]) => name === name.toLowerCase() &&
+      typeof value === 'string' && /^[\x20-\x7e]+$/.test(value)) &&
+    /^\d{8}T\d{6}Z$/.test(frozenHeaders['x-amz-date']) &&
+    /^AWS4-HMAC-SHA256 Credential=[A-Za-z0-9]{16,128}\/\d{8}\/auto\/s3\/aws4_request, SignedHeaders=[a-z0-9;-]+, Signature=[a-f0-9]{64}$/.test(frozenHeaders.authorization) &&
+    frozenHeaders.authorization.includes(`/${frozenHeaders['x-amz-date'].slice(0, 8)}/auto/s3/aws4_request, SignedHeaders=${expected.filter(name => !['authorization', 'content-length'].includes(name)).join(';')}, Signature=`) &&
+    (method !== 'PUT' || frozenHeaders['content-type'] === 'application/json'),
+    'Unapproved checkpoint headers');
   check(frozenHeaders.host === target.hostname &&
     frozenHeaders['x-amz-content-sha256'] === hex('sha256', bytes) &&
     frozenHeaders['content-length'] === String(bytes.length) &&
@@ -91,7 +102,7 @@ function requestFor(target, {hostname = target.hostname, port, secure = true, pa
     signal?.addEventListener('abort', fail, {once: true});
     try {
       request = (secure ? https : http).request({hostname, port, path, method,
-        agent: false, maxHeaderSize: MAX_BYTES, headers: frozenHeaders}, response => {
+        agent: false, rejectUnauthorized: true, maxHeaderSize: MAX_BYTES, headers: frozenHeaders}, response => {
         const chunks = []; let size = 0;
         response.on('aborted', fail); response.on('error', fail);
         response.on('data', chunk => {

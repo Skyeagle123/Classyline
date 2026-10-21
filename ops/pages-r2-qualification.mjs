@@ -1,13 +1,17 @@
 // Prepared checkpoint-only qualification. Importing performs no I/O.
-// Hosted execution is deliberately blocked. Only real loopback HTTP is wired.
-// A future authenticated read-only metadata collector needs independent review;
-// raw API-shaped fixture evidence here does not prove hosted permissions/locks.
+// Hosted execution is gated on an independently qualified durable authority.
+// Native metadata collection is implemented; hosted credentials/configuration
+// and authority persistence remain unverified. Importing performs no I/O.
 import {createHash} from 'node:crypto';
 import {QUALIFICATION, signQualificationRequest, requestQualificationOnce} from './pages-r2-fixed-transport.mjs';
+import {createConfigurationCollector} from './pages-qualification-collector.mjs';
+import {claimHostedQualificationBudget, requireBudgetGrant} from './pages-qualification-budget.mjs';
 
 export {QUALIFICATION};
 export const HOSTED_QUALIFICATION_ENABLED = false;
 const MAX_CONFIGURATION_AGE_MS = 60_000;
+const HOSTED = Symbol('private hosted qualification context');
+export const OWNER_AUTHORIZATION = 'AUTHORIZE ONE CLASSYLINE CHECKPOINT-ONLY QUALIFICATION; NO PAGES DEPLOYMENT';
 const permissionName = 'Workers R2 Storage Bucket Item Write';
 const hash = (kind, bytes) => createHash(kind).update(bytes).digest('hex');
 const etagFor = bytes => `"${hash('md5', bytes)}"`;
@@ -81,24 +85,29 @@ function record(contender) {
 }
 
 export class QualificationHarness {
-  #credentials; #port; #readConfiguration; #now; #signal; #timeout; #started = false;
+  #credentials; #port; #readConfiguration; #now; #signal; #timeout; #budget; #hosted; #started = false;
   #evidence = {schema: 1, mode: 'offline-loopback', hosted_qualified: false,
     bucket: QUALIFICATION.bucket, key: QUALIFICATION.key, state: 'unstarted',
     conditional_puts: 0, object_reads: 0, metadata_reads: 0, max_created_objects: 1,
     pages_requests: 0, automatic_retries: 0, cleanup_permitted: false};
-  constructor({credentials, port, readConfiguration, now = () => new Date(), signal, timeoutMs = 300}) {
-    // There is intentionally no hostname, URL, bucket, key or arbitrary request
-    // override. The only executable endpoint is 127.0.0.1 on an explicit port.
-    check(Number.isInteger(port) && port > 0 && port <= 65535 && typeof now === 'function' &&
+  constructor({credentials, port, readConfiguration, now = () => new Date(), signal, timeoutMs = 300, budget,
+    [HOSTED]: hosted = false}) {
+    // No hostname/URL/bucket/key override. Public construction is loopback-only;
+    // only this module's private hosted entry can select the fixed HTTPS target.
+    check((hosted ? port === undefined && budget !== undefined : Number.isInteger(port) && port > 0 && port <= 65535) && typeof now === 'function' &&
       Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 20000);
     this.#credentials = Object.freeze({accessKeyId: credentials?.accessKeyId, secretAccessKey: credentials?.secretAccessKey});
     check(typeof this.#credentials.accessKeyId === 'string' && /^[A-Za-z0-9]{16,128}$/.test(this.#credentials.accessKeyId));
     this.#port = port; this.#readConfiguration = readConfiguration; this.#now = now;
     this.#signal = signal; this.#timeout = timeoutMs;
+    if (budget !== undefined) requireBudgetGrant(budget);
+    this.#budget = budget; this.#hosted = hosted;
+    if (hosted) this.#evidence.mode = 'hosted-checkpoint-only';
   }
   evidence() { return Object.freeze({...this.#evidence}); }
   async #configuration() {
     return configuration(async request => {
+      this.#budget?.take('metadata');
       this.#evidence.metadata_reads++;
       return this.#readConfiguration(request);
     }, this.#credentials.accessKeyId, this.#now(), this.#signal);
@@ -106,9 +115,11 @@ export class QualificationHarness {
   async #request(method, body) {
     const signed = signQualificationRequest({method, body, credentials: this.#credentials, now: this.#now()});
     check(!this.#signal?.aborted);
+    this.#budget?.take(method === 'PUT' ? 'put' : 'get');
     if (method === 'PUT') this.#evidence.conditional_puts++; else this.#evidence.object_reads++;
-    return requestQualificationOnce({...signed, hostname: '127.0.0.1', port: this.#port,
-      secure: false, signal: this.#signal, timeoutMs: this.#timeout});
+    return requestQualificationOnce({...signed,
+      ...(this.#hosted ? {} : {hostname: '127.0.0.1', port: this.#port, secure: false}),
+      signal: this.#signal, timeoutMs: this.#timeout});
   }
   async run() {
     check(!this.#started); this.#started = true; this.#evidence.state = 'blocked';
@@ -134,20 +145,37 @@ export class QualificationHarness {
       check(denied?.status === 412 && Buffer.isBuffer(denied.body));
       const after = await this.#configuration();
       check(JSON.stringify(after) === JSON.stringify(before) && !this.#signal?.aborted);
-      this.#evidence = {...this.#evidence, state: 'offline-passed', winner,
+      this.#evidence = {...this.#evidence, state: this.#hosted ? 'hosted-passed' : 'offline-passed', winner,
+        hosted_qualified: this.#hosted,
         checkpoint_sha256: hash('sha256', bytes), checkpoint_bytes: bytes.length,
         configuration_sha256: hash('sha256', JSON.stringify(before)),
         retention_verified_in_fixture: true, permission_scope_verified_in_fixture: true};
       return this.evidence();
     } catch {
+      this.#budget?.stop();
       this.#evidence.state = 'blocked';
       throw new Error('Qualification blocked or outcome uncertain; no retry, resume or cleanup');
     }
   }
 }
 
-export function runHostedQualification() {
-  // Do not arm this in this preparation package. A separately authorized live
-  // adapter, authenticated metadata reader and scoped credential path are absent.
-  throw new Error('BLOCKED: hosted qualification is not enabled or authorized');
+export async function runHostedQualification(options) {
+  let budget;
+  try {
+    check(options && Object.keys(options).every(k => ['ownerAuthorization', 'credentials', 'apiToken', 'signal'].includes(k)) &&
+      options.ownerAuthorization === OWNER_AUTHORIZATION && !options.signal?.aborted);
+    const {credentials, apiToken, signal} = options;
+    // Local validation only: never log either credential or signed request.
+    signQualificationRequest({method: 'PUT', body: Buffer.from('{}'), credentials, now: new Date()});
+    const reader = createConfigurationCollector({apiToken, accessKeyId: credentials.accessKeyId});
+    // Permanent consume BEFORE the first of the ten metadata requests. No
+    // caller-provided store, grant, endpoint or boolean can satisfy this gate.
+    budget = await claimHostedQualificationBudget();
+    check(HOSTED_QUALIFICATION_ENABLED);
+    return await new QualificationHarness({credentials, readConfiguration: reader.collect,
+      signal, timeoutMs: 10000, budget, [HOSTED]: true}).run();
+  } catch {
+    budget?.stop();
+    throw new Error('BLOCKED: hosted qualification authorization or durable authority unverified; no retry');
+  }
 }

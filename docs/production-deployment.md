@@ -360,6 +360,40 @@ It is prepared and tested offline, not enabled for live execution. Independent
 review is the next gate; hosted qualification and installation need separate
 Owner authorization.
 
+## Hosted qualification hardening — still blocked
+
+The fixed hosted entry now validates the explicit qualification-only Owner arm,
+credentials, native read-only collector and durable whole-budget grant. It does
+not accept arbitrary accounts, buckets, keys, endpoints or a caller-provided
+verified grant. A native HTTPS collector enforces fixed GET paths, authentication,
+TLS, no redirects/retries, ten requests, bounded responses/deadlines and strict
+envelope/result validation. Header validation rejects case variants, unknown
+names, injection and incorrect SigV4 signed-header lists.
+
+The external authority protocol consumes the entire allowance before any metadata
+or R2 request. A conclusive atomic durable claim grants at most 3 PUTs, 1 object
+GET and 10 metadata GETs in total; runner loss burns unused allowance. Integrated
+offline tests cover concurrent claims, committed-but-lost acknowledgements,
+replacement after unreceived R2 PUTs and denied/exhausted grants. They exercise
+the actual collector, budget counters and R2 transport, but a modeled transaction
+store is not proof of hosted persistence or retention.
+
+**BLOCKED:** no authoritative hosted store, authenticated authority transport or
+permanent retention control has been provisioned or verified. The hosted authority
+function refuses execution, and both qualification gates remain false. Do not
+substitute local files/artifacts or an injected boolean, remove gates, or infer
+authorization from an absent R2 object. The stricter Owner policy remains unwaived.
+All three Production workflow hard stops and application code remain unchanged.
+No service deployment, namespace, resource, token or configuration was created.
+
+This hardening revision passed **341/341** relevant offline tests on Node
+24.19.0: the existing 306 cases plus 35 hardening regressions. Zero failures,
+cancellations or skips. YAML (2 files), Bash (14 scripts), embedded JavaScript
+(4 scripts), JavaScript modules (17 files), diff checks and all three Production
+hard stops passed validation. The exact published commit's automatic offline CI
+must be verified separately in PR #4. These results qualify neither a hosted
+authority nor live R2 behavior and are not permission to dispatch or install.
+
 ## Checkpoint qualification preparation validation
 
 On 2026-10-21, the complete relevant Node 24.19.0 offline suite passed **306/306**,

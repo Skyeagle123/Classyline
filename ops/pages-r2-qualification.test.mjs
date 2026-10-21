@@ -115,9 +115,9 @@ function privateEvidence(instance, error) {
   assert.equal(instance.evidence().hosted_qualified, false);
 }
 
-test('qualification is isolated, import-safe, hosted-blocked and has no Pages client dependency', () => {
+test('qualification is isolated, import-safe, hosted-blocked and has no Pages client dependency', async () => {
   assert.equal(HOSTED_QUALIFICATION_ENABLED, false);
-  assert.throws(() => runHostedQualification(), /BLOCKED/);
+  await assert.rejects(runHostedQualification(), /BLOCKED/);
   assert.notEqual(QUALIFICATION.bucket, CHECKPOINT.bucket); assert.notEqual(QUALIFICATION.key, CHECKPOINT.key);
   assert.equal(QUALIFICATION.bucket, 'classyline-checkpoint-qualification');
   const source = readFileSync(new URL('./pages-r2-qualification.mjs', import.meta.url), 'utf8');

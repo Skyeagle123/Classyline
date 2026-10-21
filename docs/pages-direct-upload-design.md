@@ -20,7 +20,11 @@ and separately authorized installation controls. Both original workflow blocks r
 - `ops/pages-r2-fixed-transport.mjs`: shared signer/native HTTP implementation with
   separate fixed Production and qualification wrappers; no generic target factory.
 - `ops/pages-r2-qualification.mjs`: isolated checkpoint-only qualification
-  orchestration. Only loopback execution is wired; live execution is blocked.
+  orchestration and a fixed hosted entry; authority/review gates block live execution.
+- `ops/pages-qualification-collector.mjs`: fixed authenticated native HTTPS GET
+  collector with bounded requests, schemas, timeouts and credential-safe failures.
+- `ops/pages-qualification-budget.mjs`: consume-before-execution transaction
+  contract and non-resumable request grant. No hosted authority adapter exists.
 - `ops/pages-direct-upload.test.mjs`: actual loopback HTTP fault servers and
   independent child-process interruption/restart tests, plus packaging checks.
 - The manual workflow checks out its own exact controller commit separately from
@@ -201,11 +205,16 @@ new storage or credentials.
 ## Isolated checkpoint-only qualification harness
 
 `ops/pages-r2-qualification.mjs` is prepared for independent review, **not live
-execution**. `runHostedQualification()` always throws; the only executable harness
-requires an explicit loopback port. There is no CLI entry, credential discovery,
-Pages import/request, arbitrary hostname, bucket or key override. The shared
-native signer/request core has separate fixed wrappers; Production's target is
-unchanged. Do not remove the live block as an operational workaround.
+execution**. `runHostedQualification()` now validates an explicit fixed-purpose
+Owner arm, local credentials and a native configuration collector, then requires
+a durable budget grant before any HTTP request. It has no caller-supplied store,
+grant, endpoint or verified flag. `HOSTED_QUALIFICATION_ENABLED = false` and
+`AUTHORITY_TRANSPORT_VERIFIED = false` independently preserve the live boundary.
+The authority adapter remains unimplemented and fail-closed. There is no CLI,
+credential discovery or Pages request. Ordinary public harness construction still
+requires loopback; only the private hosted context selects fixed R2 HTTPS. Never
+remove these gates as an operational workaround. An arm string is a deliberate
+operator check, not cryptographic proof of Owner approval or a new authorization.
 
 | Target or budget | Fixed value |
 | --- | --- |
@@ -226,8 +235,14 @@ require a third conditional PUT to return `412`. Recheck permission/retention
 evidence. Any uncertainty stops without retry, resume, cleanup or inferred success.
 An already consumed key cannot qualify again and must not be automatically rotated.
 
-The prepared metadata validator requires raw successful responses from an
-independently authenticated read-only collector for these exact paths:
+The native metadata collector accepts an explicit API token privately and uses
+normal verified TLS to `api.cloudflare.com`, without a proxy/SDK, redirects or
+retries. Each GET has at most a 10-second deadline and 64 KiB response; the
+collector permits at most ten requests, refuses reuse after any error and rejects
+invalid UTF-8, non-200 responses, wrong content type, malformed envelopes, result
+shape and pagination. There is a separate loopback-only test factory. No arbitrary
+request headers, URL, account, bucket or endpoint option is accepted. Configuration
+semantics are validated before writes and again afterward for these exact paths:
 
 - GET `/accounts/{account}/r2/buckets/{test-bucket}`
 - GET `/accounts/{account}/r2/buckets/{test-bucket}/lock`
@@ -242,8 +257,10 @@ and resource `com.cloudflare.edge.r2.bucket.{account}_default_{test-bucket}: "*"
 are required. Broad account resources, extra grants, expiry, missing/ambiguous
 readback and retention drift fail closed. No forbidden write is attempted to
 "test" boundaries. The S3 credential cannot provide these management-API reads;
-a separate least-privilege read-only collector is still missing and needs review.
-Fixture-shaped responses are not proof of authenticated hosted configuration.
+a separate least-privilege API token is necessary. The implemented collector and
+its permission/retention validation have only been exercised with fake credentials
+and loopback responses; actual API permissions and response compatibility remain
+unverified. Fixture responses do not prove hosted configuration.
 
 Only allowlisted fixed target identities, counts, state and SHA-256 evidence leave
 the harness. Credentials, token IDs, signed headers and raw responses are excluded.
@@ -251,6 +268,48 @@ Offline evidence explicitly says `hosted_qualified: false`. Lock readback proves
 only observed configuration, not perpetual retention: prohibit administrative lock
 removal, lifecycle edits, key deletion/reset and credential broadening operationally.
 No live resources or credentials were created and no hosted test was executed.
+
+### Whole-budget consumption and the remaining authority blocker
+
+The total authorization is **3 R2 conditional PUTs, 1 R2 GET, 10 metadata GETs and
+one retained test object across all runners**, not a fresh allowance per instance.
+`claimQualificationBudget()` first stores a consumed record under the permanent
+`classyline/pr4/checkpoint-qualification/af06e616de69ce9c2a0d086ba0f9da43db4ff12e`
+authorization key using a transaction. Only that execution's conclusive commit
+acknowledgement creates a process-local grant. It is consumed before each request,
+never refunded, and stopped on any qualification failure. There is no record-read
+resume, counter reset, deletion or expiry. Replacement runners must fail before
+the first metadata request, even if the preceding R2 PUTs never reached R2.
+
+This is an **implemented conditional protocol, not a qualified hosted authority**.
+The backend must atomically serialize get-if-absent plus insert, acknowledge only
+durable commit, retain the record permanently and prevent rollback/reset or
+unauthorized deletion. No local file, Actions artifact or ordinary in-memory Map
+qualifies. Offline tests use a serialized copy-on-commit store to model this
+contract. Lost acknowledgement or timeout returns no grant; a retained commit
+denies replacements and unused allowance is burned. If the authority claim itself
+never reaches the authority, no qualification request was permitted; a later
+successful authority claim is not replay of an R2 request.
+
+Cloudflare documents transactional strongly consistent Durable Object storage as
+a possible primitive, but this package does not create a service, namespace,
+retention control, RPC/authentication adapter or deployment for it. Git references
+are rewritable and require separately proven uniqueness/protection/retention; no
+Git ref adapter is implemented. Neither candidate is silently treated as verified.
+`claimHostedQualificationBudget()` refuses all execution until an exact authoritative
+backend and its identity, authentication, atomicity and retention are independently
+qualified. It accepts no injected success flag or store from the hosted caller.
+
+Thus the previous per-instance budget gap is closed **in the modeled integrated
+path**, but cross-runner hosted enforcement remains BLOCKED. The stronger Owner
+policy is not waived: a pre-send authoritative record can preserve an uncertain
+R2 attempt, whereas R2 alone cannot preserve a request it never received. The
+separate Production release remains unchanged and does not use this test grant.
+
+The R2 native transport now admits exactly the lowercase signed header set and
+rejects unknown names, case variants, arrays, CR/LF, incorrect signed-header lists
+and inconsistent dates before I/O. SigV4 signing, fixed endpoints, exact bytes,
+deadlines and response bounds remain in force. Normal TLS verification is explicit.
 
 ## Validation and remaining proof boundaries
 
@@ -295,6 +354,8 @@ operators. Safe installation/recovery remains in `production-deployment.md`.
 - [Functions build serialization](https://github.com/cloudflare/workers-sdk/blob/wrangler%404.150.0/packages/wrangler/src/pages/build.ts)
 - [Worker bundle metadata](https://github.com/cloudflare/workers-sdk/blob/wrangler%404.150.0/packages/wrangler/src/api/pages/create-worker-bundle-contents.ts)
 - [Node v24.19.0 HTTPS](https://github.com/nodejs/node/blob/v24.19.0/lib/https.js) and [HTTP client](https://github.com/nodejs/node/blob/v24.19.0/lib/_http_client.js)
+- [Transactional Durable Object storage](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/) (candidate primitive, not an installed authority)
+- [Git reference API](https://docs.github.com/en/rest/git/refs) and [tag update/deletion restrictions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets) (not qualified as an authority)
 - [Official SDK retry configuration](https://github.com/cloudflare/cloudflare-typescript#retries) (moving documentation, not a selected pinned SDK).
 - [R2 credentials, S3 key identity and bucket-scoped resources](https://developers.cloudflare.com/r2/api/tokens/)
 - [Bucket lock readback](https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/locks/methods/get/)
