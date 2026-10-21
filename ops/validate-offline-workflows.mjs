@@ -64,16 +64,26 @@ try {
       }
     }
   }
-  for (const name of readdirSync('ops').filter(n => n.endsWith('.mjs')).sort()) {
-    checkSyntax(process.execPath, ['--check', join('ops', name)]); counts.javascript_files++;
+  function javascript(directory) {
+    for (const entry of readdirSync(directory, {withFileTypes: true})) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory() && entry.name !== 'node_modules') javascript(path);
+      else if (entry.isFile() && entry.name.endsWith('.mjs')) {
+        checkSyntax(process.execPath, ['--check', path]); counts.javascript_files++;
+      }
+    }
   }
+  javascript('ops');
   const {text: productionText, workflow: production} = workflows.get('classyline-production-manual.yml');
   assert.deepEqual(Object.keys(production.on), ['workflow_dispatch'], 'Production workflow must be manual only');
   assert.deepEqual(production.permissions, {contents: 'read', actions: 'read'});
   assert.equal(production.jobs.deploy.environment, 'classyline-production');
   assert.match(production.jobs.deploy.steps[0].run, /^exit 1$/m, 'Missing first unconditional deployment block');
-  assert.match(productionText, /const NO_RETRY_TRANSPORT_VERIFIED = false;/, 'Missing transport block');
-  assert.match(productionText, /checkpoint:async \(\) => false/, 'Missing durable-checkpoint block');
+  assert.match(productionText, /const RELEASE_IMPLEMENTATION_REVIEWED = false;/, 'Missing independent-review block');
+  assert.doesNotMatch(productionText, /DirectUpload|AttemptJournal|pages-r2-|qualification|stageAndCreate/,
+    'Retired custom transport must not be executable');
+  assert.equal((productionText.match(/spawn\('npx'/g) ?? []).length, 1, 'Exactly one deployment invocation site');
+  assert.match(productionText, /WRANGLER_WRITE_LOGS: 'false'/, 'Raw CLI debug logging must be disabled');
   const {text: offlineText, workflow: offline} = workflows.get('pr4-offline-validation.yml');
   assert.deepEqual(Object.keys(offline.on).sort(), ['push', 'workflow_dispatch']);
   assert.deepEqual(offline.on.push.branches, ['phase/manual-production-deployment-preparation']);
@@ -81,11 +91,12 @@ try {
   assert.deepEqual(Object.keys(offline.jobs), ['offline']);
   assert.equal(offline.jobs.offline.environment, undefined, 'Offline validation must not enter a protected release environment');
   assert.doesNotMatch(offlineText, /secrets\.|CLOUDFLARE_API_TOKEN|GH_TOKEN|pages deploy|stageAndCreate|curl\s|gh\s+workflow/i);
-  const appCheckout = offline.jobs.offline.steps.find(s => s.with?.path === 'app');
-  assert.equal(appCheckout?.with?.ref, 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a');
-  assert.equal(appCheckout.with['persist-credentials'], false);
-  assert(offline.jobs.offline.steps.some(s => s['working-directory'] === 'app' &&
-    s.run === 'npm ci --ignore-scripts --no-audit --no-fund'), 'Application lockfile must be installed separately');
+  const checkout = offline.jobs.offline.steps.filter(s => s.uses?.startsWith('actions/checkout@'));
+  assert.equal(checkout.length, 1, 'Offline controller tests do not need an application checkout');
+  assert.equal(checkout[0].with?.ref, '${{ github.sha }}');
+  assert.equal(checkout[0].with['persist-credentials'], false);
+  assert.doesNotMatch(offlineText, /npm test|security:check|build:functions|CLASSYLINE_TEST_APPLICATION/,
+    'Do not repeat unrelated accepted application suites');
   assert(offline.jobs.offline.steps.some(s => s.run === 'node --test ops/*.test.mjs'), 'Missing complete offline suite');
-  console.log(JSON.stringify({status: 'PASS', ...counts, deployment_blocks: 3, offline_credentials: 'none'}));
+  console.log(JSON.stringify({status: 'PASS', ...counts, deployment_blocks: 2, offline_credentials: 'none'}));
 } finally { rmSync(temp, {recursive: true, force: true}); }
