@@ -330,15 +330,42 @@ jobs:
               PRODUCT_IMAGES: {name: d.r2_buckets.PRODUCT_IMAGES.name}};
           }
           async function history() {
-            const all = [];
+            const all = [], seen = new Set();
+            let totalCount, totalPages;
+            // Require the five fields observed on the Pages API, at its supported
+            // page size. A short page alone is never evidence of completeness.
             for (let page = 1; page <= 10; page++) {
-              const b = await cf(root + `/deployments?env=production&per_page=100&page=${page}`);
+              const b = await cf(root + `/deployments?env=production&per_page=10&page=${page}`);
               check(Array.isArray(b.result), 'Missing deployment history');
-              check(b.result.every(d => d.environment === 'production'), 'Unexpected history environment');
+              const info = b.result_info;
+              check(info !== null && typeof info === 'object' && !Array.isArray(info) &&
+                ['page', 'per_page', 'count', 'total_count', 'total_pages'].every(key =>
+                  Object.hasOwn(info, key) && Number.isSafeInteger(info[key])),
+                'Missing or invalid deployment pagination metadata');
+              check(info.page === page && info.per_page === 10, 'Deployment pagination page mismatch');
+              check(info.total_pages >= 1 && info.total_pages <= 10 &&
+                info.total_count >= 1 && info.total_count <= 100,
+                'Deployment history exceeds verification bound or has invalid totals');
+              check(info.total_pages === Math.ceil(info.total_count / 10) && page <= info.total_pages,
+                'Contradictory deployment pagination totals');
+              if (page === 1) { totalCount = info.total_count; totalPages = info.total_pages; }
+              check(info.total_count === totalCount && info.total_pages === totalPages,
+                'Deployment pagination totals changed during traversal');
+              const expectedCount = Math.min(10, totalCount - (page - 1) * 10);
+              check(info.count === b.result.length && info.count === expectedCount,
+                'Incomplete or contradictory deployment page');
+              for (const d of b.result) {
+                check(d?.environment === 'production', 'Unexpected history environment');
+                check(typeof d.id === 'string' && /^[a-f0-9-]{36}$/.test(d.id) && !seen.has(d.id),
+                  'Missing or duplicate deployment pagination ID');
+                seen.add(d.id);
+              }
               all.push(...b.result);
-              if (b.result_info?.total_pages != null) {
-                if (page >= b.result_info.total_pages) return all;
-              } else if (b.result.length < 100) return all;
+              if (page === totalPages) {
+                check(all.length === totalCount && seen.size === totalCount,
+                  'Incomplete deployment history inventory');
+                return all;
+              }
             }
             throw new Error('Deployment history exceeds verification bound');
           }

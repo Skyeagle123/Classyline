@@ -149,6 +149,12 @@ globalThis.fetch = async (url, options) => {
     if (scenario === 'api-denied') return {ok: false, status: 403};
     let result;
     if (url.includes('/deployments?')) {
+      const query = new URL(url).searchParams;
+      assert.equal(query.get('env'), 'production');
+      // The live Pages endpoint rejects 100; do not let mocks hide that contract.
+      assert.equal(query.get('per_page'), '10');
+      const page = Number(query.get('page'));
+      assert(Number.isInteger(page) && page >= 1 && page <= 10);
       historyReads++;
       if (observed) postHistoryReads++;
       result = [structuredClone(baseline)];
@@ -159,7 +165,24 @@ globalThis.fetch = async (url, options) => {
       if (observed) result.unshift(structuredClone(fresh));
       if (observed && scenario === 'multiple-new') result.push(deployment(otherID, candidate));
       // INJECT_FINAL_HISTORY
-      body = {success: true, result, result_info: {total_pages: 1}};
+      if (scenario.startsWith('paginated-')) {
+        const count = scenario === 'paginated-bound-exceeded' ? 100 :
+          scenario === 'paginated-page-boundary' ? 9 :
+          scenario === 'paginated-max-success' ? 98 :
+          scenario === 'paginated-post-bound-exceeded' ? 99 : 10;
+        for (let i = 0; i < count; i++) result.push(deployment(
+          `22222222-0000-0000-0000-${String(i).padStart(12, '0')}`, baselineSHA));
+        if (scenario === 'paginated-competing' || scenario === 'paginated-no-info-competing')
+          result.at(-1).latest_stage = {name: 'build', status: 'active'};
+        if (observed && scenario === 'paginated-late-competitor') result.push(deployment(otherID, 'other'));
+        const total = result.length;
+        result = result.slice((page - 1) * 10, page * 10);
+        body = {success: true, result};
+        if (!scenario.startsWith('paginated-no-info-')) body.result_info = {
+          page, per_page: 10, count: result.length, total_count: total, total_pages: Math.ceil(total / 10)};
+      } else body = {success: true, result, result_info: {
+        page, per_page: 10, count: result.length, total_count: result.length, total_pages: 1}};
+      // INJECT_HISTORY_RESPONSE
     } else if (url.endsWith('/deployments/' + baselineID)) {
       rollbackReads++;
       result = structuredClone(baseline);

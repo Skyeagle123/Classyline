@@ -4,6 +4,55 @@
 merging, dispatching or deploying it. No credential provisioning, Cloudflare
 configuration change or D1/R2 operation is authorized by this package.
 
+## Installed controller and activation preparation
+
+The Owner installed the reviewed disabled controller on `main` at
+`d1f4b4fc55838e71bf2f4dcb9e0caadfb2a0d240`. Its tree
+`c0be2b408ec17dc00004b2993bc9b7bb9066ab14` exactly matches reviewed PR #4.
+This installation did not replace the baseline application deployment.
+
+The activation-preparation candidate retains **both** unconditional review stops.
+No gate change is necessary to prepare the real compatibility correction: the
+authenticated Pages deployment-history endpoint rejects `per_page=100` with
+HTTP 400 / error `8000024`, while `per_page=10` succeeds. The controller now
+reads ten records per page and refuses histories exceeding ten complete pages
+(100 records). It requires all five observed Pages `result_info` fields:
+`page`, `per_page`, `count`, `total_count` and `total_pages`, as safe integers.
+The page number and size must match the request; count must match both the returned
+array and the expected remaining inventory. Positive totals must be mathematically
+consistent and stable throughout each traversal. Duplicate IDs, short/truncated
+pages, missing metadata and contradictory totals fail closed. Final inventory
+must contain exactly the reported number of unique Production deployment IDs.
+There is no short-page fallback, retry or partial-history acceptance.
+
+Offline regressions inject invalid metadata and inventory faults into the real
+workflow both before upload (zero CLI invocations) and during final reconciliation
+(one invocation, no accepted-deployment evidence). They also cover later-page
+competitors, page-boundary transitions and the ten-page bound. A release that
+increases the inventory beyond 100 records is refused during reconciliation;
+it is never permission to retry. Pagination is not a server-side snapshot or
+cross-service lock: the existing operator freeze remains mandatory, and an API
+response that is fully self-consistent but omits real records cannot be disproved
+from pagination metadata alone. The offline CI workflow
+also validates the dedicated `phase/production-activation-preparation` branch;
+it receives no deployment credentials and cannot deploy.
+
+Authenticated read-only preflight confirmed the fixed baseline deployment and
+rollback candidate are successful, automatic Production builds are disabled,
+and Production/Preview D1/R2 identities and runtime settings match this document.
+The complete 16-entry Production history contained no active non-skipped build.
+The installed-controller commit has a skipped Pages record; it is not an active
+build or a replacement for the canonical baseline. No configuration was changed.
+
+The GitHub Plugin does not expose the environment rules, secret metadata or
+environment variable endpoints. Therefore the actual reviewer, self-review,
+administrator-bypass and main-only branch settings, token-secret presence and
+release-arm value remain **unverified** by this preparation package. Do not infer
+them from workflow YAML or the environment name. Their saved state must be
+verified before any later authorized enablement or release. Do not dispatch this
+blocked workflow merely to test the environment: any attempted dispatch consumes
+the one approved workflow execution operationally.
+
 ## Fixed release identities
 
 | Item | Expected identity |

@@ -79,7 +79,10 @@ for (const arm of [undefined, '', 'false', 'TRUE', 'true']) test(`explicit arm $
 const afterInvoke = new Set(['success', 'wrong-source', 'missing-functions', 'failed-deployment',
   'unknown-status', 'dirty-metadata', 'wrong-deployed-flags', 'multiple-new',
   'uncertain-no-deployment', 'uncertain-but-deployed', 'nonzero-cli', 'signal-cli', 'spawn-throws',
-  'timeout-cli', 'parent-cancelled', 'post-config-drift']);
+  'timeout-cli', 'parent-cancelled', 'post-config-drift',
+  'paginated-success', 'paginated-late-competitor', 'paginated-page-boundary',
+  'paginated-max-success', 'paginated-post-bound-exceeded']);
+const acceptedCases = new Set(['success', 'paginated-success', 'paginated-page-boundary', 'paginated-max-success']);
 const releaseCases = [...afterInvoke, 'missing-arm', 'missing-token', 'main-changed', 'wrong-project', 'wrong-baseline',
   'wrong-d1', 'wrong-r2', 'missing-d1', 'missing-r2', 'extra-d1', 'extra-r2', 'unsafe-flags', 'wrong-date',
   'missing-secret', 'unexpected-placement', 'wrong-preview', 'rollback-missing', 'rollback-source-mismatch',
@@ -88,17 +91,93 @@ const releaseCases = [...afterInvoke, 'missing-arm', 'missing-token', 'main-chan
   'late-competing-build', 'late-completed-competitor', 'late-rollback-failure',
   'extra-dist', 'omitted-dist', 'duplicate-dist-record', 'symlink-dist', 'wrong-dist-size',
   'extra-functions', 'omitted-functions', 'duplicate-functions-record', 'symlink-functions',
-  'local-override', 'late-added-dist', 'late-local-override', 'late-modified-functions'];
+  'local-override', 'late-added-dist', 'late-local-override', 'late-modified-functions',
+  'paginated-competing', 'paginated-no-info-success', 'paginated-no-info-competing', 'paginated-bound-exceeded'];
 for (const scenario of releaseCases) test(`actual workflow preflight / single invocation / verification: ${scenario}`, () => {
   const r = run(instrumented, releaseMock, scenario), info = report(r);
-  assert.equal(Boolean(info.artifacts['accepted-deployment.json']), scenario === 'success');
+  assert.equal(Boolean(info.artifacts['accepted-deployment.json']), acceptedCases.has(scenario));
   assert.equal(info.artifacts['verified-deployment.json'], undefined);
   assert.equal(info.calls, afterInvoke.has(scenario) ? 1 : 0, r.stderr);
-  assert.equal(r.status === 0, scenario === 'success', r.stderr);
+  assert.equal(r.status === 0, acceptedCases.has(scenario), r.stderr);
+  if (acceptedCases.has(scenario) && scenario.startsWith('paginated-')) {
+    const counts = {'paginated-success': [10, 11], 'paginated-page-boundary': [7, 10],
+      'paginated-max-success': [50, 99]};
+    assert.equal(info.historyReads, counts[scenario][0], 'All five history snapshots must be complete');
+    assert.equal(info.artifacts['preflight.json'].known_production_deployments.length, counts[scenario][1]);
+  }
   if (['uncertain-but-deployed', 'nonzero-cli', 'signal-cli', 'spawn-throws', 'timeout-cli', 'parent-cancelled'].includes(scenario))
     assert.equal(info.artifacts['observed-verification.json'].accepted, false);
   if (info.calls && scenario !== 'spawn-throws') assert.equal(info.kills, 1);
 });
+test('Pages deployment-history pagination uses the live-supported bounded page size', () => {
+  assert.match(scripts.at(-1), /deployments\?env=production&per_page=10&page=/);
+  assert.doesNotMatch(scripts.at(-1), /deployments\?env=production&per_page=100/);
+  assert.doesNotMatch(scripts.at(-1), /else if \(b\.result\.length < 10\) return all;/);
+  assert.match(scripts.at(-1), /Deployment history exceeds verification bound/);
+});
+
+// Exercise the real preflight and final reconciliation, not a copied paginator.
+// The normal two-page fixture gives three pre-upload traversals, then discovery
+// and final reconciliation. Faults at the latter cannot be masked by earlier reads.
+const paginationFaults = {
+  'missing metadata': 'delete body.result_info;',
+  'null metadata': 'body.result_info=null;',
+  'array metadata': 'body.result_info=[];',
+  'zero pages': 'body.result_info.total_pages=0;',
+  'negative pages': 'body.result_info.total_pages=-1;',
+  'string pages': 'body.result_info.total_pages="1";',
+  'fractional pages': 'body.result_info.total_pages=1.5;',
+  'page bound exceeded': 'body.result_info.total_pages=11;body.result_info.total_count=101;',
+  'wrong page number': 'body.result_info.page=page+1;',
+  'string page number': 'body.result_info.page=String(page);',
+  'wrong page size': 'body.result_info.per_page=100;',
+  'string page size': 'body.result_info.per_page="10";',
+  'wrong reported count': 'body.result_info.count++;',
+  'string count': 'body.result_info.count=String(body.result_info.count);',
+  'negative count': 'body.result_info.count=-1;',
+  'zero inventory': 'body.result_info.total_count=0;',
+  'negative inventory': 'body.result_info.total_count=-1;',
+  'string inventory': 'body.result_info.total_count=String(body.result_info.total_count);',
+  'unsafe integer inventory': 'body.result_info.total_count=Number.MAX_SAFE_INTEGER+1;',
+  'contradictory page total': 'body.result_info.total_pages=1;',
+  'contradictory record total': 'body.result_info.total_count=10;',
+  'short first page': 'if(page===1){body.result.pop();body.result_info.count=body.result.length;}',
+  'short final page': 'if(page===2){body.result.pop();body.result_info.count=body.result.length;}',
+  'empty final page': 'if(page===2){body.result=[];body.result_info.count=0;}',
+  'oversized first page': 'if(page===1){body.result.push(deployment(otherID,"other"));body.result_info.count++;}',
+  'totals drift between pages': 'if(page===2){body.result.push(deployment(otherID,"other"));body.result_info.count++;body.result_info.total_count++;}',
+  'page total shrinks on final page': 'if(page===2){body.result_info.total_pages=1;body.result_info.total_count=10;}',
+  'duplicate ID within page': 'if(page===1)body.result[1]=structuredClone(body.result[0]);',
+  'duplicate ID across pages': 'if(page===2)body.result[0]=structuredClone(observed?fresh:baseline);',
+  'inconsistent duplicate record across pages': 'if(page===2)body.result[0]={...structuredClone(observed?fresh:baseline),latest_stage:{name:"build",status:"active"}};',
+  'missing record ID': 'delete body.result[0].id;',
+  'invalid record ID': 'body.result[0].id="bad";',
+  'wrong record environment': 'body.result[0].environment="preview";',
+  'null record': 'body.result[0]=null;',
+  'missing result': 'delete body.result;',
+  'missing metadata and short page hiding a competitor': 'delete body.result_info;body.result=body.result.slice(0,1);',
+};
+for (const key of ['page', 'per_page', 'count', 'total_count', 'total_pages'])
+  paginationFaults[`missing ${key}`] = `delete body.result_info.${key};`;
+for (const phase of ['pre-upload', 'final-reconciliation']) {
+  for (const [label, injection] of Object.entries(paginationFaults)) {
+    test(`pagination rejects ${label} during ${phase}`, () => {
+      const when = phase === 'pre-upload' ? '!observed' : 'observed && postHistoryReads >= 3';
+      const mock = releaseMock.replace('// INJECT_HISTORY_RESPONSE', `if(${when}){${injection}}`);
+      // A real competitor is on the later page: corrupt first-page metadata must
+      // not hide it. Final-only faults use a stable preflight and valid discovery.
+      const r = run(instrumented, mock, phase === 'pre-upload' ? 'paginated-competing' : 'paginated-success');
+      const info = report(r);
+      assert.notEqual(r.status, 0, r.stdout);
+      assert.match(r.stderr, /pagination|history|deployment page|history environment/i);
+      assert.equal(info.calls, phase === 'pre-upload' ? 0 : 1);
+      assert.equal(info.artifacts['accepted-deployment.json'], undefined);
+      if (phase === 'final-reconciliation') {
+        assert(info.artifacts['observed-deployment.json'], 'Discovery completed before the injected final fault');
+      }
+    });
+  }
+}
 const ciCases = ['success','foreign-repo','foreign-repo-id','foreign-owner','wrong-ref','push-event',
  'wrong-actor','wrong-actor-id','wrong-trigger','rerun','failed-job','extra-job','wrong-ci-sha',
  'failed-ci','running-ci','ci-rerun','wrong-ci-repo','wrong-workflow','api-denied',
@@ -142,7 +221,7 @@ for (const [label, injection] of Object.entries(bindingFailures)) test(label, ()
   rejectsAfterUpload(releaseMock.replace('const cfg =', injection + '\nconst cfg ='), /deployed binding|Deployed binding/);
 });
 for (const status of ['success', 'failure', 'skipped', 'active']) test(`completed/failed/skipped/active late competitor rejected: ${status}`, () => {
-  const inject = `if (postHistoryReads === 2) result.push({...deployment('late-second', 'other-source'), latest_stage: {name:'deploy',status:'${status}'},is_skipped:${status === 'skipped'}});`;
+  const inject = `if (postHistoryReads === 2) result.push({...deployment('33333333-0000-0000-0000-000000000001', 'other-source'), latest_stage: {name:'deploy',status:'${status}'},is_skipped:${status === 'skipped'}});`;
   rejectsAfterUpload(releaseMock.replace('// INJECT_FINAL_HISTORY', inject), /Final new deployment set|Competing\/unknown/);
 });
 for (const [label, injection] of Object.entries({

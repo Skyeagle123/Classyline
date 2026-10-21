@@ -86,7 +86,8 @@ try {
   assert.match(productionText, /WRANGLER_WRITE_LOGS: 'false'/, 'Raw CLI debug logging must be disabled');
   const {text: offlineText, workflow: offline} = workflows.get('pr4-offline-validation.yml');
   assert.deepEqual(Object.keys(offline.on).sort(), ['push', 'workflow_dispatch']);
-  assert.deepEqual(offline.on.push.branches, ['phase/manual-production-deployment-preparation']);
+  assert.deepEqual(offline.on.push.branches, ['phase/manual-production-deployment-preparation',
+    'phase/production-activation-preparation']);
   assert.deepEqual(offline.permissions, {contents: 'read'});
   assert.deepEqual(Object.keys(offline.jobs), ['offline']);
   assert.equal(offline.jobs.offline.environment, undefined, 'Offline validation must not enter a protected release environment');
