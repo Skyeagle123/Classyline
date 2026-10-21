@@ -80,7 +80,9 @@ try {
   assert.equal(production.jobs.deploy.environment, 'classyline-production');
   assert.equal(production.jobs.deploy.steps[0].name, 'Require separately armed release window');
   assert.doesNotMatch(production.jobs.deploy.steps[0].run, /\bexit 1\b/, 'Obsolete first-step exit returned');
-  assert.match(productionText, /const RELEASE_IMPLEMENTATION_REVIEWED = false;/, 'Missing independent-review block');
+  assert.match(productionText, /const RELEASE_IMPLEMENTATION_REVIEWED = true;/, 'Unexpected source-review gate state');
+  assert.match(production.jobs.deploy.steps[0].run, /test "\$RELEASE_ARMED" = true/, 'Missing first runtime arm gate');
+  assert.match(productionText, /check\(e\.RELEASE_ARMED === 'true', 'Release window is not armed'\);/, 'Missing independent deployment arm gate');
   assert.doesNotMatch(productionText, /DirectUpload|AttemptJournal|pages-r2-|qualification|stageAndCreate/,
     'Retired custom transport must not be executable');
   assert.equal((productionText.match(/spawn\('npx'/g) ?? []).length, 1, 'Exactly one deployment invocation site');
@@ -88,7 +90,8 @@ try {
   const {text: offlineText, workflow: offline} = workflows.get('pr4-offline-validation.yml');
   assert.deepEqual(Object.keys(offline.on).sort(), ['push', 'workflow_dispatch']);
   assert.deepEqual(offline.on.push.branches, ['phase/manual-production-deployment-preparation',
-    'phase/production-activation-preparation', 'phase/production-release-enablement-review']);
+    'phase/production-activation-preparation', 'phase/production-release-enablement-review',
+    'phase/production-final-release-gate']);
   assert.deepEqual(offline.permissions, {contents: 'read'});
   assert.deepEqual(Object.keys(offline.jobs), ['offline']);
   assert.equal(offline.jobs.offline.environment, undefined, 'Offline validation must not enter a protected release environment');
@@ -100,5 +103,6 @@ try {
   assert.doesNotMatch(offlineText, /npm test|security:check|build:functions|CLASSYLINE_TEST_APPLICATION/,
     'Do not repeat unrelated accepted application suites');
   assert(offline.jobs.offline.steps.some(s => s.run === 'node --test ops/*.test.mjs'), 'Missing complete offline suite');
-  console.log(JSON.stringify({status: 'PASS', ...counts, deployment_blocks: 1, offline_credentials: 'none'}));
+  console.log(JSON.stringify({status: 'PASS', ...counts, unconditional_deployment_blocks: 0,
+    release_arm_checks: 2, offline_credentials: 'none'}));
 } finally { rmSync(temp, {recursive: true, force: true}); }
