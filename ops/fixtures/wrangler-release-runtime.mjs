@@ -166,7 +166,10 @@ globalThis.fetch = async (url, options) => {
       if (observed && scenario === 'multiple-new') result.push(deployment(otherID, candidate));
       // INJECT_FINAL_HISTORY
       if (scenario.startsWith('paginated-')) {
-        const count = scenario === 'paginated-bound-exceeded' ? 100 : 10;
+        const count = scenario === 'paginated-bound-exceeded' ? 100 :
+          scenario === 'paginated-page-boundary' ? 9 :
+          scenario === 'paginated-max-success' ? 98 :
+          scenario === 'paginated-post-bound-exceeded' ? 99 : 10;
         for (let i = 0; i < count; i++) result.push(deployment(
           `22222222-0000-0000-0000-${String(i).padStart(12, '0')}`, baselineSHA));
         if (scenario === 'paginated-competing' || scenario === 'paginated-no-info-competing')
@@ -177,7 +180,9 @@ globalThis.fetch = async (url, options) => {
         body = {success: true, result};
         if (!scenario.startsWith('paginated-no-info-')) body.result_info = {
           page, per_page: 10, count: result.length, total_count: total, total_pages: Math.ceil(total / 10)};
-      } else body = {success: true, result, result_info: {total_pages: 1}};
+      } else body = {success: true, result, result_info: {
+        page, per_page: 10, count: result.length, total_count: result.length, total_pages: 1}};
+      // INJECT_HISTORY_RESPONSE
     } else if (url.endsWith('/deployments/' + baselineID)) {
       rollbackReads++;
       result = structuredClone(baseline);

@@ -16,9 +16,24 @@ No gate change is necessary to prepare the real compatibility correction: the
 authenticated Pages deployment-history endpoint rejects `per_page=100` with
 HTTP 400 / error `8000024`, while `per_page=10` succeeds. The controller now
 reads ten records per page and refuses histories exceeding ten complete pages
-(100 records), rather than accepting a partial inventory. Missing pagination
-metadata uses the same ten-record boundary. Offline regressions cover second-page
-competitors, complete reconciliation and bounded failure. The offline CI workflow
+(100 records). It requires all five observed Pages `result_info` fields:
+`page`, `per_page`, `count`, `total_count` and `total_pages`, as safe integers.
+The page number and size must match the request; count must match both the returned
+array and the expected remaining inventory. Positive totals must be mathematically
+consistent and stable throughout each traversal. Duplicate IDs, short/truncated
+pages, missing metadata and contradictory totals fail closed. Final inventory
+must contain exactly the reported number of unique Production deployment IDs.
+There is no short-page fallback, retry or partial-history acceptance.
+
+Offline regressions inject invalid metadata and inventory faults into the real
+workflow both before upload (zero CLI invocations) and during final reconciliation
+(one invocation, no accepted-deployment evidence). They also cover later-page
+competitors, page-boundary transitions and the ten-page bound. A release that
+increases the inventory beyond 100 records is refused during reconciliation;
+it is never permission to retry. Pagination is not a server-side snapshot or
+cross-service lock: the existing operator freeze remains mandatory, and an API
+response that is fully self-consistent but omits real records cannot be disproved
+from pagination metadata alone. The offline CI workflow
 also validates the dedicated `phase/production-activation-preparation` branch;
 it receives no deployment credentials and cannot deploy.
 
