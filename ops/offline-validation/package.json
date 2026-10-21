@@ -1,0 +1,10 @@
+{
+  "name": "classyline-offline-workflow-validation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Isolated YAML parser for offline release-controller validation; no application dependencies.",
+  "dependencies": {
+    "yaml": "2.8.2"
+  }
+}

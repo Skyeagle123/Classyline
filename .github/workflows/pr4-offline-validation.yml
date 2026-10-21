@@ -1,0 +1,50 @@
+name: PR4 offline safety validation
+on:
+  push:
+    branches:
+      - phase/manual-production-deployment-preparation
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    if: >-
+      github.repository == 'Skyeagle123/Classyline' &&
+      github.ref == 'refs/heads/phase/manual-production-deployment-preparation'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+        working-directory: control
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+      CLASSYLINE_VALIDATION_TOOLS: ${{ github.workspace }}/classyline-validation-tools
+    steps:
+      - name: Check out the exact controller commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+      - name: Set up the reviewed Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Verify controller identity before isolated dependency installation
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = Skyeagle123/Classyline
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+          test "$(node --version)" = v24.19.0
+      - name: Install the isolated locked YAML parser outside the checkout
+        run: |
+          set -euo pipefail
+          mkdir -p "$CLASSYLINE_VALIDATION_TOOLS"
+          cp ops/offline-validation/package.json ops/offline-validation/package-lock.json "$CLASSYLINE_VALIDATION_TOOLS/"
+          npm ci --prefix "$CLASSYLINE_VALIDATION_TOOLS" --ignore-scripts --no-audit --no-fund
+      - name: Validate YAML, Bash, JavaScript and deployment hard stops offline
+        run: node ops/validate-offline-workflows.mjs
+      - name: Run all offline workflow and security fault tests
+        run: node --test ops/*.test.mjs
