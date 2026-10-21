@@ -1,8 +1,8 @@
 # Pages Direct Upload — implemented offline transport, live execution blocked
 
 Status: **BLOCKED FOR LIVE USE AND INSTALLATION** pending independent Astra review,
-durable runner-loss attempt consumption and the separately authorized installation
-controls. Both original unconditional workflow blocks remain. A third boundary,
+hosted checkpoint qualification, the unresolved stronger Owner uncertainty policy
+and separately authorized installation controls. Both original workflow blocks remain. A third boundary,
 `checkpoint: async () => false`, prevents upload when remote durability is absent.
 
 ## Implemented package
@@ -17,6 +17,10 @@ controls. Both original unconditional workflow blocks remain. A third boundary,
 - `ops/pages-r2-checkpoint.mjs`: fixed-key conditional claim, native single-request
   SigV4 transport and exact readback. Integrated with the real preflight and upload
   transport in offline tests only; the production callback still returns `false`.
+- `ops/pages-r2-fixed-transport.mjs`: shared signer/native HTTP implementation with
+  separate fixed Production and qualification wrappers; no generic target factory.
+- `ops/pages-r2-qualification.mjs`: isolated checkpoint-only qualification
+  orchestration. Only loopback execution is wired; live execution is blocked.
 - `ops/pages-direct-upload.test.mjs`: actual loopback HTTP fault servers and
   independent child-process interruption/restart tests, plus packaging checks.
 - The manual workflow checks out its own exact controller commit separately from
@@ -143,17 +147,32 @@ SDK, credential logging, delete, overwrite or expiry operation is implemented.
 Response bodies are bounded to 8 KiB and request deadlines to at most 20 seconds.
 Evidence exposes only fixed identities, hashes, status and request counts.
 
-**Unreceived-write limitation:** R2 cannot record a request it never receives.
-After an uncertain failure, the current adapter and retained local journal refuse
-replay. If that request never committed and all local context is destroyed, a new
-standalone adapter could claim the absent key. A regression test demonstrates this
-boundary rather than claiming a permanent tombstone exists. The workflow now
-rejects any second dispatch of this fixed-release workflow across controller
-commits, and rejects run attempts greater than one. Retained GitHub history is a
-defense in depth, not an atomic remote checkpoint or proof against history deletion
-or arbitrary process restart. No negative R2 read may authorize resubmission.
-The stronger requirement that every uncertainty permanently blocks all future
-execution remains unresolved without a trusted orchestration/retention boundary.
+**Supported guarantee: at most one Pages deployment-creation POST across runners,
+conditional on atomic R2 claims and permanent checkpoint retention.** Each Pages
+POST requires a positively acknowledged claim and exact readback from that same
+execution. Atomic create admits at most one such claimant; retention prevents
+replacement runners from reclaiming. That claimant's transport sends at most one
+creation POST. This does not promise eventual success or exactly-once server
+processing. A consumed claim can result in zero Pages POSTs.
+
+**Unreceived claim is not a duplicate deployment:** if a checkpoint PUT never
+reaches R2, the original execution sends zero Pages POSTs. After filesystem loss,
+a replacement may successfully claim and send the first POST; a third claimant is
+denied. The integrated loopback regression counts Pages POSTs as **0 → 1 → 1**,
+separately from checkpoint PUT counts. A delayed acknowledgement of a committed
+claim blocks replacements while the original waits. Cancellation leaves that
+retained claim consumed even when the original never posts.
+
+**Stricter Owner policy remains unresolved and is not waived:** an uncertain
+checkpoint claim must permanently consume authorization even if no request ever
+reached R2. R2 alone cannot record a request it never receives. The supported
+Pages at-most-once guarantee does not satisfy that separate authorization policy.
+The current process and retained journal refuse reuse; a fresh absent-key claim
+demonstrates the policy gap, not a second Pages POST. All deployment blocks remain
+until the Owner separately resolves this policy and hosted qualification succeeds.
+No negative read or operator inference authorizes a retry. Retained first-dispatch
+history is defense in depth, not atomic single-use protection or a substitute for
+permanent retention; do not delete it or rename the workflow to bypass it.
 
 Claims must remain consumed forever, with no expiry, reset or automatic recovery.
 An [indefinite bucket lock](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
@@ -172,12 +191,66 @@ Durable Objects transactional storage is another possible primitive but requires
 an additional authenticated service and deployment.
 
 No checkpoint bucket, lock or credentials have been created or verified.
-Next: independently review the adapter and fault tests, resolve the unreceived-write
-boundary, then
-separately authorize isolated checkpoint-only hosted qualification. Preserve both
+Next: independently review the adapter, qualification harness and fault tests;
+resolve the stronger uncertainty policy separately before deployment. Separately
+authorize isolated checkpoint-only hosted qualification. Preserve both
 original workflow hard stops and `checkpoint: async () => false` until that evidence
 exists. No existing permission or deployment authorization silently covers the
 new storage or credentials.
+
+## Isolated checkpoint-only qualification harness
+
+`ops/pages-r2-qualification.mjs` is prepared for independent review, **not live
+execution**. `runHostedQualification()` always throws; the only executable harness
+requires an explicit loopback port. There is no CLI entry, credential discovery,
+Pages import/request, arbitrary hostname, bucket or key override. The shared
+native signer/request core has separate fixed wrappers; Production's target is
+unchanged. Do not remove the live block as an operational workaround.
+
+| Target or budget | Fixed value |
+| --- | --- |
+| Account | `4bfa1a9c849c3da50520f7a4bcccccab` |
+| Dedicated test bucket | `classyline-checkpoint-qualification` |
+| Dedicated test key | `qualification/pr4/af06e616de69ce9c2a0d086ba0f9da43db4ff12e/claim.json` |
+| S3 requests | At most 3 conditional PUTs and 1 exact GET |
+| Created objects | At most 1, retained indefinitely; no cleanup/delete/overwrite |
+| Pages, D1 or product-image requests | 0 |
+| Configuration reads | At most 10 allowlisted GETs, before/after claims |
+
+The future authorized procedure is: read back the exact bucket, one enabled
+Indefinite lock covering the key, no lifecycle rules, and the actual S3 token's
+single bucket-scoped Allow permission. Launch two conditional creates with
+different fixed contender bodies. Require exactly one complete `200` and one
+`412`, verify the winner's quoted MD5 ETag and exact authenticated GET bytes, then
+require a third conditional PUT to return `412`. Recheck permission/retention
+evidence. Any uncertainty stops without retry, resume, cleanup or inferred success.
+An already consumed key cannot qualify again and must not be automatically rotated.
+
+The prepared metadata validator requires raw successful responses from an
+independently authenticated read-only collector for these exact paths:
+
+- GET `/accounts/{account}/r2/buckets/{test-bucket}`
+- GET `/accounts/{account}/r2/buckets/{test-bucket}/lock`
+- GET `/accounts/{account}/r2/buckets/{test-bucket}/lifecycle`
+- GET `/accounts/{account}/tokens/{S3-access-key-id}`
+- GET `/accounts/{account}/tokens/permission_groups`
+
+The actual token ID is matched privately to the S3 access key; it is never audit
+evidence. The permission-group ID must resolve to `Workers R2 Storage Bucket Item
+Write` from authenticated readback. Exactly one Allow policy, one permission group
+and resource `com.cloudflare.edge.r2.bucket.{account}_default_{test-bucket}: "*"`
+are required. Broad account resources, extra grants, expiry, missing/ambiguous
+readback and retention drift fail closed. No forbidden write is attempted to
+"test" boundaries. The S3 credential cannot provide these management-API reads;
+a separate least-privilege read-only collector is still missing and needs review.
+Fixture-shaped responses are not proof of authenticated hosted configuration.
+
+Only allowlisted fixed target identities, counts, state and SHA-256 evidence leave
+the harness. Credentials, token IDs, signed headers and raw responses are excluded.
+Offline evidence explicitly says `hosted_qualified: false`. Lock readback proves
+only observed configuration, not perpetual retention: prohibit administrative lock
+removal, lifecycle edits, key deletion/reset and credential broadening operationally.
+No live resources or credentials were created and no hosted test was executed.
 
 ## Validation and remaining proof boundaries
 
@@ -223,3 +296,7 @@ operators. Safe installation/recovery remains in `production-deployment.md`.
 - [Worker bundle metadata](https://github.com/cloudflare/workers-sdk/blob/wrangler%404.150.0/packages/wrangler/src/api/pages/create-worker-bundle-contents.ts)
 - [Node v24.19.0 HTTPS](https://github.com/nodejs/node/blob/v24.19.0/lib/https.js) and [HTTP client](https://github.com/nodejs/node/blob/v24.19.0/lib/_http_client.js)
 - [Official SDK retry configuration](https://github.com/cloudflare/cloudflare-typescript#retries) (moving documentation, not a selected pinned SDK).
+- [R2 credentials, S3 key identity and bucket-scoped resources](https://developers.cloudflare.com/r2/api/tokens/)
+- [Bucket lock readback](https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/locks/methods/get/)
+- [Lifecycle readback](https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/lifecycle/methods/get/)
+- [Account token metadata](https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/get/) and [permission groups](https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/subresources/permission_groups/methods/list/)

@@ -12,6 +12,7 @@ import {join, resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {RELEASE} from './pages-direct-upload.mjs';
 import {CHECKPOINT, R2Checkpoint, signCheckpointRequest, requestR2Once} from './pages-r2-checkpoint.mjs';
+import {QUALIFICATION} from './pages-r2-fixed-transport.mjs';
 
 const CREDENTIALS = Object.freeze({accessKeyId: '0123456789abcdef0123456789abcdef',
   secretAccessKey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789'});
@@ -99,6 +100,19 @@ function privateEvidence(checkpoint, error) {
   assert(!text.includes(CREDENTIALS.accessKeyId)); assert(!text.includes(CREDENTIALS.secretAccessKey));
   assert(!text.includes('AWS4-HMAC-SHA256'));
 }
+
+test('fixed checkpoint transport identities remain bound to the approved release', () => {
+  for (const field of ['account', 'project', 'sha', 'tree']) {
+    assert.equal(CHECKPOINT[field], RELEASE[field], field);
+    assert.equal(QUALIFICATION[field], RELEASE[field], field);
+  }
+  assert.equal(CHECKPOINT.environment, 'production');
+  assert.equal(QUALIFICATION.environment, 'qualification');
+  assert.notEqual(CHECKPOINT.bucket, QUALIFICATION.bucket);
+  assert.notEqual(CHECKPOINT.key, QUALIFICATION.key);
+  assert.notEqual(CHECKPOINT.path, QUALIFICATION.path);
+  assert(Object.isFrozen(CHECKPOINT) && Object.isFrozen(QUALIFICATION));
+});
 
 test('checkpoint signature binds exact account, key, payload and conditional header', () => {
   const body = Buffer.from('{"offline":"fixture"}');

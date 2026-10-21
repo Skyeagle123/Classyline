@@ -51,6 +51,8 @@ async function plan() {
 }
 async function serverFor(scenario, p) {
   const calls = [], sockets = new Set(); let object = scenario === 'existing' ? Buffer.from('consumed') : null, observed = false;
+  let commits = 0, acknowledge, resolveCommitted;
+  const committed = new Promise(resolve => {resolveCommitted = resolve;});
   const server = http.createServer(async (req, res) => {
     const chunks = []; for await (const c of req) chunks.push(c);
     const body = Buffer.concat(chunks), path = req.url.replace(/^\/client\/v4/, '');
@@ -64,6 +66,11 @@ async function serverFor(scenario, p) {
         // Model the documented atomic conditional commit, with no await between
         // existence check and assignment. Real R2 must be qualified separately.
         object = Buffer.from(body);
+        commits++; resolveCommitted();
+        if (scenario === 'delayed-ack') {
+          acknowledge = () => {res.writeHead(200, {etag: etag(object)}); res.end();};
+          return;
+        }
         if (scenario === 'lost-ack-reset') {req.socket.destroy(); return;}
         if (scenario === 'lost-ack-timeout') return;
         res.writeHead(200, {etag: etag(object)}); res.end(); return;
@@ -98,7 +105,10 @@ async function serverFor(scenario, p) {
   });
   server.on('connection', socket => {sockets.add(socket); socket.on('close', () => sockets.delete(socket));});
   server.listen(0, '127.0.0.1'); await once(server, 'listening'); const port = server.address().port;
-  return {calls, checkpointRequest: options => requestR2Once({...options, hostname: '127.0.0.1', secure: false, port, timeoutMs: 200}),
+  return {calls, committed, commits: () => commits, stored: () => object && Buffer.from(object),
+    acknowledge: () => {assert(acknowledge, 'No pending acknowledgement'); acknowledge();},
+    checkpointRequest: options => requestR2Once({...options, hostname: '127.0.0.1', secure: false, port,
+      timeoutMs: scenario === 'delayed-ack' ? 5000 : 200}),
     pagesRequest: options => requestOnce({...options, hostname: '127.0.0.1', secure: false, port, timeoutMs: 200}),
     fetch: (url, options) => {const u = new URL(url); assert(['api.cloudflare.com', 'api.github.com'].includes(u.hostname));
       assert(!options?.method || options.method === 'GET');
@@ -151,3 +161,100 @@ for (const scenario of ['success', 'concurrent', 'existing', 'denied', 'lost-ack
       }
     } finally {await h.close(); for (const dir of directories) rmSync(dir, {recursive: true, force: true});}
   });
+
+// Replacement here means a fresh adapter/transport and journal directory. The
+// separate R2 fault suite covers real SIGKILL and a replacement child process.
+// The store intentionally retains claims forever: this models the required R2
+// retention contract, rather than proving hosted lock/lifecycle configuration.
+function replacementHarness(h, p) {
+  const directories = [];
+  function attempt({checkpointRequest = h.checkpointRequest, signal} = {}) {
+    const directory = mkdtempSync(join(tmpdir(), 'classyline-replacement-')); directories.push(directory);
+    const checkpoint = new R2Checkpoint({credentials, request: checkpointRequest, signal});
+    const preflight = preflightFactory(h.fetch, {GITHUB_SHA: CONTROL, GH_TOKEN: 'offline', CLOUDFLARE_API_TOKEN: 'offline'},
+      RELEASE.projectID, ROOT, BASELINE, BASELINE_SHA, new Set([BASELINE]), (ok, message) => {if (!ok) throw Error(message);},
+      () => {verifyPlan(p, blake3); return p;}, {cwd: () => 'offline'}, 'offline', project());
+    const outcome = new DirectUpload({request: h.pagesRequest, token: 'offline'}).execute({plan: p, blake3,
+      journal: new AttemptJournal(directory), controlSHA: CONTROL, checkpoint: intent => checkpoint.claim(intent), preflight,
+      reconcile: async ({read}) => {const d = (await read(ROOT + '/deployments/' + CREATED)).result;
+        deploymentIdentity(d); const canonical = (await read(ROOT)).result.canonical_deployment;
+        deploymentIdentity(canonical); assert.equal(canonical.id, d.id); return d;}});
+    return {outcome, checkpoint, directory};
+  }
+  return {attempt,
+    pagesCalls: () => h.calls.filter(c => c.path !== CHECKPOINT.path),
+    creations: () => h.calls.filter(c => c.method === 'POST' && c.path === ROOT + '/deployments').length,
+    claims: () => h.calls.filter(c => c.method === 'PUT' && c.path === CHECKPOINT.path).length,
+    cleanup: () => {for (const directory of directories) rmSync(directory, {recursive: true, force: true});}};
+}
+
+test('unreceived claim then replacement: Pages POST totals are 0 -> 1 -> still 1', {timeout: 15000}, async () => {
+  const p = await plan(), h = await serverFor('success', p), runners = replacementHarness(h, p);
+  // Closed loopback port produces a native network failure before the external
+  // checkpoint store receives a PUT. No fake successful claim is substituted.
+  const unavailable = http.createServer(); unavailable.listen(0, '127.0.0.1'); await once(unavailable, 'listening');
+  const port = unavailable.address().port; await new Promise(resolve => unavailable.close(resolve));
+  try {
+    const first = runners.attempt({checkpointRequest: options => requestR2Once({...options,
+      hostname: '127.0.0.1', secure: false, port, timeoutMs: 200})});
+    await assert.rejects(first.outcome, /Checkpoint unavailable/);
+    assert.equal(first.checkpoint.evidence().state, 'blocked');
+    assert.equal(first.checkpoint.evidence().claim_requests, 1);
+    assert.equal(runners.pagesCalls().length, 0); assert.equal(runners.creations(), 0);
+    assert.equal(h.commits(), 0); assert.equal(h.stored(), null);
+    rmSync(first.directory, {recursive: true, force: true}); // Original runner filesystem is lost.
+
+    const second = runners.attempt(); const accepted = await second.outcome;
+    assert.equal(accepted.accepted, true); assert.equal(second.checkpoint.evidence().state, 'acknowledged');
+    assert.equal(runners.creations(), 1); assert.equal(h.commits(), 1);
+    const retained = h.stored(); rmSync(second.directory, {recursive: true, force: true});
+
+    const third = runners.attempt(); await assert.rejects(third.outcome, /Checkpoint unavailable/);
+    assert.equal(third.checkpoint.evidence().state, 'blocked');
+    assert.equal(third.checkpoint.evidence().verification_reads, 0);
+    assert.equal(runners.claims(), 2); assert.equal(h.commits(), 1);
+    assert.equal(runners.creations(), 1); assert.deepEqual(h.stored(), retained);
+    // Another checkpoint claim after an unreceived PUT is NOT a second Pages
+    // deployment. This probe does not authorize that claim under the stricter
+    // Owner policy that every uncertain checkpoint attempt stays consumed.
+  } finally {await h.close(); runners.cleanup();}
+});
+
+for (const cancel of [false, true])
+  test(`committed claim with delayed acknowledgement: ${cancel ? 'cancel original, zero Pages POSTs' : 'only original sends one Pages POST'}`,
+    {timeout: 15000}, async () => {
+      const p = await plan(), h = await serverFor('delayed-ack', p), runners = replacementHarness(h, p);
+      const cancellation = new AbortController();
+      const first = runners.attempt({signal: cancellation.signal});
+      // Attach both handlers immediately; cancellation must not produce an
+      // unhandled rejection while the competing claim is being checked.
+      const firstResult = first.outcome.then(value => ({value}), error => ({error}));
+      try {
+        await h.committed; const retained = h.stored();
+        assert.equal(h.commits(), 1); assert.equal(first.checkpoint.evidence().state, 'claiming');
+        assert.equal(runners.pagesCalls().length, 0); assert.equal(runners.creations(), 0);
+        const replacement = runners.attempt(); await assert.rejects(replacement.outcome, /Checkpoint unavailable/);
+        assert.equal(replacement.checkpoint.evidence().verification_reads, 0);
+        assert.deepEqual(h.stored(), retained); assert.equal(runners.creations(), 0);
+
+        if (cancel) cancellation.abort();
+        h.acknowledge();
+        const result = await firstResult;
+        if (cancel) {
+          assert.match(String(result.error), /Checkpoint unavailable/);
+          assert.equal(first.checkpoint.evidence().state, 'blocked');
+          assert.equal(first.checkpoint.evidence().verification_reads, 0);
+          assert.equal(runners.pagesCalls().length, 0);
+        } else {
+          assert.equal(result.error, undefined); assert.equal(result.value.accepted, true);
+          assert.equal(first.checkpoint.evidence().state, 'acknowledged');
+        }
+        assert.equal(runners.creations(), cancel ? 0 : 1);
+        rmSync(first.directory, {recursive: true, force: true});
+        rmSync(replacement.directory, {recursive: true, force: true});
+        const third = runners.attempt(); await assert.rejects(third.outcome, /Checkpoint unavailable/);
+        assert.equal(runners.claims(), 3); assert.equal(h.commits(), 1);
+        assert.equal(runners.creations(), cancel ? 0 : 1); assert.deepEqual(h.stored(), retained);
+        assert(h.calls.every(c => ['GET', 'PUT', 'POST'].includes(c.method)), 'No delete/reset operation');
+      } finally {cancellation.abort(); await firstResult; await h.close(); runners.cleanup();}
+    });

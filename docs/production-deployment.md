@@ -55,7 +55,7 @@ Local exclusive/fsynced attempt consumption survives demonstrated process kills,
 including a kill after the creation POST reached a mock server. It does not prove
 persistence after destruction of an ephemeral Actions runner. Deployment remains
 BLOCKED pending independent review, hosted checkpoint qualification, resolution
-of the unreceived-write uncertainty boundary and separate installation/activation
+of the stronger Owner uncertainty policy and separate installation/activation
 authorization.
 
 See [the implemented transport and proof boundaries](pages-direct-upload-design.md).
@@ -340,9 +340,40 @@ Bucket administrators can remove locks. This is retained administrative control,
 not administrator-proof immutability. Any checkpoint-only hosted test needs new
 explicit authorization and must not invoke Pages deployment or product storage.
 
-The current offline tests also demonstrate the remaining limitation: if an
-uncertain request never reached R2 and runner-local state is lost, the absent
-object cannot preserve that uncertainty. Retained first-dispatch history narrows
-this risk, but is not a substitute for proving the complete orchestration boundary.
-Deployment stays blocked; do not silently treat an absent checkpoint as a new
-authorization. No new hosted measurements, R2 writes or credentials were used.
+The supported guarantee is **at most one Pages deployment-creation POST across
+runners, conditional on atomic R2 claims and permanent checkpoint retention**.
+A checkpoint PUT that never reaches R2 produces zero Pages POSTs. A replacement
+can claim and produce the first POST, and a third attempt is denied: **0 → 1 → 1**.
+Committed claims with delayed acknowledgements block replacements; cancellation
+does not free the retained claim. No exactly-once server-processing claim is made.
+
+The stronger Owner policy remains unresolved: an uncertain checkpoint claim must
+permanently consume authorization even when it never reached R2 and local state
+is lost. This package does not waive that policy or authorize another claim.
+Retained first-dispatch history is defense in depth, not an atomic remote record.
+All three deployment hard stops remain byte-for-byte unchanged. No live writes,
+new credentials, workflow dispatch or configuration changes were performed.
+
+The isolated qualification harness and its exact future request budget are in
+[the checkpoint qualification procedure](pages-direct-upload-design.md#isolated-checkpoint-only-qualification-harness).
+It is prepared and tested offline, not enabled for live execution. Independent
+review is the next gate; hosted qualification and installation need separate
+Owner authorization.
+
+## Checkpoint qualification preparation validation
+
+On 2026-10-21, the complete relevant Node 24.19.0 offline suite passed **306/306**,
+with zero failures, cancellations or skips: the existing 257 cases, three explicit
+cross-runner POST-count regressions, one fixed-release identity regression and 45
+isolated qualification cases. Syntax validation passed for 2 YAML files, 14 Bash
+scripts, 4 embedded JavaScript scripts and 14 JavaScript modules; all three
+deployment blocks remain intact. The Production workflow is byte-identical to
+`af06e616de69ce9c2a0d086ba0f9da43db4ff12e`.
+
+The new regressions execute the real workflow preflight, checkpoint and transport
+against loopback servers. They count **0 → 1 → 1** Pages POSTs for an unreceived
+claim/replacement/third attempt, one only from the original delayed claimant, and
+zero after its cancellation. Retained mock bytes stay unchanged. This models the
+required retention contract; it does not prove hosted retention or waive the
+stricter Owner policy. The exact published commit's automatic offline Actions
+result is recorded separately in PR #4; no manual workflow was dispatched.
