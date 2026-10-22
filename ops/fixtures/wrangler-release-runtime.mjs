@@ -1,5 +1,6 @@
 // Test-only runtime for the actual embedded release script. No API or CLI I/O.
 import assert from 'node:assert/strict';
+import {createRecoveryAPI} from './recovery-api.mjs';
 import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, symlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -18,6 +19,8 @@ const fakeToken = 'FAKE_TEST_VALUE_NOT_A_CREDENTIAL';
 const fakeGitHubToken = 'FAKE_GITHUB_VALUE_NOT_A_CREDENTIAL';
 const temp = mkdtempSync(join(tmpdir(), 'classyline-wrangler-test-'));
 let calls = 0, writes = 0, observed = false;
+let recoveryDrift = false;
+const boundaryEvents = [];
 let historyReads = 0, projectReads = 0, mainReads = 0, rollbackReads = 0;
 let postHistoryReads = 0, postProjectReads = 0;
 let kills = 0;
@@ -31,7 +34,12 @@ Object.assign(process.env, {
   CLOUDFLARE_API_TOKEN: scenario === 'missing-token' ? '' : fakeToken,
   CLOUDFLARE_ACCOUNT_ID: '4bfa1a9c849c3da50520f7a4bcccccab',
   GH_TOKEN: fakeGitHubToken, GITHUB_TOKEN: fakeGitHubToken,
-  GITHUB_SHA: 'c'.repeat(40), GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1',
+  GITHUB_SHA: 'c'.repeat(40), GITHUB_RUN_ID: '39820000000', GITHUB_RUN_ATTEMPT: '1',
+  GITHUB_RUN_NUMBER: '3', GITHUB_WORKFLOW_SHA: 'c'.repeat(40),
+  GITHUB_WORKFLOW_REF: 'Skyeagle123/Classyline/.github/workflows/classyline-production-manual.yml@refs/heads/main',
+  GITHUB_REPOSITORY:'Skyeagle123/Classyline', GITHUB_REPOSITORY_ID:'1096008352',
+  GITHUB_REPOSITORY_OWNER_ID:'125151458', GITHUB_REF:'refs/heads/main', GITHUB_EVENT_NAME:'workflow_dispatch',
+  GITHUB_ACTOR:'Skyeagle123', GITHUB_ACTOR_ID:'125151458', GITHUB_TRIGGERING_ACTOR:'Skyeagle123',
   WRANGLER_LOG: 'debug', CLOUDFLARE_API_BASE_URL: 'https://forbidden.invalid',
   NODE_OPTIONS: '--require=/forbidden', CLASSYLINE_RELEASE_ARMED: 'true', RELEASE_ARMED: 'true',
 });
@@ -39,6 +47,7 @@ if (scenario === 'missing-arm') delete process.env.RELEASE_ARMED;
 if (scenario === 'false-arm') process.env.RELEASE_ARMED = 'false';
 if (scenario === 'empty-arm') process.env.RELEASE_ARMED = '';
 if (scenario === 'uppercase-arm') process.env.RELEASE_ARMED = 'TRUE';
+const recovery = createRecoveryAPI(process.env, scenario, true);
 const evidence = join(temp, 'classyline-evidence');
 mkdirSync(evidence);
 const app = join(temp, 'app');
@@ -95,11 +104,15 @@ function project() {
 globalThis.mockChild = {
   execFileSync(command, args) {
     assert.equal(command, 'git', 'Only read-only Git subprocesses may be mocked');
+    boundaryEvents.push('source-check');
+    if (recoveryDrift && scenario === 'during-recovery-source-drift' && args[0] === 'rev-parse')
+      return 'unreviewed-source\n';
     if (args[0] === 'rev-parse') return (args[1]?.includes('tree') ? candidateTree : candidate) + '\n';
     assert.equal(args[0], 'status');
     return scenario === 'dirty-tree' ? ' M changed\n' : '';
   },
   spawn(command, args, options) {
+    boundaryEvents.push('wrangler');
     calls++;
     assert.equal(calls, 1, 'Duplicate Wrangler deployment invocation');
     assert.equal(command, 'npx');
@@ -144,14 +157,28 @@ globalThis.fetch = async (url, options) => {
   assert(options.signal, 'API read deadline must be configured');
   let body;
   if (url.startsWith('https://api.github.com/')) {
+    const response = recovery.respond(url, options);
+    if (response) {
+      // Inject drift only during the second real guard's last API response.
+      // The guard still validates the log bytes/digests after this boundary.
+      if (recovery.counts.inventories === 2 && url.includes('/git/blobs/')) {
+        boundaryEvents.push('final-recovery-log-response');
+        if (scenario.startsWith('during-recovery-')) recoveryDrift = true;
+      }
+      return response;
+    }
+    assert(url.endsWith('/git/ref/heads/main'), 'Unexpected GitHub read');
+    boundaryEvents.push('main-check');
     mainReads++;
     body = {object: {sha: scenario === 'main-changed' || (scenario === 'late-main-drift' && mainReads >= 3)
       ? 'different' : process.env.GITHUB_SHA}};
+    if (recoveryDrift && scenario === 'during-recovery-main-drift') body.object.sha = 'unreviewed-main';
   } else {
     assert(url.startsWith('https://api.cloudflare.com/client/v4/accounts/4bfa1a9c849c3da50520f7a4bcccccab/pages/projects/classyline2'));
     if (scenario === 'api-denied') return {ok: false, status: 403};
     let result;
     if (url.includes('/deployments?')) {
+      boundaryEvents.push('cloudflare-history');
       const query = new URL(url).searchParams;
       assert.equal(query.get('env'), 'production');
       // The live Pages endpoint rejects 100; do not let mocks hide that contract.
@@ -167,6 +194,8 @@ globalThis.fetch = async (url, options) => {
       if (scenario === 'late-completed-competitor' && historyReads >= 3 && !observed) result.push(deployment(otherID, 'other'));
       if (observed) result.unshift(structuredClone(fresh));
       if (observed && scenario === 'multiple-new') result.push(deployment(otherID, candidate));
+      if (recoveryDrift && scenario === 'during-recovery-competitor')
+        result.push({...deployment(otherID, 'other'), latest_stage: {name: 'build', status: 'active'}});
       // INJECT_FINAL_HISTORY
       if (scenario.startsWith('paginated-')) {
         const count = scenario === 'paginated-bound-exceeded' ? 100 :
@@ -187,6 +216,7 @@ globalThis.fetch = async (url, options) => {
         page, per_page: 10, count: result.length, total_count: result.length, total_pages: 1}};
       // INJECT_HISTORY_RESPONSE
     } else if (url.endsWith('/deployments/' + baselineID)) {
+      boundaryEvents.push('cloudflare-rollback');
       rollbackReads++;
       result = structuredClone(baseline);
       if (scenario === 'rollback-missing' || (scenario === 'late-rollback-failure' && rollbackReads >= 2)) result.latest_stage.status = 'failure';
@@ -195,6 +225,7 @@ globalThis.fetch = async (url, options) => {
     } else if (url.endsWith('/deployments/' + newID)) {
       body = {success: true, result: structuredClone(fresh)};
     } else {
+      boundaryEvents.push('cloudflare-project');
       result = project(); projectReads++;
       if (!observed && projectReads >= 3) {
         if (scenario === 'late-added-dist') writeFileSync('dist/late.js', 'unapproved');
@@ -222,6 +253,10 @@ globalThis.fetch = async (url, options) => {
       if (scenario === 'missing-secret') delete c.env_vars.ADMIN_PASSWORD_HASH;
       if (scenario === 'unexpected-placement') c.placement = {mode: 'smart'};
       if (scenario === 'wrong-preview') result.deployment_configs.preview.d1_databases.DB.id = 'production';
+      if (recoveryDrift && scenario === 'during-recovery-d1') c.d1_databases.DB.id = 'unexpected-database';
+      if (recoveryDrift && scenario === 'during-recovery-r2') c.r2_buckets.PRODUCT_IMAGES.name = 'unexpected-bucket';
+      if (recoveryDrift && scenario === 'during-recovery-baseline')
+        result.canonical_deployment = deployment(otherID, baselineSHA);
       body = {success: true, result};
     }
   }
@@ -232,5 +267,6 @@ process.on('exit', () => {
   const artifacts = Object.fromEntries(readdirSync(evidence).filter(name => name.endsWith('.json'))
     .map(name => [name, JSON.parse(readFileSync(join(evidence, name)))]));
   rmSync(temp, {recursive: true, force: true});
-  console.log(JSON.stringify({scenario, calls, writes, kills, historyReads, projectReads, artifacts}));
+  console.log(JSON.stringify({scenario, calls, writes, kills, historyReads, projectReads,
+    recoveryReads:recovery.counts, boundaryEvents, recoveryDrift, artifacts}));
 });

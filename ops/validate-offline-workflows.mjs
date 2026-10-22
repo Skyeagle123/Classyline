@@ -96,7 +96,8 @@ try {
   assert.deepEqual(Object.keys(offline.on).sort(), ['push', 'workflow_dispatch']);
   assert.deepEqual(offline.on.push.branches, ['phase/manual-production-deployment-preparation',
     'phase/production-activation-preparation', 'phase/production-release-enablement-review',
-    'phase/production-final-release-gate', 'phase/storefront-v2-production-release']);
+    'phase/production-final-release-gate', 'phase/storefront-v2-production-release',
+    'phase/storefront-v2-release-recovery']);
   assert.deepEqual(offline.permissions, {contents: 'read'});
   assert.deepEqual(Object.keys(offline.jobs), ['offline']);
   assert.equal(offline.jobs.offline.environment, undefined, 'Offline validation must not enter a protected release environment');
