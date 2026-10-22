@@ -1,0 +1,104 @@
+[
+  {
+    "id": "SYNTHETIC-NEW",
+    "title": "SYNTHETIC SAMPLE — New In",
+    "category": "New In",
+    "description": "Test fixture only. Not real merchandise or a commercial offer.",
+    "image": "/synthetic-placeholder.svg",
+    "price_cents": 100,
+    "active": false,
+    "variants": [
+      {
+        "id": "SYNTHETIC-NEW-S-IVORY",
+        "size": "S",
+        "color": "Ivory",
+        "stock": 2
+      }
+    ]
+  },
+  {
+    "id": "SYNTHETIC-DRESS",
+    "title": "SYNTHETIC SAMPLE — Dress",
+    "category": "Dresses",
+    "description": "Test fixture only. Not real merchandise or a commercial offer.",
+    "image": "/synthetic-placeholder.svg",
+    "price_cents": 200,
+    "active": false,
+    "variants": [
+      {
+        "id": "SYNTHETIC-DRESS-M-ROSE",
+        "size": "M",
+        "color": "Dusty Rose",
+        "stock": 3
+      }
+    ]
+  },
+  {
+    "id": "SYNTHETIC-TOP",
+    "title": "SYNTHETIC SAMPLE — Top",
+    "category": "Tops",
+    "description": "Test fixture only. Not real merchandise or a commercial offer.",
+    "image": "/synthetic-placeholder.svg",
+    "price_cents": 300,
+    "active": false,
+    "variants": [
+      {
+        "id": "SYNTHETIC-TOP-L-TAUPE",
+        "size": "L",
+        "color": "Taupe",
+        "stock": 0
+      }
+    ]
+  },
+  {
+    "id": "SYNTHETIC-SET",
+    "title": "SYNTHETIC SAMPLE — Set",
+    "category": "Sets",
+    "description": "Test fixture only. Not real merchandise or a commercial offer.",
+    "image": "/synthetic-placeholder.svg",
+    "price_cents": 400,
+    "active": false,
+    "variants": [
+      {
+        "id": "SYNTHETIC-SET-XS-ESPRESSO",
+        "size": "XS",
+        "color": "Espresso",
+        "stock": 4
+      }
+    ]
+  },
+  {
+    "id": "SYNTHETIC-JACKET",
+    "title": "SYNTHETIC SAMPLE — Jacket",
+    "category": "Jackets",
+    "description": "Test fixture only. Not real merchandise or a commercial offer.",
+    "image": "/synthetic-placeholder.svg",
+    "price_cents": 500,
+    "active": false,
+    "variants": [
+      {
+        "id": "SYNTHETIC-JACKET-XL-IVORY",
+        "size": "XL",
+        "color": "Ivory",
+        "stock": 2
+      }
+    ]
+  },
+  {
+    "id": "SYNTHETIC-SALE",
+    "title": "SYNTHETIC SAMPLE — Sale collection",
+    "category": "Sale",
+    "description": "Test fixture only. No actual discount or prior price is asserted.",
+    "image": "/synthetic-placeholder.svg",
+    "price_cents": 600,
+    "active": false,
+    "variants": [
+      {
+        "id": "SYNTHETIC-SALE-XXL-ROSE",
+        "size": "XXL",
+        "color": "Dusty Rose",
+        "stock": 1
+      }
+    ]
+  }
+]
