@@ -2,7 +2,7 @@ import React from "react";
 
 export const CONTACTS = Object.freeze({
   instagram: "https://www.instagram.com/_classy_line_/",
-  whatsapp: "https://wa.me/9613505598",
+  whatsapp: "https://wa.me/96178719771",
 });
 
 function ContactIcon({ type }) {
@@ -74,7 +74,7 @@ export default function ContactLinks({ text = false, className = "" }) {
         label="Contact ClassyLine on WhatsApp"
         className="contact-link"
       >
-        {text && <span>WhatsApp · +961 3 505 598</span>}
+        {text && <span>WhatsApp · +961 78 719 771</span>}
       </ContactLink>
     </nav>
   );

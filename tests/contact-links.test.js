@@ -41,7 +41,7 @@ const anchors = (html) => [...html.matchAll(/<a\b([^>]*)>/g)].map((m) => m[1]);
 test("Header and Contact Us Footer expose exactly the approved safe contact links", () => {
   assert.deepEqual(CONTACTS, {
     instagram: "https://www.instagram.com/_classy_line_/",
-    whatsapp: "https://wa.me/9613505598",
+    whatsapp: "https://wa.me/96178719771",
   });
   for (const component of [Header, Footer]) {
     const html = render(React.createElement(component));
@@ -59,14 +59,14 @@ test("Header and Contact Us Footer expose exactly the approved safe contact link
   }
   const footer = render(React.createElement(Footer));
   assert.match(footer, /Contact Us/);
-  assert.match(footer, /\+961 3 505 598/);
+  assert.match(footer, /\+961 78 719 771/);
   assert.match(footer, /href="\/admin"/);
 });
 test("mobile contact button has an accessible name and sends no cart/order payload", () => {
   const html = render(React.createElement(FloatingWhatsApp)),
     links = anchors(html);
   assert.equal(links.length, 1);
-  assert.match(links[0], /href="https:\/\/wa.me\/9613505598"/);
+  assert.match(links[0], /href="https:\/\/wa.me\/96178719771"/);
   assert.match(
     links[0],
     /aria-label="Contact ClassyLine on WhatsApp \(opens in a new tab\)"/,

@@ -1,5 +1,9 @@
 import { digest, passwordHash, equal, cookie } from "./security.js";
-import { normalizePhone, expirePendingOrders } from "./checkout.js";
+import {
+  normalizePhone,
+  expirePendingOrders,
+  validWhatsAppNumber,
+} from "./checkout.js";
 import { ImageFailure } from "./image-validation.js";
 import { uploadImage, deliverImage } from "./product-images.js";
 import {
@@ -149,7 +153,7 @@ function receipt(order, items, number) {
     total_cents: order.subtotal_cents + order.delivery_cents,
     items,
   };
-  if (/^[1-9]\d{7,14}$/.test(number || "")) {
+  if (validWhatsAppNumber(number)) {
     const message = [
       `ClassyLine order ${order.reference}`,
       ...items.map(
@@ -234,7 +238,7 @@ export async function handle(request, env) {
         })),
         regions: (await db.prepare("SELECT * FROM regions ORDER BY name").all())
           .results,
-        whatsapp_enabled: /^[1-9]\d{7,14}$/.test(env.WHATSAPP_NUMBER || ""),
+        whatsapp_enabled: validWhatsAppNumber(env.WHATSAPP_NUMBER),
       });
     }
     if (path === "/api/admin/login" && method === "POST") {
@@ -562,7 +566,7 @@ export async function handle(request, env) {
         fail(400, "Invalid channel");
       if (
         input.channel === "whatsapp" &&
-        !/^[1-9]\d{7,14}$/.test(env.WHATSAPP_NUMBER || "")
+        !validWhatsAppNumber(env.WHATSAPP_NUMBER)
       )
         fail(503, "WhatsApp is awaiting configuration");
       const delivery = await db

@@ -122,13 +122,11 @@ export function ProductView({
                   )
                 }
               >
-                {swatchColor(name) && (
-                  <span
-                    className="color-swatch"
-                    style={{ backgroundColor: swatchColor(name) }}
-                    aria-hidden="true"
-                  />
-                )}
+                <span
+                  className="color-swatch"
+                  style={{ backgroundColor: swatchColor(name) || "#b8a79a" }}
+                  aria-hidden="true"
+                />
                 {name}
               </button>
             ))}

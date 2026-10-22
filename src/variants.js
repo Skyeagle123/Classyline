@@ -23,6 +23,23 @@ const swatches = {
   grey: "#999",
   gray: "#999",
   navy: "#27394e",
+  "light blue": "#a8c7df",
+  cream: "#fff2d5",
+  teal: "#287e80",
+  "olive green": "#6b7040",
+  "light grey": "#d3d3d3",
+  "light gray": "#d3d3d3",
+  "navy blue": "#27394e",
+  magenta: "#b52682",
+  burgundy: "#7c263b",
+  bordeaux: "#7c263b",
+  "charcoal grey": "#45474b",
+  "charcoal gray": "#45474b",
+  "chocolate brown": "#664133",
+  "cream beige": "#e7d8ba",
+  "emerald green": "#227354",
+  "rose pink": "#d28fa4",
+  "washed blue": "#809bb4",
 };
 export function swatchColor(color) {
   const key = String(color).toLowerCase();
