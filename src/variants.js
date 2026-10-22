@@ -24,5 +24,7 @@ const swatches = {
   gray: "#999",
   navy: "#27394e",
 };
-export const swatchColor = (color) =>
-  swatches[String(color).toLowerCase()] || null;
+export function swatchColor(color) {
+  const key = String(color).toLowerCase();
+  return Object.hasOwn(swatches, key) ? swatches[key] : null;
+}

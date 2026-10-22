@@ -10,6 +10,7 @@ import {
   collections,
   categoryGroups,
   CATEGORIES,
+  categorySlug,
   inCollection,
   collectionLabel,
   pieceCount,
@@ -77,6 +78,26 @@ const product = {
   price_cents: 3800,
   variants,
 };
+
+test("swatches accept only own allowlisted colors, never inherited properties", () => {
+  for (const name of ["constructor", "__proto__", "CONSTRUCTOR", "__PROTO__"])
+    assert.equal(swatchColor(name), null, name);
+  assert.equal(swatchColor("Blue"), "#52719a");
+  assert.equal(swatchColor("IVORY"), "#f6f1e8");
+  assert.equal(swatchColor("Light Blue / White Stripes"), null);
+  assert.equal(swatchColor("not-a-color"), null);
+});
+
+test("category aliases ignore inherited properties and preserve literal legacy labels", () => {
+  for (const name of ["constructor", "__proto__", " CONSTRUCTOR "])
+    assert.equal(categorySlug(name), name.trim().toLowerCase(), name);
+  assert.equal(inCollection({ category: "Tops" }, "constructor"), false);
+  assert.equal(inCollection({ category: "Tops" }, "__proto__"), false);
+  assert.equal(categorySlug("New"), "new-in");
+  assert.equal(categorySlug("Pajamas"), "pajamas-sleepwear");
+  assert.equal(categorySlug("Pajamas & Sleepwear"), "pajamas-sleepwear");
+  assert.equal(categorySlug("Existing Custom Label"), "existing-custom-label");
+});
 
 test("one taxonomy exposes all 16 clothing and five nested accessory categories", () => {
   assert.equal(clothing.length, 16);

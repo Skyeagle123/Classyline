@@ -46,7 +46,10 @@ const aliases = {
   pajamas: "pajamas-sleepwear",
   "pajamas-&-sleepwear": "pajamas-sleepwear",
 };
-export const categorySlug = (value) => aliases[slug(value)] || slug(value);
+export function categorySlug(value) {
+  const key = slug(value);
+  return Object.hasOwn(aliases, key) ? aliases[key] : key;
+}
 export function inCollection(product, value) {
   const key = categorySlug(value);
   if (key === "shop-all") return true;
