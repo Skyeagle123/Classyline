@@ -1,3 +1,14 @@
+// Pages supplies text bindings. Accept canonical international digits only.
+// No whitespace, leading +/0, coercible objects or numeric values.
+export function validWhatsAppNumber(value) {
+  return (
+    typeof value === "string" &&
+    value.length >= 8 &&
+    value.length <= 15 &&
+    value[0] !== "0" &&
+    !/[^0-9]/.test(value)
+  );
+}
 // Syntax validation, not proof that a telephone number is allocated or reachable.
 export function normalizePhone(value) {
   if (typeof value === "string") value = value.replace(/^ +| +$/g, "");
