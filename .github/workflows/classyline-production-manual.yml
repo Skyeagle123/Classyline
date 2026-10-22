@@ -1,5 +1,5 @@
 name: Controlled ClassyLine Production deployment
-run-name: Closed release b64e078 by @${{ github.actor }}
+run-name: V2 code release 45ac091 by @${{ github.actor }}
 
 # Release execution requires separate Owner approval and an explicitly armed window.
 # Owner policy: one workflow execution / one pages deploy invocation; Wrangler's
@@ -9,6 +9,8 @@ run-name: Closed release b64e078 by @${{ github.actor }}
 # pending builds and verify the baseline. Configure the environment:
 # owner-only required reviewer, main-only deployment branch, no admin bypass,
 # CLOUDFLARE_API_TOKEN as an ENVIRONMENT secret (never a repository secret).
+# Owner reports the arm is true: disarm and verify effective inheritance BEFORE
+# any separately authorized merge of this draft. No environment change occurs here.
 # Keep environment variable CLASSYLINE_RELEASE_ARMED absent/false until the
 # Owner approves the exact installed workflow and release window.
 # Freeze main pushes/merges and all other deployment operators for the run.
@@ -78,30 +80,62 @@ jobs:
             if (!r.ok) throw new Error(`GitHub read failed: HTTP ${r.status}`);
             return r.json();
           }
-          const r = await get('/actions/runs/39297195087');
+          const r = await get('/actions/runs/39725797281');
+          assert.equal(r.id, 39725797281);
           assert.equal(r.repository.full_name, 'Skyeagle123/Classyline');
-          assert.equal(r.head_sha, 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a');
-          assert.equal(r.head_branch, 'fix/image-processing-limit-messages');
+          assert.equal(r.head_sha, '45ac09182cca5cc989fbae1c967c6e7e849e63c3');
+          assert.equal(r.head_branch, 'feat/storefront-v2-option2');
           assert.equal(r.path, '.github/workflows/storefront.yml');
-          assert.equal(r.event, 'push');
+          assert.equal(r.event, 'pull_request');
+          assert.equal(r.head_commit.tree_id, '6457416153e4aba803424d13a75db7d9e418adbc');
           assert.equal(r.run_attempt, 1);
           assert.equal(r.status, 'completed');
           assert.equal(r.conclusion, 'success');
-          const jobs = await get('/actions/runs/39297195087/attempts/1/jobs?per_page=100');
+          const jobs = await get('/actions/runs/39725797281/attempts/1/jobs?per_page=100');
           assert.equal(jobs.total_count, 1);
           assert.equal(jobs.jobs.length, 1);
           assert.equal(jobs.jobs[0].name, 'check');
           assert.equal(jobs.jobs[0].status, 'completed');
           assert.equal(jobs.jobs[0].conclusion, 'success');
-          // Fixed-release refusal fence: changing the controller commit must not
-          // reset an uncertain attempt. Keep all dispatch history; never delete it
-          // to make this gate pass. A rerun is separately rejected above.
+          assert.equal(jobs.jobs[0].run_id, 39725797281);
+          assert.equal(jobs.jobs[0].run_attempt, 1);
+          assert.equal(jobs.jobs[0].head_sha, '45ac09182cca5cc989fbae1c967c6e7e849e63c3');
+          // PR CI checked out a synthetic merge; the later squash commit has a
+          // different SHA. All three must independently bind to the accepted tree.
+          const source = await get('/git/commits/45ac09182cca5cc989fbae1c967c6e7e849e63c3');
+          const tested = await get('/git/commits/3a18df71e4f0e7808389f739b0c7081b7f89e464');
+          const squash = await get('/git/commits/35f0f8b69b168d363dba15646c220d64e5606454');
+          for (const [commit, sha] of [[source, '45ac09182cca5cc989fbae1c967c6e7e849e63c3'],
+            [tested, '3a18df71e4f0e7808389f739b0c7081b7f89e464'],
+            [squash, '35f0f8b69b168d363dba15646c220d64e5606454']]) {
+            assert.equal(commit.sha, sha);
+            assert.equal(commit.tree.sha, '6457416153e4aba803424d13a75db7d9e418adbc');
+          }
+          assert.deepEqual(tested.parents.map(p => p.sha),
+            ['492fb4a963f9a0c9a8a24cf783a47cbe44ae7586', '45ac09182cca5cc989fbae1c967c6e7e849e63c3']);
+          assert.deepEqual(squash.parents.map(p => p.sha), ['492fb4a963f9a0c9a8a24cf783a47cbe44ae7586']);
+          // The prior b64e078 release is the only reviewed historical dispatch.
+          // Preserve it; permit exactly one NEW dispatch, even if preflight fails.
+          // Never delete history or change this allowlist to bypass uncertainty.
           const runs = await get('/actions/workflows/classyline-production-manual.yml/runs' +
             '?event=workflow_dispatch&per_page=100');
-          assert.equal(runs.total_count, 1);
-          assert.equal(runs.workflow_runs.length, 1);
-          assert.equal(String(runs.workflow_runs[0].id), e.GITHUB_RUN_ID);
-          assert.equal(runs.workflow_runs[0].head_sha, e.GITHUB_SHA);
+          assert.equal(runs.total_count, 2);
+          assert.equal(runs.workflow_runs.length, 2);
+          assert.equal(new Set(runs.workflow_runs.map(run => run.id)).size, 2);
+          const previous = runs.workflow_runs.find(run => run.id === 39629341749);
+          assert(previous, 'Reviewed previous release dispatch missing');
+          assert.equal(previous.head_sha, '492fb4a963f9a0c9a8a24cf783a47cbe44ae7586');
+          assert.equal(previous.path, '.github/workflows/classyline-production-manual.yml');
+          assert.equal(previous.head_branch, 'main');
+          assert.equal(previous.event, 'workflow_dispatch');
+          assert.equal(previous.run_attempt, 1);
+          assert.equal(previous.status, 'completed');
+          assert.equal(previous.conclusion, 'success');
+          assert.equal(previous.actor.login, 'Skyeagle123');
+          const current = runs.workflow_runs.filter(run => run.id !== 39629341749);
+          assert.equal(current.length, 1);
+          assert.equal(String(current[0].id), e.GITHUB_RUN_ID);
+          assert.equal(current[0].head_sha, e.GITHUB_SHA);
           console.log('Approved candidate CI and Owner dispatch verified.');
           NODE
 
@@ -120,7 +154,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, reviewed official commit
         with:
           repository: Skyeagle123/Classyline
-          ref: b64e078ee6ecfc5f4e124fe6d68129164f521b8a
+          ref: 45ac09182cca5cc989fbae1c967c6e7e849e63c3
           path: app
           persist-credentials: false
           fetch-depth: 1
@@ -142,8 +176,8 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = b64e078ee6ecfc5f4e124fe6d68129164f521b8a
-          test "$(git rev-parse 'HEAD^{tree}')" = 123889f9fd27b3f0b2138ea057efa2e762a231b1
+          test "$(git rev-parse HEAD)" = 45ac09182cca5cc989fbae1c967c6e7e849e63c3
+          test "$(git rev-parse 'HEAD^{tree}')" = 6457416153e4aba803424d13a75db7d9e418adbc
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
           test -f package-lock.json
           for config in wrangler.toml wrangler.json wrangler.jsonc .env .env.local .dev.vars .npmrc; do
@@ -211,11 +245,13 @@ jobs:
           for (const path of controlFiles) files.push({path: `control-source/${path}`,
             sha256: createHash('sha256').update(readFileSync(join(control, path))).digest('hex')});
           const provenance = {
-            application_sha: 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a',
-            application_tree: '123889f9fd27b3f0b2138ea057efa2e762a231b1',
+            application_sha: '45ac09182cca5cc989fbae1c967c6e7e849e63c3',
+            application_tree: '6457416153e4aba803424d13a75db7d9e418adbc',
+            accepted_squash_main: '35f0f8b69b168d363dba15646c220d64e5606454',
+            ci_tested_checkout: '3a18df71e4f0e7808389f739b0c7081b7f89e464',
             workflow_sha: process.env.GITHUB_SHA, run_id: process.env.GITHUB_RUN_ID,
             run_attempt: process.env.GITHUB_RUN_ATTEMPT, node: process.version,
-            wrangler: '4.150.0', approved_ci: 39297195087, files
+            wrangler: '4.150.0', approved_ci: 39725797281, files
           };
           writeFileSync(join(evidence, 'provenance.json'), JSON.stringify(provenance, null, 2));
           console.log(`Recorded ${files.length} source and build hashes. No credentials included.`);
@@ -235,9 +271,9 @@ jobs:
           import {existsSync, lstatSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
           import {join} from 'node:path';
           const e = process.env;
-          const candidate = 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a';
-          const baseline = '5824179f-af77-4a18-9a23-ab22019e8ccc';
-          const baselineSHA = '393ff88e76dcca226de7f83e148554699e85ca01';
+          const candidate = '45ac09182cca5cc989fbae1c967c6e7e849e63c3';
+          const baseline = '05c1e186-a17a-4a37-b1e1-c3be59cffd11';
+          const baselineSHA = 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a';
           const projectID = '25d5c0d3-f248-4d69-b5a3-feacfcb66dec';
           const root = '/accounts/4bfa1a9c849c3da50520f7a4bcccccab/pages/projects/classyline2';
           const evidence = join(e.RUNNER_TEMP, 'classyline-evidence');
@@ -392,7 +428,7 @@ jobs:
           function verifyInputs() {
             assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(), candidate);
             assert.equal(execFileSync('git', ['rev-parse', 'HEAD^{tree}'], {encoding: 'utf8'}).trim(),
-              '123889f9fd27b3f0b2138ea057efa2e762a231b1');
+              '6457416153e4aba803424d13a75db7d9e418adbc');
             assert.equal(execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'],
               {encoding: 'utf8'}), '');
             for (const name of ['wrangler.toml', 'wrangler.json', 'wrangler.jsonc', '.env', '.env.local', '.dev.vars', '.npmrc'])

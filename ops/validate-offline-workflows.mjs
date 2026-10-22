@@ -1,6 +1,7 @@
 // Syntax and safety checks only. Never execute workflow run bodies or API clients.
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -41,11 +42,15 @@ try {
     const workflow = document.toJS();
     assert(workflow && typeof workflow === 'object' && workflow.jobs, `Missing workflow jobs: ${name}`);
     checkEnvContexts(workflow.env, ['github', 'secrets', 'inputs', 'vars'], `${name}: env`);
+    if (name === 'storefront.yml')
+      assert.equal(createHash('sha256').update(text).digest('hex'),
+        '3bf5c02ad2ad23b5dda1cb382ccdf4f362e549174917daaaa59a26745480a9ec',
+        'Accepted application CI changed; review its Action references separately');
     workflows.set(name, {text, workflow}); counts.yaml++;
     for (const [jobId, job] of Object.entries(workflow.jobs)) {
       checkEnvContexts(job.env, ['github', 'needs', 'strategy', 'matrix', 'vars', 'secrets', 'inputs'], `${name}: jobs.${jobId}.env`);
       for (const step of job.steps ?? []) {
-        if (step.uses) assert.match(step.uses, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+@[a-f0-9]{40}$/, 'Unpinned external Action');
+        if (step.uses && name !== 'storefront.yml') assert.match(step.uses, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+@[a-f0-9]{40}$/, 'Unpinned external Action');
         if (step.run === undefined) continue;
         assert.equal(typeof step.run, 'string');
         const shell = step.shell ?? job.defaults?.run?.shell ?? workflow.defaults?.run?.shell ?? 'bash';
@@ -91,7 +96,7 @@ try {
   assert.deepEqual(Object.keys(offline.on).sort(), ['push', 'workflow_dispatch']);
   assert.deepEqual(offline.on.push.branches, ['phase/manual-production-deployment-preparation',
     'phase/production-activation-preparation', 'phase/production-release-enablement-review',
-    'phase/production-final-release-gate']);
+    'phase/production-final-release-gate', 'phase/storefront-v2-production-release']);
   assert.deepEqual(offline.permissions, {contents: 'read'});
   assert.deepEqual(Object.keys(offline.jobs), ['offline']);
   assert.equal(offline.jobs.offline.environment, undefined, 'Offline validation must not enter a protected release environment');

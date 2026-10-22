@@ -7,10 +7,10 @@ import {createHash} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 
 const scenario = process.argv[2];
-const candidate = 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a';
-const candidateTree = '123889f9fd27b3f0b2138ea057efa2e762a231b1';
-const baselineID = '5824179f-af77-4a18-9a23-ab22019e8ccc';
-const baselineSHA = '393ff88e76dcca226de7f83e148554699e85ca01';
+const candidate = '45ac09182cca5cc989fbae1c967c6e7e849e63c3';
+const candidateTree = '6457416153e4aba803424d13a75db7d9e418adbc';
+const baselineID = '05c1e186-a17a-4a37-b1e1-c3be59cffd11';
+const baselineSHA = 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a';
 const projectID = '25d5c0d3-f248-4d69-b5a3-feacfcb66dec';
 const newID = '12345678-0000-0000-0000-000000000001';
 const otherID = '12345678-0000-0000-0000-000000000002';

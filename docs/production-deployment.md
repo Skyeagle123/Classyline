@@ -1,296 +1,212 @@
-# ClassyLine closed Production release — preparation only
+# ClassyLine V2 Production release preparation
 
-**PREPARATION ONLY.** This candidate removes the final source-review blocker;
-it does not authorize merge, release-arm activation, dispatch or deployment.
-No credential provisioning, Cloudflare configuration change or D1/R2 operation
-is authorized by this package. After installation, the runtime arm and protected
-environment are the operative release gates; no unconditional blocker remains.
+**Draft preparation only: no merge, workflow dispatch, deployment, environment
+change, credential operation or D1/R2 write is authorized by this package.**
 
-## Installed controller and activation preparation
+The Owner reports `CLASSYLINE_RELEASE_ARMED=true`. The installed workflow and this
+candidate have no unconditional source blocker. Keep this candidate off main
+until an independently reviewed installation is authorized AND the effective arm
+is verified disabled. A draft PR is a review boundary, not an execution lock.
 
-The starting `main` is `d22ea0be89a2dd18ae5418391f008062761bf36e`, tree
-`a02b5145af9ce6dcd7f9186b1dd7ccb3c51b6202`, which installed reviewed PR #6.
-The obsolete first-step exit is already removed. This candidate changes only
-the remaining `RELEASE_IMPLEMENTATION_REVIEWED` literal from false to true in
-executable Production workflow code, with related comments, tests and documentation.
-It does not change the approved application or the served baseline deployment.
+## Fixed source, CI and rollback identities
 
-The accepted pagination correction remains unchanged. The authenticated Pages
-deployment-history endpoint rejects `per_page=100` with
-HTTP 400 / error `8000024`, while `per_page=10` succeeds. The controller now
-reads ten records per page and refuses histories exceeding ten complete pages
-(100 records). It requires all five observed Pages `result_info` fields:
-`page`, `per_page`, `count`, `total_count` and `total_pages`, as safe integers.
-The page number and size must match the request; count must match both the returned
-array and the expected remaining inventory. Positive totals must be mathematically
-consistent and stable throughout each traversal. Duplicate IDs, short/truncated
-pages, missing metadata and contradictory totals fail closed. Final inventory
-must contain exactly the reported number of unique Production deployment IDs.
-There is no short-page fallback, retry or partial-history acceptance.
-
-Offline regressions inject invalid metadata and inventory faults into the real
-workflow both before upload (zero CLI invocations) and during final reconciliation
-(one invocation, no accepted-deployment evidence). They also cover later-page
-competitors, page-boundary transitions and the ten-page bound. A release that
-increases the inventory beyond 100 records is refused during reconciliation;
-it is never permission to retry. Pagination is not a server-side snapshot or
-cross-service lock: the existing operator freeze remains mandatory, and an API
-response that is fully self-consistent but omits real records cannot be disproved
-from pagination metadata alone. The offline CI workflow
-also validates the dedicated `phase/production-activation-preparation` branch;
-it receives no deployment credentials and cannot deploy.
-
-Authenticated read-only preflight confirmed the fixed baseline deployment and
-rollback candidate are successful, automatic Production builds are disabled,
-and Production/Preview D1/R2 identities and runtime settings match this document.
-The complete 18-entry Production history contained no active non-skipped build.
-The three installed-controller commits have explicitly skipped Pages records;
-none replaces the canonical baseline. No configuration was changed.
-
-Owner-provided screenshots establish reviewer `Skyeagle123`, self-review allowed,
-administrator bypass disabled, main-only deployment branches, the environment
-secret name `CLOUDFLARE_API_TOKEN` and no environment variables. These are Owner
-evidence, not independent API readback. The GitHub Plugin rejects environment and
-repository-variable endpoints, so the effective `CLASSYLINE_RELEASE_ARMED` value
-remains unverified. GitHub reports the repository owner as type `User`; organization
-variable inheritance does not apply to this personal repository. Repository
-variables may still supply the arm when no environment override exists. Verify
-the effective arm is absent/false before any merge of this candidate. Do not
-dispatch merely to test the environment: any attempted dispatch consumes the one
-approved workflow execution operationally.
-
-## Fixed release identities
-
-| Item | Expected identity |
+| Role | Exact identity |
 | --- | --- |
-| Repository / numeric ID | `Skyeagle123/Classyline` / `1096008352` |
-| Owner / numeric ID | `Skyeagle123` / `125151458` |
-| Application SHA | `b64e078ee6ecfc5f4e124fe6d68129164f521b8a` |
-| Application tree | `123889f9fd27b3f0b2138ea057efa2e762a231b1` |
-| Approved application CI | `39297195087`, attempt 1, successful push validation |
-| Production baseline SHA | `393ff88e76dcca226de7f83e148554699e85ca01` |
-| Production baseline deployment | `5824179f-af77-4a18-9a23-ab22019e8ccc` |
+| Starting main / squash merge of PR #8 | `35f0f8b69b168d363dba15646c220d64e5606454` |
+| Accepted application source to check out and deploy | `45ac09182cca5cc989fbae1c967c6e7e849e63c3` |
+| Accepted application tree | `6457416153e4aba803424d13a75db7d9e418adbc` |
+| Accepted application CI | `39725797281`, attempt 1, SUCCESS, 150/150 |
+| CI checkout commit from job logs | `3a18df71e4f0e7808389f739b0c7081b7f89e464` |
+| Prior successful release dispatch | `39629341749`, attempt 1, controller `492fb4a963f9a0c9a8a24cf783a47cbe44ae7586` |
+| Current Production application / rollback source | `b64e078ee6ecfc5f4e124fe6d68129164f521b8a` |
+| Current Production / rollback deployment | `05c1e186-a17a-4a37-b1e1-c3be59cffd11` |
+| Repository / ID | `Skyeagle123/Classyline` / `1096008352` |
+| Owner / ID | `Skyeagle123` / `125151458` |
 | Cloudflare account | `4bfa1a9c849c3da50520f7a4bcccccab` |
 | Pages project / ID | `classyline2` / `25d5c0d3-f248-4d69-b5a3-feacfcb66dec` |
-| Production D1 / binding | `classyline-storefront-production-d1` / `DB` |
-| Production D1 UUID | `10c800b1-ddf7-427b-8354-9cf8529782b6` |
-| Production R2 / binding | `classyline-storefront-production-images` / `PRODUCT_IMAGES` |
-| Preview D1 UUID | `ce1d28f3-f20b-485d-9799-619a7fc52ade` |
-| Preview R2 | `classyline-storefront-preview-images` |
+| Production D1 / DB | `classyline-storefront-production-d1` / `10c800b1-ddf7-427b-8354-9cf8529782b6` |
+| Production R2 / PRODUCT_IMAGES | `classyline-storefront-production-images` |
+| Preview D1 / DB | `classyline-storefront-staging-d1` / `ce1d28f3-f20b-485d-9799-619a7fc52ade` |
+| Preview R2 / PRODUCT_IMAGES | `classyline-storefront-preview-images` |
+| Accepted protected V2 Preview | `edd284ff-88f9-4da4-855c-3b57afe0e65b` |
 | Runtime | Compatibility date `2025-11-13`, empty flags, Default placement |
 | Toolchain | Node `24.19.0`, Wrangler `4.150.0` |
 
-The workflow checks out its own reviewed controller commit separately from the
-fixed application. No application source, dependency lock or migration changes
-are part of PR #4. The installed controller commit will differ from the legacy
-application baseline; `main` must remain at that reviewed dispatch commit during
-execution, while Cloudflare must still serve the baseline before deployment.
+The accepted source, CI checkout and squash merge are three different commits
+with the **same tree**. CI is a `pull_request` run on `feat/storefront-v2-option2`,
+not the earlier application's push run. The controller verifies the fixed CI run,
+its sole successful job and job source/attempt, all three commit trees, the tested
+merge parents and the squash parent. GitHub logs establish the fixed CI checkout;
+API tree validation establishes byte identity without relabelling the squash SHA
+as the application SHA. The app checkout remains the accepted `45ac091...` commit.
+The separately checked-out controller is the future dispatch commit, not the app.
 
-## Owner-approved policy change
+V2 changes no backend, dependencies or migrations relative to the deployed
+`b64e078...` application. Production migrations 0001-0003 remain in place; no
+migration, initialization, product import or inventory rewrite is part of release.
+Existing products, images, inventory, sessions and orders must be preserved.
+Current live record counts were not queried by this preparation.
 
-For this **closed, code-only release only**, the Owner replaced the former strict
-single-HTTP-POST and unreceived-checkpoint-consumption requirements with:
+## Authenticated read-only preparation evidence
 
-1. Exactly one Owner-approved workflow execution and one Wrangler **deployment**
-   CLI invocation.
-2. Acceptance of Wrangler 4.150.0's internal retries on `UNKNOWN_ERROR`, which can
-   issue multiple deployment-creation POSTs and potentially create multiple
-   deployments. The version's deployment loop permits three attempts.
-3. No workflow rerun, replacement deployment invocation or wrapper retry after an
-   uncertain result. Read-only history reconciliation is the only automatic
-   response to uncertainty.
-4. Fail-closed acceptance when unexpected or multiple new deployments appear.
-   Rollback requires its separate Owner authorization.
+On 22 October 2026, GitHub confirmed the exact starting main and accepted source
+share tree `645741...`; PR #8 is squash-merged. Approved CI is successful at the
+accepted source and attempt. Cloudflare readback confirmed the canonical
+Production and rollback deployment above are terminal SUCCESS, Functions are
+present, automatic Production builds are disabled, and Production/Preview D1/R2
+bindings and compatibility settings match the table.
 
-**One CLI invocation does not mean one HTTP POST, one deployment, or exactly-once
-server processing.** An exit code of zero alone does not establish acceptance.
-Offline Functions compilation is a build operation, not another deployment
-invocation. The former custom transport, SigV4 checkpoint and qualification
-components are retired from the active release path; their evidence remains in
-Git history. No hosted checkpoint test or new checkpoint resource is required for
-this release path.
+All 21 Production history records were retrieved across three complete pages.
+Five records showed queued/idle stage placeholders, including the PR #8 squash
+commit, but individual deployment readbacks confirmed `is_skipped=true` for all
+five. There was no active non-skipped Production deployment. Recheck these
+point-in-time facts before installation and again in the release window.
 
-Version-specific and official references:
+The only retained manual dispatch was the prior successful release `39629341749`.
+The V2 refusal fence permits exactly that fixed historical run PLUS the current
+new run, with exactly two unique IDs and complete reported inventory. It verifies
+the previous run's controller SHA, workflow path, main branch, event, attempt,
+Owner and successful completion; the new run must match current run ID/controller
+SHA. Missing, altered, duplicated, truncated or additional history fails closed.
+Changing the controller commit cannot reset a failed or uncertain V2 dispatch.
+Do not delete history, rename the workflow or change the allowlist to bypass it.
 
-- [Wrangler 4.150.0 deployment retry loop](https://github.com/cloudflare/workers-sdk/blob/wrangler%404.150.0/packages/wrangler/src/api/pages/deploy.ts)
-- [Versioned retry constants](https://github.com/cloudflare/workers-sdk/blob/wrangler%404.150.0/packages/wrangler/src/pages/constants.ts)
-- [Versioned CLI status handling](https://github.com/cloudflare/workers-sdk/blob/wrangler%404.150.0/packages/wrangler/src/pages/deploy.ts)
-- [Pages Direct Upload through CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/)
-- [Existing Git projects and Functions upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)
+## Release arm and protected environment
 
-## Guarded workflow
+The Owner's `true` arm report is evidence of an installation hazard, not permission
+to dispatch. The GitHub Plugin rejects the environment and repository-variable
+read endpoints; saved protections, secret presence and effective inherited arm
+were not independently API-verified in this preparation. Earlier Owner evidence
+identifies the `classyline-production` environment, reviewer `Skyeagle123`, allowed
+self-review, administrator bypass disabled, main-only deployment branch and the
+`CLOUDFLARE_API_TOKEN` environment secret name. Do not inspect secret values.
 
-`.github/workflows/classyline-production-manual.yml` now proposes
-`RELEASE_IMPLEMENTATION_REVIEWED = true`. No unconditional deployment stop remains
-in this candidate. Both the first shell step and the deployment script require
-the effective runtime `RELEASE_ARMED` to equal the exact string `true`; absent,
-empty, false and other values are refused. The runtime check precedes Cloudflare
-requests and the deployment invocation. Setting a true inherited repository arm
-would satisfy these checks, so an empty environment-variable list alone does not
-establish that the workflow is unarmed. Separate review, merge and release-window
-authorization remain required.
+Before any separately authorized merge, the Owner or an authorized supported
+GitHub interface must:
 
-The guarded path retains:
+1. Inspect repository Settings -> Secrets and variables -> Actions -> Variables
+   and Settings -> Environments -> classyline-production -> Environment variables.
+2. Set the environment arm to exact `false` (or remove every applicable true arm),
+   read back the saved value, and verify repository inheritance cannot enable it.
+   An empty environment variable list alone is insufficient. This is a personal
+   User-owned repository; organization inheritance is not applicable unless the
+   repository is transferred, which would invalidate fixed identity controls.
+3. Read back required reviewer, main-only branch protection, no admin bypass and
+   the environment secret NAME. Capture only credential-free evidence.
 
-- Manual `workflow_dispatch` only, no release inputs, exact repository/Owner names
-  and numeric IDs, `main` ref, initial and triggering actors, and run attempt 1.
-- Protected `classyline-production` environment, release arm absent/false by
-  default, `contents: read` / `actions: read`, full-commit pinned supporting Actions,
-  and concurrency group `classyline2-production` with no cancellation in progress.
-- Approved CI identity and successful job checks, exact application SHA/tree,
-  clean checkout, locked installation, exact Wrangler version and rejection of
-  local deployment/environment overrides. Static assets and Pages Functions are
-  built before credentials enter the deployment step.
-- A first-dispatch refusal check covering the retained history of this fixed
-  workflow. Only the current run ID and controller commit may appear. A new
-  controller commit must not reset the release attempt.
-- Exact project/account, disabled automatic Production Git builds, baseline and
-  successful rollback source/status, Production and Preview D1/R2 identities,
-  runtime date/flags/placement and encrypted Admin-secret presence.
-- Bounded Production history reads rejecting queued, running and unknown states,
-  plus any earlier Production attempt for the fixed application SHA. Main,
-  canonical baseline, rollback, configuration, source/artifact and history checks
-  are repeated immediately before the single deployment invocation.
-- Independent post-deployment reads requiring one new deployment, exact SHA,
-  successful terminal deploy stage, canonical Production identity, Functions,
-  clean commit metadata, URL and runtime. Exact D1/R2 maps are validated directly
-  on the deployment and final canonical snapshot, not inferred from project defaults.
-- Final complete history reconciliation. Missing, duplicate or additional IDs,
-  including completed/failed/skipped competitors, prevent acceptance. Canonical
-  identity and configuration are reread after reconciliation.
+Configuration changes need separate Owner authorization and are not performed
+here. There is no new arm variable in this branch. Both runtime checks still
+require exact string `true` and reject absent, empty, false and malformed values.
 
-GitHub concurrency and sequential API reads are not an account-wide atomic lock.
-An Owner-controlled freeze of main updates and all other deployment operators is
-still mandatory throughout the release window. Final history reconciliation is
-point-in-time evidence; it cannot rule out a delayed Cloudflare operation appearing
-later. Unexpected later deployments require read-only investigation and separately
-authorized recovery, never another deployment invocation.
+## Preserved release safeguards
 
-The fixed deployment command, from the approved application root, is:
+- Manual-only dispatch, fixed repository/Owner numeric IDs, main-only ref, initial
+  and triggering Owner identity, attempt 1 and protected environment approval.
+- Minimal contents/actions read permissions; immutable full-SHA supporting Actions;
+  checkout credentials not persisted; concurrency group `classyline2-production`
+  with no cancellation of an in-progress run.
+- Exact app SHA/tree, clean source, locked `npm ci --ignore-scripts`, pinned
+  Wrangler 4.150.0 and rejection of local deployment overrides. Static and
+  Functions builds run before the Cloudflare token enters the deployment step.
+- Credential-free SHA-256 inventory of tracked app/controller source, static output
+  and Functions validation build. Evidence separately records the accepted source,
+  its tree, CI checkout, squash merge and actual controller commit. Exact inventory,
+  sizes and hashes are reverified immediately before upload.
+- Canonical baseline and successful rollback identity, disabled automatic builds,
+  Production and Preview bindings, runtime and encrypted Admin-secret presence.
+- Complete Pages history with all five observed `result_info` fields required as
+  safe integers; `per_page=10`, maximum ten pages/100 records, stable mathematically
+  consistent totals, exact page counts and unique IDs. No short-page fallback.
+- Competing/unknown non-skipped deployments and any existing V2 Production attempt
+  refused. Main, baseline, rollback, configuration, history and inputs rechecked
+  immediately before the single CLI invocation.
+- Independent final acceptance requires exactly one new deployment, exact source,
+  canonical terminal SUCCESS, Functions, runtime, clean metadata and exact deployed
+  D1/R2 maps, followed by complete history and canonical revalidation. Additional
+  completed, failed or skipped deployments prevent acceptance too.
+
+An external freeze of main updates and all deployment operators remains mandatory.
+GitHub concurrency and sequential API reads are not a Cloudflare-wide atomic lock.
+A later delayed deployment requires investigation, never another invocation.
+
+## One invocation and uncertainty policy
+
+The existing Owner-approved Wrangler policy remains: one approved workflow
+execution and one deployment CLI invocation, no wrapper retry or rerun after any
+uncertain outcome. Wrangler 4.150.0's internal UNKNOWN_ERROR retries are accepted;
+**one invocation is not one HTTP POST or exactly-once server processing**.
+Read-only history reconciliation follows every outcome. Observation is not
+acceptance: a nonzero/unknown CLI result never creates final acceptance evidence,
+even when a matching deployment appears. Rollback needs separate authorization.
+
+The future deployment command is fixed and is NOT run by this package:
 
 ```sh
 npx --no-install wrangler pages deploy dist \
   --project-name classyline2 \
   --branch main \
-  --commit-hash b64e078ee6ecfc5f4e124fe6d68129164f521b8a \
+  --commit-hash 45ac09182cca5cc989fbae1c967c6e7e849e63c3 \
   --commit-dirty=false
 ```
 
-It uses the fixed account, protected environment token and
-`WRANGLER_SEND_METRICS=false`. The repository root includes `functions/`; running
-from an assets-only directory would omit the intended Functions compilation.
-The wrapper invokes this deployment command once, regardless of its outcome.
+Run from the exact app root with `functions/` present. The Functions validation
+build records reviewed inputs; it does not claim separate Wrangler packaging runs
+produce identical multipart bytes. Tokens enter only the release/verification step
+and the fixed child environment. No raw CLI output, API bodies, credentials or
+customer records may enter logs or artifacts. Allowlisted evidence retention is
+14 days; preserve it privately before expiry.
 
-## Provenance and credentials
+## Ordered installation and release boundary
 
-Record the application SHA/tree, controller SHA, run ID/attempt, Node/Wrangler
-versions, approved CI and SHA-256 hashes of tracked source, static output and the
-Functions validation build. Recheck those inputs before invoking Wrangler.
-Require exact build-file inventory, size and hash equality, rejecting added,
-omitted or duplicate records, symlinks and local deployment overrides.
-Wrangler performs its supported upload/Functions packaging. Validation-build
-hashes establish reviewed inputs; they are **not** a claim that a custom frozen
-multipart body was transmitted or that a separate compiler run is byte-identical.
+1. Independently review this draft PR's exact SHA/tree and hosted offline CI.
+2. Under separate authorization, disarm and read back the effective arm and saved
+   environment protections. Freeze deployment operators and verify automatic
+   Production builds remain disabled, with no active non-skipped deployment.
+3. Separately authorize merging only the reviewed controller changes. Use
+   `[CF-Pages-Skip]` as an additional guard, not a substitute for disabled builds.
+   Verify canonical Production remains `05c1e186...` and record installed SHA.
+4. Before release approval, verify current D1 integrity/recovery and R2 privacy,
+   intended Access coverage and retention of existing products/inventory/orders
+   using separately authorized read-only channels. Do not reset data, fees or
+   catalog to satisfy assumptions from the original empty-catalog launch.
+5. Separately authorize one code-only V2 release; arm only that window, dispatch
+   once from the reviewed installed controller and approve that exact run. No
+   new checkout, product, inventory or delivery-fee activation is implied.
+6. Verify deployment evidence and bounded static/Access smoke checks. Preserve
+   existing order/reservation behavior; catalog GET can expire reservations, so
+   do not treat it as a side-effect-free smoke check. Disarm after the attempt.
+   Credential revocation/removal requires its own authorized secure procedure.
 
-The Cloudflare token is exposed only to the deployment/verification step, never
-installation, build or test steps. Checkout credentials are not persisted. Do
-not pass the GitHub token to the Wrangler subprocess. Do not print or retain raw
-CLI output, API responses, signed requests, environment dumps, debug logs, tokens
-or customer records. Persist only allowlisted credential-free evidence.
+The Pages token scope remains account Cloudflare Pages Edit for the fixed account;
+it is not a project-only permission. Do not add D1/R2 data-write, Access, DNS,
+billing or token-administration permissions. No token/secret is created, read or
+changed in this preparation. Sequential Admin image uploads, no blind retry and
+resource-error monitoring remain operational safeguards; peak CPU/memory are not
+measured by offline tests. An empty catalog/NULL fees are not an API kill switch.
 
-Observed deployment evidence is not acceptance. Unknown/nonzero CLI outcomes,
-missing or multiple deployments, failed final checks or partial evidence must not
-create `accepted-deployment.json`. Matching source observed after an uncertain
-outcome requires manual review; it is not permission to invoke Wrangler again.
-Evidence artifacts are retained for 14 days; preserve them privately before
-expiry. Missing artifact retention is an evidence gap requiring manual review.
+## Rollback and recovery
 
-The Pages deployment token needs **Account → Cloudflare Pages → Edit**, limited
-to the intended account and a short expiration. That permission is account-wide,
-not a verified project-only boundary; the reviewed workflow fixes the project.
-Do not add D1/R2 data-write, Access-edit, DNS, billing or token-administration
-permissions. Provision the token privately in GitHub environment secret
-`CLOUDFLARE_API_TOKEN`, never in chat, tool output, a repository secret or a file.
-Revoke it in Cloudflare after the release attempt and remove the environment
-secret. Deleting the GitHub secret alone does not revoke the Cloudflare token.
+If acceptance fails, stop and inspect canonical identity and complete history.
+Do not rerun, redispatch or replace the CLI invocation. A separately authorized
+Pages code rollback may target **only** `05c1e186-a17a-4a37-b1e1-c3be59cffd11`,
+reverified as terminal SUCCESS with source `b64e078...`. It retains the same backend
+schema and preserves all Production D1/R2/customer records. Never restore an old
+snapshot, run down-migrations, reset stock, delete images or replay customer orders
+as part of code rollback. No automatic rollback is added by this PR.
 
-## Safe installation and release sequence
+## Targeted validation
 
-Each mutation below requires separate Owner authorization; none is performed by
-this preparation package.
+The credential-free offline workflow adds only this preparation branch to its
+existing push allowlist; no dispatch is needed and no environment/token is used.
+It executes actual extracted workflow scripts with API/CLI boundaries mocked,
+including uncertainty, drift, binding, rollback, pagination and authorization
+faults. Native tests use a fake local CLI for process-group cancellation and
+single-invocation evidence. New tests reject incorrect source/CI/squash identities
+and any history beyond the single reviewed prior dispatch plus current run.
 
-1. Independently review this exact final-gate candidate SHA/tree and its offline
-   CI. Verify the effective release arm is absent/false before separately
-   authorizing merge; this candidate removes the last unconditional source stop.
-2. Freeze main updates, merges and other deployment operators. Separately disable
-   automatic Production Git builds, read back the setting, drain pending builds
-   and verify the accepted baseline. Actions gates cannot stop Cloudflare's
-   separate Git-triggered build when a workflow-only change reaches main.
-3. Configure `classyline-production` with an Owner-only required reviewer,
-   `main`-only deployment branch and no administrator bypass. If the Owner also
-   dispatches, do not configure self-review prevention that makes approval
-   impossible. This is explicit single-Owner approval, not two-person approval.
-4. Install only the reviewed controller changes on main under separate approval.
-   Use `[CF-Pages-Skip]` as an additional installation guard, never as a substitute
-   for disabled automatic builds. Verify no deployment started and record the
-   installed workflow commit. Keep automatic Production Git builds disabled while
-   main's application is older than the manually deployed candidate.
-5. Keep `CLASSYLINE_RELEASE_ARMED` absent/false until the release window is
-   separately approved. Read back environment protections and provide the token
-   privately. The environment's name in YAML does not prove protection exists.
-6. Reverify Production D1 integrity/recovery, empty catalog/variants/orders, all
-   nine delivery fees NULL, private R2 and intended Access coverage using existing
-   authorized read-only channels. These data/Access gates are not implemented by
-   broadening the Pages deployment token.
-7. After independent review, authorized enablement and separate release approval,
-   arm the window, dispatch once from the installed main commit and approve that
-   exact run. No product, inventory, delivery-fee or customer checkout activation
-   is implied. Sequential Admin uploads and resource-error monitoring remain
-   closed-launch operating conditions.
-8. Inspect final evidence and static/Access smoke results without application
-   login or mutating endpoints. Disarm, revoke the token, remove its environment
-   secret and preserve audit evidence, including any uncertainty or extra
-   deployments. An empty catalog and NULL delivery fees are not a complete
-   API-level checkout kill switch.
-
-## Failure and rollback
-
-Any attempted dispatch, including an unarmed or preflight-failed run, consumes the
-single approved workflow execution operationally. Do not rerun, redispatch,
-replace the runner, rename the workflow or delete run history to bypass the gate.
-Retained GitHub history is an administrative refusal mechanism, not a cryptographic
-or atomic cross-service single-use guarantee. Privileged history deletion or
-concurrent external deployers are outside that guarantee and prohibited by the
-release freeze.
-
-After timeout, cancellation, abnormal exit, unknown status or multiple new
-deployments: stop. Inspect canonical identity and history read-only. Do not
-interpret absent or matching deployment evidence as permission to retry. Internal
-Wrangler retries are accepted within the original invocation; the wrapper never
-starts another deployment invocation.
-
-Emergency rollback is Pages code rollback only, separately authorized, to
-`5824179f-af77-4a18-9a23-ab22019e8ccc`, whose exact baseline SHA and successful
-terminal status must still be verified. Preserve Production D1 and R2. Never
-restore a database snapshot, run down-migrations, reset inventory or delete
-objects as part of code rollback. The legacy baseline does not contain the newer
-checkout backend; rollback is containment, not continuity of that backend. Any
-customer records must be preserved and reconciled under separate authorization.
-
-## Offline validation boundary
-
-The credential-free PR4 validation workflow runs syntax checks and the relevant
-controller tests. Extracted workflow scripts execute only against mocked APIs and
-an intercepted CLI boundary. Tests do not flip the source-review flag; they run
-the proposed enabled script with mocked API/process boundaries. Explicit absent,
-false, empty and uppercase arm regressions require zero Cloudflare calls and zero
-deployment invocations. Cases also cover one invocation, uncertainty without replay,
-multiple deployments, drift, binding mismatch, rollback failure, unauthorized
-identity, absent arm and credential-safe evidence.
-
-Application CI `39297195087` remains accepted evidence for the unchanged
-application. Do not rerun unrelated application acceptance suites merely for this
-controller simplification. Verify the exact new PR CI result independently; this
-document does not claim a test count or hosted result before it exists. Offline
-success is readiness for independent review, never installation or deployment
-permission.
+The imported application CI workflow uses its accepted `@v4` references and is
+unchanged. Syntax validation now covers all three workflows, locks that accepted
+application CI file to its exact SHA-256, and continues requiring immutable full
+SHA pins on release and offline-controller Actions. This does not change application
+CI or weaken controller Action pins. Accepted application/Preview suites are not
+rerun locally. Hosted PR-triggered application CI may run automatically.
