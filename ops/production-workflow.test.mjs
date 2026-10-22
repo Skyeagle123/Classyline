@@ -17,13 +17,18 @@ const release = scripts.at(-1).replace("import {execFileSync, spawn} from 'node:
 assert.notEqual(release, scripts.at(-1), 'Real subprocess import must be mocked');
 assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = true;/);
 const instrumented = release; // Only API/process boundaries and deadlines are mocked.
-const releaseMock = readFileSync(new URL('./fixtures/wrangler-release-runtime.mjs', import.meta.url), 'utf8');
+const recoveryAPIURL = new URL('./fixtures/recovery-api.mjs', import.meta.url).href;
+const releaseMock = readFileSync(new URL('./fixtures/wrangler-release-runtime.mjs', import.meta.url), 'utf8')
+  .replace("'./recovery-api.mjs'", JSON.stringify(recoveryAPIURL));
 const ciMock = `
+import {createRecoveryAPI} from ${JSON.stringify(recoveryAPIURL)};
 const scenario = process.argv[2];
 Object.assign(process.env, {GITHUB_REPOSITORY:'Skyeagle123/Classyline', GITHUB_REPOSITORY_ID:'1096008352',
  GITHUB_REPOSITORY_OWNER_ID:'125151458', GITHUB_REF:'refs/heads/main', GITHUB_EVENT_NAME:'workflow_dispatch',
  GITHUB_ACTOR:'Skyeagle123', GITHUB_ACTOR_ID:'125151458', GITHUB_TRIGGERING_ACTOR:'Skyeagle123',
- GITHUB_RUN_ATTEMPT:'1', GITHUB_SHA:'workflow-commit', GITHUB_RUN_ID:'123'});
+ GITHUB_RUN_ATTEMPT:'1', GITHUB_RUN_NUMBER:'3', GITHUB_SHA:'c'.repeat(40), GITHUB_RUN_ID:'39820000000',
+ GITHUB_WORKFLOW_SHA:'c'.repeat(40),
+ GITHUB_WORKFLOW_REF:'Skyeagle123/Classyline/.github/workflows/classyline-production-manual.yml@refs/heads/main'});
 const changes = {'foreign-repo':['GITHUB_REPOSITORY','other/Classyline'],
  'foreign-repo-id':['GITHUB_REPOSITORY_ID','other'], 'foreign-owner':['GITHUB_REPOSITORY_OWNER_ID','other'],
  'wrong-ref':['GITHUB_REF','refs/heads/feature'], 'push-event':['GITHUB_EVENT_NAME','push'],
@@ -32,26 +37,12 @@ const changes = {'foreign-repo':['GITHUB_REPOSITORY','other/Classyline'],
 if (changes[scenario]) process.env[changes[scenario][0]] = changes[scenario][1];
 const source='45ac09182cca5cc989fbae1c967c6e7e849e63c3', tree='6457416153e4aba803424d13a75db7d9e418adbc';
 const base='492fb4a963f9a0c9a8a24cf783a47cbe44ae7586';
+const recovery = createRecoveryAPI(process.env, scenario);
 globalThis.fetch=async(url, options)=>{
+ const response = recovery.respond(url, options); if(response) return response;
  if(options.redirect!=='error' || !options.signal || options.method) throw Error('Unexpected HTTP contract');
  let body;
- if(url.includes('/actions/workflows/')) {
-  const previous={id:39629341749,head_sha:base,path:'.github/workflows/classyline-production-manual.yml',
-   head_branch:'main',event:'workflow_dispatch',run_attempt:1,status:'completed',conclusion:'success',actor:{login:'Skyeagle123'}};
-  body={total_count:2,workflow_runs:[{id:123,head_sha:'workflow-commit'},previous]};
-  if(scenario==='prior-dispatch') {body.workflow_runs.push({id:124,head_sha:'other'});body.total_count++;}
-  if(scenario==='wrong-dispatch-id') body.workflow_runs[0].id=124;
-  if(scenario==='wrong-dispatch-sha') body.workflow_runs[0].head_sha='different';
-  if(scenario==='missing-previous') {body.workflow_runs.pop();body.total_count--;}
-  if(scenario==='unknown-previous') previous.id=999;
-  if(scenario==='duplicate-dispatch') body.workflow_runs[1]={...body.workflow_runs[0]};
-  if(scenario==='truncated-dispatch') body.total_count++;
-  const mutations={'previous-sha':['head_sha','different'],'previous-branch':['head_branch','feature'],
-   'previous-path':['path','other.yml'],'previous-event':['event','push'],'previous-rerun':['run_attempt',2],
-   'previous-active':['status','in_progress'],'previous-failed':['conclusion','failure']};
-  if(mutations[scenario]) previous[mutations[scenario][0]]=mutations[scenario][1];
-  if(scenario==='previous-actor') previous.actor.login='other';
- } else if(url.includes('/jobs?')) {
+ if(url.includes('/jobs?')) {
   body={total_count:1,jobs:[{name:'check',status:'completed',conclusion:'success',run_id:39725797281,run_attempt:1,head_sha:source}]};
   if(scenario==='failed-job') body.jobs[0].conclusion='failure';
   if(scenario==='extra-job') body.total_count=2;
@@ -328,9 +319,9 @@ test('V2 release identity differs from its squash merge; baseline uses the curre
   assert.doesNotMatch(yaml, /39297195087|123889f9fd27b3f0b2138ea057efa2e762a231b1|5824179f-af77-4a18-9a23-ab22019e8ccc/);
 });
 test('the V2 CI gate reads all three source trees and the complete retained dispatch inventory', () => {
-  assert.equal((scripts[0].match(/await get\('\/git\/commits\//g) ?? []).length, 3);
-  assert.match(scripts[0], /assert.equal\(runs.total_count, 2\)/);
-  assert.match(scripts[0], /run.id === 39629341749/);
+  assert.equal((scripts[0].match(/await get\('\/git\/commits\//g) ?? []).length, 5);
+  assert.match(scripts[0], /assert.equal\(inventory.total_count, 3/);
+  assert.match(scripts[0], /const expectedIDs = \[39629341749, 39814798811, currentID\]/);
   // Changing only this workflow commit cannot admit a failed or additional V2 attempt.
   assert.notEqual(run(scripts[0], ciMock, 'prior-dispatch').status, 0);
   assert.notEqual(run(scripts[0], ciMock, 'missing-previous').status, 0);

@@ -1,5 +1,12 @@
 # ClassyLine V2 Production release preparation
 
+> Recovery update: the installed controller failed before checkout in run
+> `39814798811` because its arm was `True`. The current arm was independently
+> read back as exact `false`. For the narrowly scoped local recovery package,
+> see [v2-release-recovery.md](v2-release-recovery.md). The original preparation
+> evidence below is historical; its two-run dispatch fence is superseded only by
+> the reviewed three-run recovery predicate, not by a general retry permission.
+
 **Draft preparation only: no merge, workflow dispatch, deployment, environment
 change, credential operation or D1/R2 write is authorized by this package.**
 
@@ -196,13 +203,17 @@ as part of code rollback. No automatic rollback is added by this PR.
 
 ## Targeted validation
 
-The credential-free offline workflow adds only this preparation branch to its
-existing push allowlist; no dispatch is needed and no environment/token is used.
+The credential-free offline workflow admits `phase/storefront-v2-release-recovery`
+in both its push allowlist and job predicate, preserving the five existing
+branches; no dispatch is needed and no environment/token is used.
 It executes actual extracted workflow scripts with API/CLI boundaries mocked,
 including uncertainty, drift, binding, rollback, pagination and authorization
 faults. Native tests use a fake local CLI for process-group cancellation and
 single-invocation evidence. New tests reject incorrect source/CI/squash identities
-and any history beyond the single reviewed prior dispatch plus current run.
+and any history outside the exact successful historical run, failed pre-upload
+V2 run and single current recovery dispatch. The final recovery guard completes
+before the last Cloudflare baseline/configuration/history revalidation. Drift
+injected during the guard must be rejected before any mocked CLI invocation.
 
 The imported application CI workflow uses its accepted `@v4` references and is
 unchanged. Syntax validation now covers all three workflows, locks that accepted

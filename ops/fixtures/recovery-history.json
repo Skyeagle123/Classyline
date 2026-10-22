@@ -1,0 +1,194 @@
+{
+  "previous": {
+    "id": 39629341749,
+    "workflow_id": 391522489,
+    "path": ".github/workflows/classyline-production-manual.yml",
+    "event": "workflow_dispatch",
+    "run_number": 1,
+    "run_attempt": 1,
+    "head_branch": "main",
+    "head_sha": "492fb4a963f9a0c9a8a24cf783a47cbe44ae7586",
+    "head_commit": {
+      "id": "492fb4a963f9a0c9a8a24cf783a47cbe44ae7586",
+      "tree_id": "2632c6bd097c61af2eff1b48cefb186b1ad3802d"
+    },
+    "status": "completed",
+    "conclusion": "success",
+    "actor": {
+      "id": 125151458,
+      "login": "Skyeagle123"
+    },
+    "triggering_actor": {
+      "id": 125151458,
+      "login": "Skyeagle123"
+    },
+    "repository": {
+      "id": 1096008352,
+      "full_name": "Skyeagle123/Classyline"
+    }
+  },
+  "failed": {
+    "id": 39814798811,
+    "workflow_id": 391522489,
+    "path": ".github/workflows/classyline-production-manual.yml",
+    "event": "workflow_dispatch",
+    "run_number": 2,
+    "run_attempt": 1,
+    "head_branch": "main",
+    "head_sha": "cddb2e8303df17b78d1880e73f311547ea333dc0",
+    "head_commit": {
+      "id": "cddb2e8303df17b78d1880e73f311547ea333dc0",
+      "tree_id": "c5d0d4ba5281660d00c5924511d0639885a3d875"
+    },
+    "status": "completed",
+    "conclusion": "failure",
+    "actor": {
+      "id": 125151458,
+      "login": "Skyeagle123"
+    },
+    "triggering_actor": {
+      "id": 125151458,
+      "login": "Skyeagle123"
+    },
+    "repository": {
+      "id": 1096008352,
+      "full_name": "Skyeagle123/Classyline"
+    }
+  },
+  "jobs": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 119950374894,
+        "name": "deploy",
+        "run_id": 39814798811,
+        "run_attempt": 1,
+        "head_sha": "cddb2e8303df17b78d1880e73f311547ea333dc0",
+        "status": "completed",
+        "conclusion": "failure",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-22T16:43:39Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Require separately armed release window",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 2,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Verify approved CI and dispatch identity",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 3,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Check out reviewed release controller",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 4,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Check out approved application only",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 5,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Verify reviewed controller checkout",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 6,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Set up Node 24",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 7,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Verify source and locked tooling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 8,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Validate and build complete application",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 9,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Record source and artifact provenance",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 10,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Preflight, one Wrangler deployment invocation, and read-only verification",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Retain credential-free release evidence",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-22T16:43:40Z",
+            "completed_at": "2026-10-22T16:43:40Z"
+          }
+        ]
+      }
+    ]
+  },
+  "approvals": [
+    {
+      "user": {
+        "login": "Skyeagle123",
+        "id": 125151458
+      },
+      "state": "approved",
+      "environments": [
+        {
+          "id": 24902198946,
+          "name": "classyline-production",
+          "can_admins_bypass": false
+        }
+      ]
+    }
+  ]
+}
