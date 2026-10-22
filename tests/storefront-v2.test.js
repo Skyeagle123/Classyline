@@ -483,6 +483,10 @@ test("responsive navigation and product columns retain mobile touch and desktop 
     "utf8",
   );
   assert.match(css, /\.shop-panel\[hidden\]\s*\{\s*display: none/);
+  assert.match(
+    css,
+    /\.collection-links\.primary-collection-links\s*\{\s*grid-template-columns: repeat\(3/,
+  );
   assert.match(css, /max-height: 65dvh/);
   assert.match(css, /overflow-y: auto/);
   assert.match(

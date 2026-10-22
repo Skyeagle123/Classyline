@@ -295,7 +295,7 @@ body:has(dialog[open]) .floating-contact {
 .variant-options { display: flex; flex-wrap: wrap; gap: .5rem; }
 .color-option { gap: .5rem; }
 .color-swatch { width: 1rem; height: 1rem; border: 1px solid #b8a79a; border-radius: 50%; }
-.primary-collection-links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.collection-links.primary-collection-links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (min-width: 640px) { .category-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (min-width: 1000px) { .category-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 @media (max-width: 639px) {
