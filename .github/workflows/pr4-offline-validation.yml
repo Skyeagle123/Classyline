@@ -6,6 +6,7 @@ on:
       - phase/production-activation-preparation
       - phase/production-release-enablement-review
       - phase/production-final-release-gate
+      - phase/storefront-v2-production-release
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,7 +17,8 @@ jobs:
       (github.ref == 'refs/heads/phase/manual-production-deployment-preparation' ||
        github.ref == 'refs/heads/phase/production-activation-preparation' ||
        github.ref == 'refs/heads/phase/production-release-enablement-review' ||
-       github.ref == 'refs/heads/phase/production-final-release-gate')
+       github.ref == 'refs/heads/phase/production-final-release-gate' ||
+       github.ref == 'refs/heads/phase/storefront-v2-production-release')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:

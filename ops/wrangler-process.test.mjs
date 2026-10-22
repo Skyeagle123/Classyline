@@ -52,7 +52,7 @@ async function execute(mode) {
   // Only the timeout duration is shortened; the native invocation function is exact.
   const source = `import {spawn} from 'node:child_process';
 const e = {PATH: ${JSON.stringify(bin)}, HOME: ${JSON.stringify(dir)}, CLOUDFLARE_API_TOKEN: ${JSON.stringify(fakeCredential)}};
-const candidate = 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a';
+const candidate = '45ac09182cca5cc989fbae1c967c6e7e849e63c3';
 const check = (ok, message) => { if (!ok) throw Error(message); };
 ${invocation.replace('180000', mode === 'timeout' ? '1000' : '5000')}
 const result = await invokeWranglerOnce();

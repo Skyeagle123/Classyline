@@ -18,7 +18,76 @@ assert.notEqual(release, scripts.at(-1), 'Real subprocess import must be mocked'
 assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = true;/);
 const instrumented = release; // Only API/process boundaries and deadlines are mocked.
 const releaseMock = readFileSync(new URL('./fixtures/wrangler-release-runtime.mjs', import.meta.url), 'utf8');
-const ciMock = "\nconst scenario=process.argv[2];\nObject.assign(process.env,{GITHUB_REPOSITORY:'Skyeagle123/Classyline',GITHUB_REPOSITORY_ID:'1096008352',GITHUB_REPOSITORY_OWNER_ID:'125151458',GITHUB_REF:'refs/heads/main',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_ACTOR:'Skyeagle123',GITHUB_ACTOR_ID:'125151458',GITHUB_TRIGGERING_ACTOR:'Skyeagle123',GITHUB_RUN_ATTEMPT:'1',GITHUB_SHA:'workflow-commit',GITHUB_RUN_ID:'123'});\nif(scenario==='foreign-repo')process.env.GITHUB_REPOSITORY='other/Classyline';\nif(scenario==='foreign-repo-id')process.env.GITHUB_REPOSITORY_ID='other';\nif(scenario==='foreign-owner')process.env.GITHUB_REPOSITORY_OWNER_ID='other';\nif(scenario==='wrong-ref')process.env.GITHUB_REF='refs/heads/feature';\nif(scenario==='push-event')process.env.GITHUB_EVENT_NAME='push';\nif(scenario==='wrong-actor')process.env.GITHUB_ACTOR='other';\nif(scenario==='wrong-actor-id')process.env.GITHUB_ACTOR_ID='other';\nif(scenario==='wrong-trigger')process.env.GITHUB_TRIGGERING_ACTOR='other';\nif(scenario==='rerun')process.env.GITHUB_RUN_ATTEMPT='2';\nglobalThis.fetch=async(url)=>{let body;\n if(url.includes('/actions/workflows/')){body={total_count:scenario==='prior-dispatch'?2:1,workflow_runs:[{id:123,head_sha:'workflow-commit'}]};if(scenario==='wrong-dispatch-id')body.workflow_runs[0].id=124;}else if(url.includes('/jobs?')){body={total_count:1,jobs:[{name:'check',status:'completed',conclusion:'success'}]};if(scenario==='failed-job')body.jobs[0].conclusion='failure';if(scenario==='extra-job')body.total_count=2;}\n else{body={repository:{full_name:'Skyeagle123/Classyline'},head_sha:'b64e078ee6ecfc5f4e124fe6d68129164f521b8a',head_branch:'fix/image-processing-limit-messages',path:'.github/workflows/storefront.yml',event:'push',run_attempt:1,status:'completed',conclusion:'success'};\n if(scenario==='wrong-ci-sha')body.head_sha='bad';if(scenario==='failed-ci')body.conclusion='failure';if(scenario==='running-ci')body.status='in_progress';if(scenario==='ci-rerun')body.run_attempt=2;if(scenario==='wrong-ci-repo')body.repository.full_name='bad';if(scenario==='wrong-workflow')body.path='other.yml';}\n return {ok:scenario!=='api-denied',status:403,json:async()=>body};};\n";
+const ciMock = `
+const scenario = process.argv[2];
+Object.assign(process.env, {GITHUB_REPOSITORY:'Skyeagle123/Classyline', GITHUB_REPOSITORY_ID:'1096008352',
+ GITHUB_REPOSITORY_OWNER_ID:'125151458', GITHUB_REF:'refs/heads/main', GITHUB_EVENT_NAME:'workflow_dispatch',
+ GITHUB_ACTOR:'Skyeagle123', GITHUB_ACTOR_ID:'125151458', GITHUB_TRIGGERING_ACTOR:'Skyeagle123',
+ GITHUB_RUN_ATTEMPT:'1', GITHUB_SHA:'workflow-commit', GITHUB_RUN_ID:'123'});
+const changes = {'foreign-repo':['GITHUB_REPOSITORY','other/Classyline'],
+ 'foreign-repo-id':['GITHUB_REPOSITORY_ID','other'], 'foreign-owner':['GITHUB_REPOSITORY_OWNER_ID','other'],
+ 'wrong-ref':['GITHUB_REF','refs/heads/feature'], 'push-event':['GITHUB_EVENT_NAME','push'],
+ 'wrong-actor':['GITHUB_ACTOR','other'], 'wrong-actor-id':['GITHUB_ACTOR_ID','other'],
+ 'wrong-trigger':['GITHUB_TRIGGERING_ACTOR','other'], 'rerun':['GITHUB_RUN_ATTEMPT','2']};
+if (changes[scenario]) process.env[changes[scenario][0]] = changes[scenario][1];
+const source='45ac09182cca5cc989fbae1c967c6e7e849e63c3', tree='6457416153e4aba803424d13a75db7d9e418adbc';
+const base='492fb4a963f9a0c9a8a24cf783a47cbe44ae7586';
+globalThis.fetch=async(url, options)=>{
+ if(options.redirect!=='error' || !options.signal || options.method) throw Error('Unexpected HTTP contract');
+ let body;
+ if(url.includes('/actions/workflows/')) {
+  const previous={id:39629341749,head_sha:base,path:'.github/workflows/classyline-production-manual.yml',
+   head_branch:'main',event:'workflow_dispatch',run_attempt:1,status:'completed',conclusion:'success',actor:{login:'Skyeagle123'}};
+  body={total_count:2,workflow_runs:[{id:123,head_sha:'workflow-commit'},previous]};
+  if(scenario==='prior-dispatch') {body.workflow_runs.push({id:124,head_sha:'other'});body.total_count++;}
+  if(scenario==='wrong-dispatch-id') body.workflow_runs[0].id=124;
+  if(scenario==='wrong-dispatch-sha') body.workflow_runs[0].head_sha='different';
+  if(scenario==='missing-previous') {body.workflow_runs.pop();body.total_count--;}
+  if(scenario==='unknown-previous') previous.id=999;
+  if(scenario==='duplicate-dispatch') body.workflow_runs[1]={...body.workflow_runs[0]};
+  if(scenario==='truncated-dispatch') body.total_count++;
+  const mutations={'previous-sha':['head_sha','different'],'previous-branch':['head_branch','feature'],
+   'previous-path':['path','other.yml'],'previous-event':['event','push'],'previous-rerun':['run_attempt',2],
+   'previous-active':['status','in_progress'],'previous-failed':['conclusion','failure']};
+  if(mutations[scenario]) previous[mutations[scenario][0]]=mutations[scenario][1];
+  if(scenario==='previous-actor') previous.actor.login='other';
+ } else if(url.includes('/jobs?')) {
+  body={total_count:1,jobs:[{name:'check',status:'completed',conclusion:'success',run_id:39725797281,run_attempt:1,head_sha:source}]};
+  if(scenario==='failed-job') body.jobs[0].conclusion='failure';
+  if(scenario==='extra-job') body.total_count=2;
+  if(scenario==='wrong-job-run') body.jobs[0].run_id=123;
+  if(scenario==='wrong-job-sha') body.jobs[0].head_sha='other';
+  if(scenario==='job-rerun') body.jobs[0].run_attempt=2;
+ } else if(url.includes('/git/commits/')) {
+  const sha=url.split('/').at(-1);
+  if(![source,'3a18df71e4f0e7808389f739b0c7081b7f89e464','35f0f8b69b168d363dba15646c220d64e5606454'].includes(sha)) throw Error('Unapproved Git identity');
+  body={sha,tree:{sha:tree},parents:[{sha:base},...(sha.startsWith('3a18')?[{sha:source}]:[])]};
+  if(scenario==='source-tree'&&sha===source) body.tree.sha='other';
+  if(scenario==='tested-tree'&&sha.startsWith('3a18')) body.tree.sha='other';
+  if(scenario==='squash-tree'&&sha.startsWith('35f0')) body.tree.sha='other';
+  if(scenario==='tested-parent'&&sha.startsWith('3a18')) body.parents.pop();
+  if(scenario==='squash-parent'&&sha.startsWith('35f0')) body.parents[0].sha='other';
+  if(scenario==='commit-identity') body.sha='other';
+ } else {
+  if(!url.endsWith('/actions/runs/39725797281')) throw Error('Unapproved CI run');
+  body={id:39725797281,repository:{full_name:'Skyeagle123/Classyline'},head_sha:source,
+   head_branch:'feat/storefront-v2-option2',path:'.github/workflows/storefront.yml',event:'pull_request',
+   head_commit:{tree_id:tree},run_attempt:1,status:'completed',conclusion:'success'};
+  if(scenario==='wrong-ci-sha') body.head_sha='bad';
+  if(scenario==='failed-ci') body.conclusion='failure';
+  if(scenario==='running-ci') body.status='in_progress';
+  if(scenario==='ci-rerun') body.run_attempt=2;
+  if(scenario==='wrong-ci-repo') body.repository.full_name='bad';
+  if(scenario==='wrong-workflow') body.path='other.yml';
+  if(scenario==='wrong-ci-id') body.id=123;
+  if(scenario==='wrong-ci-branch') body.head_branch='other';
+  if(scenario==='wrong-ci-event') body.event='push';
+  if(scenario==='wrong-ci-tree') body.head_commit.tree_id='other';
+ }
+ return {ok:scenario!=='api-denied',status:403,json:async()=>body};
+};
+`;
+
 function run(script, mock, scenario) {
   const dir = mkdtempSync(join(tmpdir(), 'classyline-control-test-'));
   try {
@@ -182,7 +251,11 @@ for (const phase of ['pre-upload', 'final-reconciliation']) {
 const ciCases = ['success','foreign-repo','foreign-repo-id','foreign-owner','wrong-ref','push-event',
  'wrong-actor','wrong-actor-id','wrong-trigger','rerun','failed-job','extra-job','wrong-ci-sha',
  'failed-ci','running-ci','ci-rerun','wrong-ci-repo','wrong-workflow','api-denied',
- 'prior-dispatch','wrong-dispatch-id'];
+ 'prior-dispatch','wrong-dispatch-id','wrong-dispatch-sha','missing-previous','unknown-previous',
+ 'duplicate-dispatch','truncated-dispatch','previous-sha','previous-branch','previous-path','previous-event',
+ 'previous-rerun','previous-active','previous-failed','previous-actor','wrong-job-run','wrong-job-sha','job-rerun',
+ 'source-tree','tested-tree','squash-tree','tested-parent','squash-parent','commit-identity',
+ 'wrong-ci-id','wrong-ci-branch','wrong-ci-event','wrong-ci-tree'];
 for (const scenario of ciCases) test(`Owner identity and approved application CI: ${scenario}`, () => {
   const r = run(scripts[0], ciMock, scenario);
   assert.equal(r.error, undefined);
@@ -244,4 +317,21 @@ for (const [label, injection] of Object.entries({
 test('final acceptance is written only after independent verification and conclusive CLI outcome', () => {
   assert(yaml.indexOf("save('accepted-deployment.json'") > yaml.indexOf('Deployment observed but'));
   assert.doesNotMatch(yaml, /save\('verified-deployment\.json'/);
+});
+
+test('V2 release identity differs from its squash merge; baseline uses the current backend release', () => {
+  assert.match(yaml, /ref: 45ac09182cca5cc989fbae1c967c6e7e849e63c3/);
+  assert.match(yaml, /accepted_squash_main: '35f0f8b69b168d363dba15646c220d64e5606454'/);
+  assert.match(yaml, /ci_tested_checkout: '3a18df71e4f0e7808389f739b0c7081b7f89e464'/);
+  assert.match(yaml, /const baseline = '05c1e186-a17a-4a37-b1e1-c3be59cffd11'/);
+  assert.match(yaml, /const baselineSHA = 'b64e078ee6ecfc5f4e124fe6d68129164f521b8a'/);
+  assert.doesNotMatch(yaml, /39297195087|123889f9fd27b3f0b2138ea057efa2e762a231b1|5824179f-af77-4a18-9a23-ab22019e8ccc/);
+});
+test('the V2 CI gate reads all three source trees and the complete retained dispatch inventory', () => {
+  assert.equal((scripts[0].match(/await get\('\/git\/commits\//g) ?? []).length, 3);
+  assert.match(scripts[0], /assert.equal\(runs.total_count, 2\)/);
+  assert.match(scripts[0], /run.id === 39629341749/);
+  // Changing only this workflow commit cannot admit a failed or additional V2 attempt.
+  assert.notEqual(run(scripts[0], ciMock, 'prior-dispatch').status, 0);
+  assert.notEqual(run(scripts[0], ciMock, 'missing-previous').status, 0);
 });
