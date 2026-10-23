@@ -237,3 +237,163 @@ test('original immediate visibility mutation fails before delayed cart rendering
   assert.deepEqual(cart.counts(),{waits:0,immediateReads:1});
   cart.render('Free Size / Red · Qty 1');
 });
+
+// Execute the actual enabled/disabled readiness blocks, including their final
+// strict assertions. Render events and deadline expiry are controlled, without
+// Chromium, wall-clock sleeps, or a duplicate readiness implementation.
+const methodStart = "await check(`${width}: WhatsApp/COD methods and public destination without submission`,async()=>{";
+const methodAssert = "assert.deepEqual(await method.locator('option').evaluateAll(els=>els.map(e=>e.value)),['cod','whatsapp']);";
+function methodReadiness(disabled = false, source = harness) {
+  assert.equal(source.split(methodStart).length, 2, 'Unique Order method check');
+  const check = source.split(methodStart)[1].split('        });')[0];
+  const body = disabled
+    ? check.split("await page.getByRole('button',{name:'Bag (1)',exact:true}).click();")[1].split("await page.keyboard.press('Escape');")[0]
+    : check.split("await method.selectOption('whatsapp');")[0];
+  assert(body, 'Readiness block must exist');
+  return new (Object.getPrototypeOf(async function(){}).constructor)(disabled ? 'method' : 'page', 'assert', body);
+}
+function orderForm({present = true, visible = true, values = [], name = 'Order method', count = 1} = {}) {
+  const state = {present,visible,values,name,count};
+  const waits = [], pending = [], notices = [];
+  let reads = 0;
+  const notify = () => { for (const fn of notices.splice(0)) fn(); };
+  function control(kind, expected, exact) {
+    const matches = () => state.present && (kind === 'role'
+      ? state.name === expected
+      : (exact ? state.name + state.values.map(v => v === 'cod' ? 'Cash on Delivery' : 'WhatsApp + Cash on Delivery').join('') === expected : state.name.includes(expected)));
+    function wait(target, options) {
+      assert.deepEqual(options,{state:target === 'control' ? 'visible' : options.state,timeout:10000});
+      assert(['visible','attached','detached'].includes(options.state));
+      const item = {target,options,ready:() => {
+        if (matches() && state.count > 1) throw new Error('Strict Order method selector matched multiple controls');
+        if (target === 'control') return matches() && state.visible;
+        const attached = matches() && state.values.includes(target);
+        return options.state === 'detached' ? !attached : attached;
+      }};
+      waits.push({target,...options});
+      if (item.ready()) return Promise.resolve();
+      return new Promise((resolve,reject) => { pending.push({...item,resolve,reject}); notify(); });
+    }
+    return {
+      waitFor:options => wait('control',options),
+      locator(selector) {
+        if (selector === 'option') return {async evaluateAll(fn) {
+          reads++;
+          return fn(matches() ? state.values.map(value => ({value})) : []);
+        }};
+        const value = /^option\[value="(cod|whatsapp)"\]$/.exec(selector)?.[1];
+        assert(value, 'Readiness must inspect the exact expected option value');
+        return {waitFor:options => wait(value,options)};
+      },
+    };
+  }
+  const dialog = {
+    getByRole(role, options) {
+      assert.equal(role,'combobox');assert.deepEqual(options,{name:'Order method',exact:true});
+      return control('role',options.name,options.exact);
+    },
+    getByLabel(label, options) { return control('label',label,options.exact); },
+  };
+  return {
+    page:{getByRole(role) { assert.equal(role,'dialog'); return dialog; }},
+    method:control('role','Order method',true), waits,
+    render(update) {
+      Object.assign(state,update);
+      for (const item of [...pending]) if (item.ready()) {
+        pending.splice(pending.indexOf(item),1); item.resolve();
+      }
+      notify();
+    },
+    async waitingFor(target) {
+      while (!pending.some(item => item.target === target)) await new Promise(resolve => notices.push(resolve));
+    },
+    expire() {
+      assert(pending.length,'A bounded readiness wait must be pending');
+      for (const item of pending.splice(0)) item.reject(new Error(`Order method ${item.target} readiness deadline exceeded`));
+    },
+    reads:() => reads,
+  };
+}
+test('Order method accepts delayed control and both delayed correct options',async()=>{
+  const form=orderForm({present:false});let done=false;
+  const pending=methodReadiness()(form.page,assert).then(()=>{done=true;});
+  await form.waitingFor('control');assert.equal(form.reads(),0);
+  form.render({present:true});await form.waitingFor('cod');assert.equal(done,false);
+  form.render({values:['cod']});await form.waitingFor('whatsapp');assert.equal(form.reads(),0);
+  form.render({values:['cod','whatsapp']});await pending;assert.equal(done,true);
+  assert.deepEqual(form.waits,[
+    {target:'control',state:'visible',timeout:10000},
+    {target:'cod',state:'attached',timeout:10000},
+    {target:'whatsapp',state:'attached',timeout:10000},
+  ]);assert.equal(form.reads(),1);
+});
+for (const [name,options,target] of [
+  ['missing control',{present:false},'control'],
+  ['hidden control',{visible:false},'control'],
+  ['near-match label',{name:'Order method backup'},'control'],
+  ['COD-only when WhatsApp is expected',{values:['cod']},'whatsapp'],
+  ['wrong COD value',{values:['cash','whatsapp']},'cod'],
+  ['wrong WhatsApp value',{values:['cod','chat']},'whatsapp'],
+]) test(`Order method rejects ${name}`,async()=>{
+  const form=orderForm(options),pending=methodReadiness()(form.page,assert);
+  const rejected=assert.rejects(pending,/Order method .* readiness deadline exceeded/);
+  await form.waitingFor(target);assert.equal(form.reads(),0);form.expire();await rejected;
+});
+for (const values of [['whatsapp','cod'],['cod','whatsapp','chat'],['cod','cod','whatsapp']])
+  test(`Order method strict final assertion rejects values/order ${JSON.stringify(values)}`,async()=>{
+    const form=orderForm({values});
+    await assert.rejects(methodReadiness()(form.page,assert),assert.AssertionError);
+    assert.equal(form.reads(),1);
+  });
+test('Order method rejects an ambiguous exact control',async()=>{
+  const form=orderForm({count:2,values:['cod','whatsapp']});
+  await assert.rejects(methodReadiness()(form.page,assert),/matched multiple controls/);
+});
+test('WhatsApp-disabled mode waits for COD and scoped WhatsApp removal',async()=>{
+  const form=orderForm({values:['cod','whatsapp']});let done=false;
+  const pending=methodReadiness(true)(form.method,assert).then(()=>{done=true;});
+  await form.waitingFor('whatsapp');assert.equal(done,false);assert.equal(form.reads(),0);
+  form.render({values:['cod']});await pending;assert.equal(done,true);assert.equal(form.reads(),1);
+  assert.deepEqual(form.waits,[
+    {target:'control',state:'visible',timeout:10000},
+    {target:'cod',state:'attached',timeout:10000},
+    {target:'whatsapp',state:'detached',timeout:10000},
+  ]);
+});
+for (const [name,options,target] of [
+  ['missing control',{present:false},'control'],
+  ['missing COD',{values:[]},'cod'],
+  ['retained WhatsApp',{values:['cod','whatsapp']},'whatsapp'],
+]) test(`WhatsApp-disabled mode rejects ${name}`,async()=>{
+  const form=orderForm(options),pending=methodReadiness(true)(form.method,assert);
+  const rejected=assert.rejects(pending,/readiness deadline exceeded/);
+  await form.waitingFor(target);form.expire();await rejected;
+});
+test('WhatsApp-disabled strict final assertion rejects unexpected options',async()=>{
+  const form=orderForm({values:['cod','chat']});
+  await assert.rejects(methodReadiness(true)(form.method,assert),assert.AssertionError);
+});
+test('original exact wrapped-label selector mutation reproduces empty option list',async()=>{
+  const form=orderForm({values:['cod','whatsapp']});
+  const original=harness.replace(/const dialog=page.getByRole\('dialog'\),method=dialog.getByRole\('combobox',\{name:'Order method',exact:true\}\);[\s\S]*?(?=          assert.deepEqual\(await method.locator\('option'\))/,"const dialog=page.getByRole('dialog'),method=dialog.getByLabel('Order method',{exact:true});\n");
+  assert.notEqual(original,harness);
+  await assert.rejects(methodReadiness(false,original)(form.page,assert),error => {
+    assert.deepEqual(error.actual,[]);assert.deepEqual(error.expected,['cod','whatsapp']);return true;
+  });assert.equal(form.waits.length,0);
+});
+test('Order method immediate-read mutation fails before delayed options',async()=>{
+  const immediate=harness.replace(/          await method(?:\.locator\('option\[value="(?:cod|whatsapp)"\]'\))?\.waitFor\(\{state:'(?:visible|attached|detached)',timeout:10000\}\);\n/g,'');
+  assert.notEqual(immediate,harness);
+  const form=orderForm();
+  await assert.rejects(methodReadiness(false,immediate)(form.page,assert),assert.AssertionError);
+  assert.equal(form.waits.length,0);assert.equal(form.reads(),1);
+});
+test('Order method fix retains exact cart assertions, strict methods and no submission',()=>{
+  assert(harness.includes(methodAssert));
+  for(const text of ["stored.lines[0].variant_id,'RED-FREE'","stored.lines[0].qty,1","stored.attempt,null","['cod']);"])
+    assert(harness.includes(text),text);
+  const check=harness.split(methodStart)[1].split('        });')[0];
+  assert(check.includes('s.model.whatsapp=false;'));
+  assert(!/waitForTimeout|setTimeout|\.submit\(|\.request\.|\.evaluate\(|\.click\((?!\))/.test(check));
+  assert(!/\.getByLabel\(|exact:false|\.first\(|\.nth\(|document\.querySelector/.test(check));
+});

@@ -133,7 +133,12 @@ export async function qualify(application, output) {
           await overflow(); await screenshot('cart');
         });
         await check(`${width}: WhatsApp/COD methods and public destination without submission`,async()=>{
-          const dialog=page.getByRole('dialog'),method=dialog.getByLabel('Order method',{exact:true});
+          // Match the select's exact accessible name; getByLabel also includes
+          // descendant option text when the select is wrapped in its label.
+          const dialog=page.getByRole('dialog'),method=dialog.getByRole('combobox',{name:'Order method',exact:true});
+          await method.waitFor({state:'visible',timeout:10000});
+          await method.locator('option[value="cod"]').waitFor({state:'attached',timeout:10000});
+          await method.locator('option[value="whatsapp"]').waitFor({state:'attached',timeout:10000});
           assert.deepEqual(await method.locator('option').evaluateAll(els=>els.map(e=>e.value)),['cod','whatsapp']);
           await method.selectOption('whatsapp');assert.equal(await method.inputValue(),'whatsapp');
           await method.selectOption('cod');assert.equal(await method.inputValue(),'cod');
@@ -142,7 +147,9 @@ export async function qualify(application, output) {
           assert(links.length>=2);for(const l of links){assert.equal(l.href,'https://wa.me/'+NUMBER);assert.equal(l.target,'_blank');assert(l.rel.includes('noopener')&&l.rel.includes('noreferrer'));}
           s.model.whatsapp=false;
           await page.getByRole('button',{name:'Bag (1)',exact:true}).click();
-          await page.waitForFunction(()=>document.querySelector('select option[value="whatsapp"]')===null);
+          await method.waitFor({state:'visible',timeout:10000});
+          await method.locator('option[value="cod"]').waitFor({state:'attached',timeout:10000});
+          await method.locator('option[value="whatsapp"]').waitFor({state:'detached',timeout:10000});
           assert.deepEqual(await method.locator('option').evaluateAll(els=>els.map(e=>e.value)),['cod']);
           await page.keyboard.press('Escape');
           assert(!network.some(e=>e.event==='request'&&e.method!=='GET'),'UI emitted a mutating request');
