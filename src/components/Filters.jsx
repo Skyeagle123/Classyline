@@ -1,4 +1,5 @@
 import React from "react";
+import { sortSizes } from "../sizes.js";
 export default function Filters({
   q,
   setQ,
@@ -44,7 +45,7 @@ export default function Filters({
       <div className="card p-4">
         <div className="mb-2 font-medium">Sizes</div>
         <div className="flex flex-wrap gap-2">
-          {sizesAll.map((s) => (
+          {sortSizes(sizesAll).map((s) => (
             <button
               key={s}
               onClick={() => setSize(size === s ? "" : s)}

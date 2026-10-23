@@ -1,8 +1,10 @@
+import { sortSizes } from "./sizes.js";
+
 // Exact stored values are identities: never split names or synthesize an ID.
 export function variantOptions(variants) {
   return {
     colors: [...new Set(variants.map((v) => v.color))],
-    sizes: [...new Set(variants.map((v) => v.size))],
+    sizes: sortSizes(new Set(variants.map((v) => v.size))),
   };
 }
 export function resolveVariant(variants, color, size) {

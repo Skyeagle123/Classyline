@@ -1,5 +1,6 @@
 import React from "react";
 import { money } from "../api.js";
+import { variantOptions } from "../variants.js";
 export default function ProductCard({ p }) {
   return (
     <article className="card product-card overflow-hidden">
@@ -24,7 +25,7 @@ export default function ProductCard({ p }) {
                 : "Sold out"}
           </p>
           <p className="muted text-sm mt-2">
-            {[...new Set(p.variants.map((v) => v.size))].join(" · ")}
+            {variantOptions(p.variants).sizes.join(" · ")}
           </p>
         </div>
       </a>
