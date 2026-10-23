@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 
 const scenario = process.argv[2];
-const candidate = '9ce02cce69d5774df46c7555543a7f95262c8507';
+const candidate = '0ce95a706a88c63a914c25b142d4fc6878de66d8';
 const candidateTree = '8266d7f79405fca39374298b4695687b225de4c7';
 const baselineID = '9f36717b-a93f-410b-858a-4e9c0e4314fe';
 const baselineSHA = '45ac09182cca5cc989fbae1c967c6e7e849e63c3';
@@ -199,12 +199,43 @@ globalThis.fetch = async (url, options) => {
       if (observed && scenario === 'multiple-new') result.push(deployment(otherID, candidate));
       if (recoveryDrift && scenario === 'during-recovery-competitor')
         result.push({...deployment(otherID, 'other'), latest_stage: {name: 'build', status: 'active'}});
+      { // Every normal fixture includes the mandatory historical evidence.
+        const idle = name => ({name,started_on:null,ended_on:null,status:'idle'});
+        const skipped = {...deployment('104abcf0-b542-4ea5-b655-70abab5339ba',candidate),is_skipped:true,
+          deployment_trigger:{type:'github:push',metadata:{branch:'main',commit_hash:candidate,commit_dirty:false}},
+          latest_stage:idle('queued'),stages:['queued','initialize','clone_repo','build','deploy'].map(idle)};
+        const changes = {
+          'wrong-id': d=>{d.id=otherID;}, 'unskipped':d=>{d.is_skipped=false;},
+          'wrong-source':d=>{d.deployment_trigger.metadata.commit_hash='other';},
+          'wrong-environment':d=>{d.environment='preview';}, 'wrong-project':d=>{d.project_id='other';},
+          'wrong-project-name':d=>{d.project_name='other';}, 'wrong-branch':d=>{d.deployment_trigger.metadata.branch='feature';},
+          'wrong-trigger':d=>{d.deployment_trigger.type='ad_hoc';},'dirty':d=>{d.deployment_trigger.metadata.commit_dirty=true;},
+          'missing-dirty':d=>{delete d.deployment_trigger.metadata.commit_dirty;},
+          'missing-skip':d=>{delete d.is_skipped;}, 'missing-latest':d=>{delete d.latest_stage;},
+          'latest-active':d=>{d.latest_stage.status='active';}, 'latest-started':d=>{d.latest_stage.started_on='now';},
+          'missing-stages':d=>{delete d.stages;},'short-stages':d=>{d.stages.pop();},
+          'duplicate-stage':d=>{d.stages[4].name='build';},'active-stage':d=>{d.stages[4].status='active';},
+          'started-stage':d=>{d.stages[3].started_on='now';},'ended-stage':d=>{d.stages[3].ended_on='now';},
+        };
+        const label=scenario.startsWith('skipped-candidate-') ? scenario.slice('skipped-candidate-'.length) : '';
+        changes[label]?.(skipped);
+        if ((label==='pre-upload-drift'&&recovery.counts.inventories>=2)||
+            (label==='final-drift'&&observed)) skipped.is_skipped=false;
+        const omit = label === 'absent-all' || (label === 'absent-initial' && historyReads === 1) ||
+          (label === 'absent-pre-upload' && recovery.counts.inventories >= 2) ||
+          (label === 'absent-discovery' && observed && postHistoryReads === 1) ||
+          (label === 'absent-final' && observed && postHistoryReads >= 2);
+        if (!omit) result.push(skipped);
+        if(label==='duplicate')result.push(structuredClone(skipped));
+        if(label==='second-candidate')result.push({...structuredClone(skipped),id:otherID});
+        if(label==='prior-ci-source-attempt')result.push(deployment(otherID,'9ce02cce69d5774df46c7555543a7f95262c8507'));
+      }
       // INJECT_FINAL_HISTORY
       if (scenario.startsWith('paginated-')) {
-        const count = scenario === 'paginated-bound-exceeded' ? 100 :
+        const count = (scenario === 'paginated-bound-exceeded' ? 100 :
           scenario === 'paginated-page-boundary' ? 9 :
           scenario === 'paginated-max-success' ? 98 :
-          scenario === 'paginated-post-bound-exceeded' ? 99 : 10;
+          scenario === 'paginated-post-bound-exceeded' ? 99 : 10) - 1; // Account for pinned history record.
         for (let i = 0; i < count; i++) result.push(deployment(
           `22222222-0000-0000-0000-${String(i).padStart(12, '0')}`, baselineSHA));
         if (scenario === 'paginated-competing' || scenario === 'paginated-no-info-competing')

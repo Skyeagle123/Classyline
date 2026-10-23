@@ -1,5 +1,5 @@
-// Tests execute the committed workflow script with read-only APIs and CLI mocked.
-// Positive path tests explicitly model future reviewed enablement; unmodified blockers are tested separately.
+// Tests execute the exact local activation proposal with every network/process boundary mocked.
+// The proposed workflow is not installed, armed or authorized to deploy.
 import test from 'node:test';
 import {createHash as hash} from 'node:crypto';
 import assert from 'node:assert/strict';
@@ -16,18 +16,16 @@ const release = scripts.at(-1).replace("import {execFileSync, spawn} from 'node:
   .replaceAll('/tmp/classyline-functions-build', './functions-build')
   .replace("setTimeout(() => finish(null, 'SIGKILL', true), 180000)", "setTimeout(() => finish(null, 'SIGKILL', true), 20)");
 assert.notEqual(release, scripts.at(-1), 'Real subprocess import must be mocked');
-assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = false;/);
-const instrumented = release.replace('const RELEASE_IMPLEMENTATION_REVIEWED = false;', 'const RELEASE_IMPLEMENTATION_REVIEWED = true;');
-// This test-only replacement is not saved to any workflow. No executable test bypass exists in Production.
+assert.match(release, /const RELEASE_IMPLEMENTATION_REVIEWED = true;/);
 const releaseMock = readFileSync(new URL('./fixtures/v21-release-runtime.mjs',import.meta.url),'utf8')
   .replace("'./v21-release-api.mjs'",JSON.stringify(new URL('./fixtures/v21-release-api.mjs',import.meta.url).href));
 const early = scripts[0].replace("import assert from 'node:assert/strict';",'');
 
-function run(script, mock, scenario) {
+function run(script, mock, scenario, includeInitialGuard = true) {
   const dir = mkdtempSync(join(tmpdir(), 'classyline-control-test-'));
   try {
     writeFileSync(join(dir, 'mock.mjs'), mock);
-    writeFileSync(join(dir, 'run.mjs'), "import './mock.mjs';\n" + (script === scripts[0] ? "" : `import assert from 'node:assert/strict';\nawait (async()=>{${early}\n})();\n`).replace("import assert from 'node:assert/strict';\n", "") + script);
+    writeFileSync(join(dir, 'run.mjs'), "import './mock.mjs';\n" + (script === scripts[0] || !includeInitialGuard ? "" : `import assert from 'node:assert/strict';\nawait (async()=>{${early}\n})();\n`).replace("import assert from 'node:assert/strict';\n", "") + script);
     return spawnSync(process.execPath, [join(dir, 'run.mjs'), scenario], {
       encoding: 'utf8', timeout: 10000, env: {PATH: process.env.PATH}
     });
@@ -58,24 +56,35 @@ test('manual only, fixed identity, protected environment, minimal permissions an
   assert.equal((scripts.at(-1).match(/spawn\('npx'/g) || []).length, 1);
   assert.doesNotMatch(yaml, /DirectUpload|AttemptJournal|stageAndCreate|pages-r2-|pages-qualification-|pages-release-artifacts/);
 });
-test('both unconditional blockers are active in the exact candidate', () => {
- const first=yaml.split('    steps:')[1].split('      - name: Require separately armed')[0];
- assert.match(first,/exit 1/); assert.match(release,/const RELEASE_IMPLEMENTATION_REVIEWED = false;/);
- const shell=first.split('run: |\n')[1].replace(/^          /gm,'');
- assert.notEqual(spawnSync('bash',['-e','-c',shell],{encoding:'utf8'}).status,0);
- const r=run(release,releaseMock,'success'),info=report(r);
- assert.notEqual(r.status,0); assert.equal(info.calls,0);assert.equal(info.projectReads,0);
+test('activation proposal removes obsolete exits but preserves first runtime arm gate', () => {
+ const first=yaml.split('    steps:')[1].split('      - name: Verify approved CI')[0];
+ assert.match(first,/name: Require separately armed release window/);
+ assert.doesNotMatch(first,/exit 1|preparation remains disabled/);
+ assert.match(first,/test "\$RELEASE_ARMED" = true/);
+ assert.match(release,/const RELEASE_IMPLEMENTATION_REVIEWED = true;/);
+ assert.doesNotMatch(release,/const RELEASE_IMPLEMENTATION_REVIEWED = false;/);
+});
+for (const scenario of ['missing-arm','false-arm','empty-arm','uppercase-arm'])
+ test('final runtime arm independently blocks '+scenario+' without prior guard',()=>{
+  const r=run(release,releaseMock,scenario,false),info=report(r);
+  assert.notEqual(r.status,0);assert.equal(info.calls,0);assert.equal(info.projectReads,0);
+  assert.equal(info.recoveryReads.reads,0);assert.match(r.stderr,/Release window is not armed/);
+ });
+test('review gate still fails closed when disabled in a temporary negative test',()=>{
+ const disabled=release.replace('const RELEASE_IMPLEMENTATION_REVIEWED = true;','const RELEASE_IMPLEMENTATION_REVIEWED = false;');
+ const r=run(disabled,releaseMock,'success',false),info=report(r);
+ assert.notEqual(r.status,0);assert.equal(info.calls,0);assert.equal(info.projectReads,0);
  assert.match(r.stderr,/awaits independent review/);
 });
 for (const scenario of ['missing-arm', 'false-arm', 'empty-arm', 'uppercase-arm']) test(`runtime release arm blocks ${scenario} before any API or deployment invocation`, () => {
-  const r = run(instrumented, releaseMock, scenario), info = report(r);
+  const r = run(release, releaseMock, scenario), info = report(r);
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /Release window is not armed/);
   assert.equal(info.calls, 0);
   assert.equal(info.historyReads, 0);
   assert.equal(info.projectReads, 0);
 });
-for (const arm of [undefined, '', 'false', 'TRUE', 'true']) test(`explicit arm ${String(arm)} is checked by actual shell gate`, () => {
+for (const arm of [undefined, '', 'false', 'False', 'True', 'TRUE', ' true', 'true ', 'true\n', 'true']) test(`explicit arm ${String(arm)} is checked by actual shell gate`, () => {
   const shell = yaml.split('name: Require separately armed release window')[1]
     .split('      - name:')[0].split('run: |\n')[1].replace(/^          /gm, '');
   const r = spawnSync('bash', ['-e', '-c', shell], {encoding: 'utf8',
@@ -100,7 +109,7 @@ const releaseCases = [...afterInvoke, 'missing-arm', 'missing-token', 'main-chan
   'local-override', 'late-added-dist', 'late-local-override', 'late-modified-functions',
   'paginated-competing', 'paginated-no-info-success', 'paginated-no-info-competing', 'paginated-bound-exceeded'];
 for (const scenario of releaseCases) test(`actual workflow preflight / single invocation / verification: ${scenario}`, () => {
-  const r = run(instrumented, releaseMock, scenario), info = report(r);
+  const r = run(release, releaseMock, scenario), info = report(r);
   assert.equal(Boolean(info.artifacts['accepted-deployment.json']), acceptedCases.has(scenario));
   assert.equal(info.artifacts['verified-deployment.json'], undefined);
   assert.equal(info.calls, afterInvoke.has(scenario) ? 1 : 0, r.stderr);
@@ -172,7 +181,7 @@ for (const phase of ['pre-upload', 'final-reconciliation']) {
       const mock = releaseMock.replace('// INJECT_HISTORY_RESPONSE', `if(${when}){${injection}}`);
       // A real competitor is on the later page: corrupt first-page metadata must
       // not hide it. Final-only faults use a stable preflight and valid discovery.
-      const r = run(instrumented, mock, phase === 'pre-upload' ? 'paginated-competing' : 'paginated-success');
+      const r = run(release, mock, phase === 'pre-upload' ? 'paginated-competing' : 'paginated-success');
       const info = report(r);
       assert.notEqual(r.status, 0, r.stdout);
       assert.match(r.stderr, /pagination|history|deployment page|history environment/i);
@@ -201,7 +210,7 @@ const bindingFailures = {
   'missing deployed R2 name': 'delete fresh.r2_buckets.PRODUCT_IMAGES.name;',
 };
 function rejectsAfterUpload(mock, message) {
-  const r = run(instrumented, mock, 'success'), info = report(r);
+  const r = run(release, mock, 'success'), info = report(r);
   assert.notEqual(r.status, 0, r.stdout);
   if (message) assert.match(r.stderr, message);
   assert.equal(info.calls, 1);
@@ -239,7 +248,7 @@ test('final acceptance is written only after independent verification and conclu
 
 
 test('V2.1 exact release identities and immutable historical controller',()=>{
- assert.match(yaml,/ref: 9ce02cce69d5774df46c7555543a7f95262c8507/);
+ assert.match(yaml,/ref: 0ce95a706a88c63a914c25b142d4fc6878de66d8/);
  assert.match(yaml,/accepted_squash_main: '0ce95a706a88c63a914c25b142d4fc6878de66d8'/);
  assert.match(yaml,/ci_tested_checkout: '4f1770c12451aed3495f66e3990e399016249ada'/);
  assert.match(yaml,/const baseline = '9f36717b-a93f-410b-858a-4e9c0e4314fe'/);
@@ -252,32 +261,32 @@ test('V2.1 exact release identities and immutable historical controller',()=>{
 function awaitHash(bytes){return hash('sha256').update(bytes).digest('hex');}
 
 for(const scenario of ['history-missing','history-recovery-omitted','history-extra','history-duplicate','history-truncated',
- 'extra-dispatch','duplicate-dispatch','current-missing','current-truncated','controller-parent','workflow-disabled',
+ 'extra-dispatch','duplicate-dispatch','current-missing','current-truncated','controller-parent','controller-parent-obsolete','workflow-disabled',
  'wrong-ci-sha','failed-ci','running-ci','ci-rerun','missing-ci-step','failed-ci-step','source-tree',
  'recovery-no-approval','recovery-approval-actor','recovery-approval-bypass','recovery-approval-environment',
  'recovery-missing-jobs','recovery-extra-job','recovery-missing-step','recovery-arm-succeeded','recovery-log-tampered'])
  test('V2.1 real initial/final dispatch guard rejects '+scenario,()=>{
-  const r=run(instrumented,releaseMock,scenario),info=report(r);
+  const r=run(release,releaseMock,scenario),info=report(r);
   assert.notEqual(r.status,0,r.stdout);assert.equal(info.calls,0);assert.equal(info.artifacts['accepted-deployment.json'],undefined);
  });
 for(const role of ['previous','failed','completed','current'])for(const property of ['sha','tree','branch','rerun','path','workflow','actor','trigger','conclusion','number','active'])
  test('V2.1 rejects altered '+role+' '+property,()=>{
-  const r=run(instrumented,releaseMock,role+'-'+property),info=report(r);assert.notEqual(r.status,0,r.stdout);assert.equal(info.calls,0);
+  const r=run(release,releaseMock,role+'-'+property),info=report(r);assert.notEqual(r.status,0,r.stdout);assert.equal(info.calls,0);
  });
 for(const scenario of ['whatsapp-missing','whatsapp-wrong','whatsapp-newline','whatsapp-secret-type'])
  test('exact Production WhatsApp binding: '+scenario,()=>{
-  const r=run(instrumented,releaseMock,scenario),info=report(r);assert.notEqual(r.status,0,r.stdout);assert.equal(info.calls,0);
+  const r=run(release,releaseMock,scenario),info=report(r);assert.notEqual(r.status,0,r.stdout);assert.equal(info.calls,0);
  });
 for(const scenario of ['during-recovery-d1','during-recovery-r2','during-recovery-competitor','during-recovery-baseline','during-recovery-main-drift','during-recovery-source-drift','late-recovery-extra-dispatch'])
  test('V2.1 integrated final-guard drift: '+scenario,()=>{
-  const r=run(instrumented,releaseMock,scenario),info=report(r);assert.notEqual(r.status,0,r.stdout);assert.equal(info.calls,0);
+  const r=run(release,releaseMock,scenario),info=report(r);assert.notEqual(r.status,0,r.stdout);assert.equal(info.calls,0);
  });
 test('both V2.1 guards are identical and the last guard precedes final Cloudflare revalidation',()=>{
  const guards=[...yaml.matchAll(/          \/\/ BEGIN FIXED V21 GUARD[\s\S]*?          \/\/ END FIXED V21 GUARD/g)];
  assert.equal(guards.length,2);assert.equal(guards[0][0],guards[1][0]);
- const end=instrumented.indexOf('const recoveryEvidence = await verifyV21(recoveryGet)');
- assert(end>=0);assert(end<instrumented.indexOf('const current = (await cf(root)).result;'));
- assert.equal(instrumented.slice(end).match(/await verifyV21/g)?.length,1);
+ const end=release.indexOf('const recoveryEvidence = await verifyV21(recoveryGet)');
+ assert(end>=0);assert(end<release.indexOf('const current = (await cf(root)).result;'));
+ assert.equal(release.slice(end).match(/await verifyV21/g)?.length,1);
 });
 
 for(const [key,value] of [['GITHUB_ACTOR','other'],['GITHUB_ACTOR_ID','1'],['GITHUB_TRIGGERING_ACTOR','other'],
@@ -285,12 +294,12 @@ for(const [key,value] of [['GITHUB_ACTOR','other'],['GITHUB_ACTOR_ID','1'],['GIT
  ['GITHUB_WORKFLOW_SHA','0'.repeat(40)],['GITHUB_REPOSITORY','other/Classyline'],['RELEASE_ARMED','True'],
  ['RELEASE_ARMED',' true'],['RELEASE_ARMED','true '],['RELEASE_ARMED','true\\n']])
  test('V2.1 actual dispatch context rejects '+key+'='+JSON.stringify(value),()=>{
-  const r=run(instrumented,releaseMock+'\nObject.assign(process.env,'+JSON.stringify({[key]:value})+');\n','success'),info=report(r);
+  const r=run(release,releaseMock+'\nObject.assign(process.env,'+JSON.stringify({[key]:value})+');\n','success'),info=report(r);
   assert.notEqual(r.status,0);assert.equal(info.calls,0);
  });
 
 for(const scenario of ['rollback-d1','rollback-r2'])test('rollback own binding evidence: '+scenario,()=>{
- const r=run(instrumented,releaseMock,scenario),info=report(r);assert.notEqual(r.status,0);assert.equal(info.calls,0);
+ const r=run(release,releaseMock,scenario),info=report(r);assert.notEqual(r.status,0);assert.equal(info.calls,0);
 });
 test('final deployment must carry its own exact WhatsApp configuration',()=>{
  rejectsAfterUpload(releaseMock.replace('const cfg =',"fresh.env_vars.WHATSAPP_NUMBER.value='other';\nconst cfg ="),/WhatsApp binding/);
@@ -303,4 +312,114 @@ test('future hosted controller validation is automatic and credential-free',()=>
  assert.doesNotMatch(ci,/secrets\.|environment:|workflow_dispatch|CLOUDFLARE_API_TOKEN|pages deploy|gh workflow/);
  assert.match(ci,/permissions:\n  contents: read/);
  for(const action of ci.matchAll(/uses: (\S+)/g))assert.match(action[1],/@[a-f0-9]{40}$/);
+});
+
+
+test('both controller parent guards pin the exact installed activation baseline',()=>{
+ const pin="assert.deepEqual(controller.parents?.map(p => p.sha), ['54c5a3ac9cf11e1aa5aca762220c7267289702e0']);";
+ assert.equal(yaml.split(pin).length-1,2);
+ assert.doesNotMatch(yaml,/controller.parents[^\n]+0ce95a/);
+});
+test('controller-parent drift in final guard blocks after valid initial guard',()=>{
+ const r=run(release,releaseMock,'late-controller-parent'),info=report(r);
+ assert.notEqual(r.status,0);assert.equal(info.calls,0);assert.equal(info.recoveryReads.inventories,2);
+});
+test('approved squash is checked out and recorded while CI original source remains pinned',()=>{
+ assert.match(yaml,/ref: 0ce95a706a88c63a914c25b142d4fc6878de66d8/);
+ assert.match(yaml,/const candidate = '0ce95a706a88c63a914c25b142d4fc6878de66d8'/);
+ assert.match(yaml,/application_sha: '0ce95a706a88c63a914c25b142d4fc6878de66d8'/);
+ assert.match(yaml,/ci.head_sha, '9ce02cce69d5774df46c7555543a7f95262c8507'/);
+ const r=run(release,releaseMock,'success'),info=report(r);
+ assert.equal(r.status,0,r.stderr);assert.equal(info.calls,1);
+ assert.equal(info.artifacts['accepted-deployment.json'].sha,'0ce95a706a88c63a914c25b142d4fc6878de66d8');
+});
+const skippedFailures=['wrong-id','unskipped','wrong-source','wrong-environment','wrong-project',
+ 'wrong-project-name','wrong-branch','wrong-trigger','dirty','missing-dirty','missing-skip','missing-latest',
+ 'latest-active','latest-started','missing-stages','short-stages','duplicate-stage','active-stage',
+ 'started-stage','ended-stage','duplicate','second-candidate','prior-ci-source-attempt','pre-upload-drift','final-drift'];
+for(const label of ['valid',...skippedFailures])test('exact historical skipped squash evidence: '+label,()=>{
+ const r=run(release,releaseMock,'skipped-candidate-'+label),info=report(r);
+ const succeeds=label==='valid';
+ assert.equal(r.status===0,succeeds,r.stderr);
+ assert.equal(info.calls,succeeds||label==='final-drift'?1:0,r.stderr);
+ assert.equal(Boolean(info.artifacts['accepted-deployment.json']),succeeds);
+});
+test('native-tested invocation wrapper remains byte-identical to the consumed V2 controller',()=>{
+ const old=readFileSync(new URL('../.github/workflows/classyline-production-manual.yml',import.meta.url),'utf8');
+ const pattern=/\/\/ BEGIN WRANGLER INVOCATION([\s\S]*?)\/\/ END WRANGLER INVOCATION/;
+ assert.equal(yaml.match(pattern)[1],old.match(pattern)[1]);
+});
+
+// Pinned evidence is mandatory even when it vanished before our first snapshot.
+for (const label of ['absent-initial', 'absent-all', 'absent-pre-upload', 'absent-discovery', 'absent-final'])
+ test('mandatory pinned history rejects '+label+' without replay',()=>{
+  const r=run(release,releaseMock,'skipped-candidate-'+label),info=report(r);
+  assert.notEqual(r.status,0,r.stderr);
+  const postUpload=['absent-discovery','absent-final'].includes(label);
+  assert.equal(info.calls,postUpload?1:0);
+  assert.equal(info.artifacts['accepted-deployment.json'],undefined);
+  assert.match(r.stderr,/Missing or duplicate pinned skipped-history evidence/);
+ });
+test('exact pinned evidence is required inside every complete history traversal',()=>{
+ const history=release.slice(release.indexOf('async function history()'),release.indexOf('function noActive('));
+ assert.match(history,/pinnedSkippedHistory\(all\);\s*return all;/);
+ assert.match(release,/function candidateHistory\(list, acceptedID = null\) \{\s*pinnedSkippedHistory\(list\);/);
+});
+test('mutation control reproduces original omission vulnerability',()=>{
+ const needle="check(matches.length === 1, 'Missing or duplicate pinned skipped-history evidence');";
+ assert.equal(release.split(needle).length,2,'Mutation must change the actual presence guard');
+ const unsafe=release.replace(needle,'if (matches.length === 0) return; '+needle);
+ const fixed=report(run(release,releaseMock,'skipped-candidate-absent-all'));
+ const result=run(unsafe,releaseMock,'skipped-candidate-absent-all'),mutant=report(result);
+ assert.equal(fixed.calls,0);assert.equal(fixed.artifacts['accepted-deployment.json'],undefined);
+ assert.equal(result.status,0,result.stderr);assert.equal(mutant.calls,1);
+ assert.equal(mutant.artifacts['accepted-deployment.json'].accepted,true,
+  'The omission regression must detect the original unsafe behavior');
+});
+test('mutation control detects missing validation of discovery snapshots',()=>{
+ const needle='pinnedSkippedHistory(all);';
+ assert.equal(release.split(needle).length,2);
+ const fixed=run(release,releaseMock,'skipped-candidate-absent-discovery'),fixedInfo=report(fixed);
+ assert.notEqual(fixed.status,0);assert.equal(fixedInfo.calls,1);
+ assert.equal(fixedInfo.artifacts['accepted-deployment.json'],undefined);
+ const mutant=run(release.replace(needle,'/* removed in offline mutation only */'),releaseMock,
+  'skipped-candidate-absent-discovery'),info=report(mutant);
+ assert.equal(mutant.status,0,mutant.stderr);assert.equal(info.calls,1);
+ assert.equal(info.artifacts['accepted-deployment.json'].accepted,true);
+});
+
+test('dedicated activation CI adds one exact branch and retains credential isolation',()=>{
+ const ci=readFileSync(new URL('../.github/workflows/v21-release-offline.yml',import.meta.url),'utf8');
+ assert.match(ci,/branches: \[phase\/storefront-v21-production-release, phase\/storefront-v21-activation\]/);
+ assert.match(ci,/branches: \[main\]/);
+ assert.doesNotMatch(ci,/secrets\.|environment:|workflow_dispatch|pull_request_target|CLOUDFLARE_API_TOKEN|pages deploy|gh workflow/);
+ assert.match(ci,/permissions:\n  contents: read\n/);
+ assert.match(ci,/node --test ops\/\*\.test\.mjs/);
+ assert.match(ci,/node ops\/validate-offline-workflows.mjs/);
+ for(const a of ci.matchAll(/uses: (\S+)/g))assert.match(a[1],/@[a-f0-9]{40}$/);
+});
+for(const [event,ref,head,repo,allowed] of [
+ ['push','refs/heads/phase/storefront-v21-activation','','Skyeagle123/Classyline',true],
+ ['push','refs/heads/phase/storefront-v21-production-release','','Skyeagle123/Classyline',true],
+ ['pull_request','refs/pull/13/merge','phase/storefront-v21-activation','Skyeagle123/Classyline',true],
+ ['pull_request','refs/pull/13/merge','phase/storefront-v21-production-release','Skyeagle123/Classyline',true],
+ ['push','refs/heads/main','','Skyeagle123/Classyline',false],
+ ['push','refs/heads/phase/storefront-v21-activation-evil','','Skyeagle123/Classyline',false],
+ ['pull_request','refs/pull/13/merge','unapproved','Skyeagle123/Classyline',false],
+ ['push','refs/heads/phase/storefront-v21-activation','','other/Classyline',false],
+])test('actual credential-free CI branch condition: '+event+' '+ref+' '+head+' '+repo,()=>{
+ const ci=readFileSync(new URL('../.github/workflows/v21-release-offline.yml',import.meta.url),'utf8');
+ const expression=ci.split('    if: >-\n')[1].split('    runs-on:')[0].trim();
+ const evaluate=new Function('github','return ('+expression+');');
+ assert.equal(evaluate({event_name:event,ref,head_ref:head,repository:repo}),allowed);
+});
+for(const condition of ['missing','altered'])test('uncertain CLI and '+condition+' discovery evidence never replays',()=>{
+ const inject=condition==='missing'
+  ? "if(observed) result=result.filter(d=>d.id!=='104abcf0-b542-4ea5-b655-70abab5339ba');"
+  : "if(observed) result.find(d=>d.id==='104abcf0-b542-4ea5-b655-70abab5339ba').stages[4].status='active';";
+ const mock=releaseMock.replace('// INJECT_FINAL_HISTORY',inject);
+ const result=run(release,mock,'uncertain-but-deployed'),info=report(result);
+ assert.notEqual(result.status,0);assert.equal(info.calls,1);
+ assert.equal(info.artifacts['accepted-deployment.json'],undefined);
+ assert.equal(info.artifacts['command-result.json'].uncertain,true);
 });
