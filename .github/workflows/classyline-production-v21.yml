@@ -126,7 +126,7 @@ jobs:
             assert.equal(controller.sha, e.GITHUB_SHA);
             assert.match(controller.tree?.sha, /^[a-f0-9]{40}$/);
             // A reviewed activation squash from this exact installed baseline is required.
-            assert.deepEqual(controller.parents?.map(p => p.sha), ['54c5a3ac9cf11e1aa5aca762220c7267289702e0']);
+            assert.deepEqual(controller.parents?.map(p => p.sha), ['aaed520c284e533a9d2227107ce62b4be5579f50']);
             const expected = [
               [39629341749, 1, '492fb4a963f9a0c9a8a24cf783a47cbe44ae7586',
                 '2632c6bd097c61af2eff1b48cefb186b1ad3802d', 'completed', 'success'],
@@ -459,7 +459,7 @@ jobs:
             assert.equal(controller.sha, e.GITHUB_SHA);
             assert.match(controller.tree?.sha, /^[a-f0-9]{40}$/);
             // A reviewed activation squash from this exact installed baseline is required.
-            assert.deepEqual(controller.parents?.map(p => p.sha), ['54c5a3ac9cf11e1aa5aca762220c7267289702e0']);
+            assert.deepEqual(controller.parents?.map(p => p.sha), ['aaed520c284e533a9d2227107ce62b4be5579f50']);
             const expected = [
               [39629341749, 1, '492fb4a963f9a0c9a8a24cf783a47cbe44ae7586',
                 '2632c6bd097c61af2eff1b48cefb186b1ad3802d', 'completed', 'success'],

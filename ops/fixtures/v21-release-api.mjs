@@ -5,7 +5,7 @@ import {createRecoveryAPI} from './recovery-api.mjs';
 const historical=JSON.parse(readFileSync(new URL('./recovery-history.json',import.meta.url)));
 const source='9ce02cce69d5774df46c7555543a7f95262c8507',tree='8266d7f79405fca39374298b4695687b225de4c7';
 const base='583105d0c548caf9c81228f0d1f3572d9b6cbe37',main='0ce95a706a88c63a914c25b142d4fc6878de66d8';
-const activationBase='54c5a3ac9cf11e1aa5aca762220c7267289702e0';
+const activationBase='aaed520c284e533a9d2227107ce62b4be5579f50';
 const path='.github/workflows/classyline-production-v21.yml',workflowID=999999001;
 export function createV21API(e,scenario) {
  const counts={reads:0,inventories:0},legacy=createRecoveryAPI(e,scenario,true);
@@ -36,7 +36,18 @@ export function createV21API(e,scenario) {
    if(s==='duplicate-dispatch')list.push(structuredClone(current));
    return reply({total_count:s==='current-truncated'?2:list.length,workflow_runs:list});
   }
-  if(p==='/git/commits/'+e.GITHUB_SHA)return reply({sha:e.GITHUB_SHA,tree:{sha:'d'.repeat(40)},parents:[{sha:s==='controller-parent'||(s==='late-controller-parent'&&counts.inventories>=2)?'bad':s==='controller-parent-obsolete'?main:activationBase}]});
+  if(p==='/git/commits/'+e.GITHUB_SHA) {
+   const parentScenario=s.startsWith('late-controller-parent')&&counts.inventories>=2?s.replace('late-',''):s;
+   const parents={
+    'controller-parent':[{sha:'bad'}],
+    'controller-parent-obsolete':[{sha:main}],
+    'controller-parent-old-pin':[{sha:'54c5a3ac9cf11e1aa5aca762220c7267289702e0'}],
+    'controller-parent-previous-main':[{sha:'04feef6a48968e736d99a072efbf98750feb7bdf'}],
+    'controller-parent-missing':[],
+    'controller-parent-multiple':[{sha:activationBase},{sha:'04feef6a48968e736d99a072efbf98750feb7bdf'}],
+   }[parentScenario]??[{sha:activationBase}];
+   return reply({sha:e.GITHUB_SHA,tree:{sha:'d'.repeat(40)},parents});
+  }
   for(const r of [...runs,current])if(p==='/actions/runs/'+r.id)return reply(r);
   if(p==='/actions/runs/39851191294')return reply({id:39851191294,repository:{id:1096008352,full_name:'Skyeagle123/Classyline'},head_sha:s==='wrong-ci-sha'?'bad':source,head_branch:'phase/storefront-v21-whatsapp-swatches',path:'.github/workflows/storefront.yml',event:'pull_request',head_commit:{tree_id:tree},run_attempt:s==='ci-rerun'?2:1,status:s==='running-ci'?'in_progress':'completed',conclusion:s==='failed-ci'?'failure':'success'});
   if(p==='/actions/runs/39851191294/attempts/1/jobs?per_page=100') {
