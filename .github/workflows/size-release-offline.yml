@@ -1,0 +1,55 @@
+name: Size update controller offline security validation
+on:
+  push:
+    branches: [phase/storefront-size-release-preparation]
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/classyline-production-size-update.yml
+      - .github/workflows/size-release-offline.yml
+      - ops/size-release/**
+      - docs/size-ordering-release.md
+permissions:
+  contents: read
+jobs:
+  offline:
+    if: >-
+      github.repository == 'Skyeagle123/Classyline' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/phase/storefront-size-release-preparation') ||
+       (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == 'Skyeagle123/Classyline' &&
+        github.head_ref == 'phase/storefront-size-release-preparation'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      CLASSYLINE_VALIDATION_TOOLS: ${{ github.workspace }}/validation-tools
+    steps:
+      - name: Check out exact reviewed test candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Install locked tools without lifecycle scripts
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          mkdir -p "$CLASSYLINE_VALIDATION_TOOLS"
+          cp ops/offline-validation/package.json ops/offline-validation/package-lock.json "$CLASSYLINE_VALIDATION_TOOLS/"
+          npm ci --prefix "$CLASSYLINE_VALIDATION_TOOLS" --ignore-scripts --no-audit --no-fund
+      - name: Syntax and credential scans
+        run: |
+          set -euo pipefail
+          node ops/validate-offline-workflows.mjs
+          node --check ops/size-release/create-gate.cjs
+          npm run security:check
+      - name: All release security and retry fault tests offline
+        run: node --test ops/*.test.mjs ops/size-release/*.test.mjs
+      - name: Verify application suite without release credentials
+        run: npm test
