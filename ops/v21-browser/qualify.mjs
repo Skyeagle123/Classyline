@@ -127,7 +127,9 @@ export async function qualify(application, output) {
           assert.equal(stored.lines[0].qty,1);assert.equal(stored.attempt,null);
           await page.getByRole('button',{name:'Bag (1)',exact:true}).click();
           const dialog=page.getByRole('dialog');await dialog.waitFor({state:'visible'});
-          assert(await dialog.getByText('Free Size / Red · Qty 1',{exact:true}).isVisible());
+          await dialog
+            .getByText('Free Size / Red · Qty 1', { exact: true })
+            .waitFor({ state: 'visible', timeout: 10000 });
           await overflow(); await screenshot('cart');
         });
         await check(`${width}: WhatsApp/COD methods and public destination without submission`,async()=>{

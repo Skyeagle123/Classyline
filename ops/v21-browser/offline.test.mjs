@@ -180,3 +180,60 @@ test('isolated tool lock pins Playwright and registry integrity without applicat
     }
   }
 });
+
+// Execute the actual cart-readiness statement. Rendering and the deadline are
+// controlled events, so these offline regressions need no browser or sleeps.
+const cartReadyStart = "const dialog=page.getByRole('dialog');await dialog.waitFor({state:'visible'});";
+function cartReadiness(source = harness) {
+  assert.equal(source.split(cartReadyStart).length, 2, 'Unique cart-readiness boundary');
+  const body = source.split(cartReadyStart)[1].split('await overflow();')[0];
+  return new (Object.getPrototypeOf(async function(){}).constructor)('dialog', 'assert', body);
+}
+function delayedCart() {
+  const expected = 'Free Size / Red · Qty 1';
+  let text = null, waiter, waits = 0, immediateReads = 0;
+  const dialog = {getByText(label, options) {
+    assert.equal(label, expected); assert.deepEqual(options, {exact:true});
+    return {
+      async isVisible() { immediateReads++; return text === label; },
+      async waitFor(options) {
+        assert.deepEqual(options, {state:'visible', timeout:10000}); waits++;
+        if (text === label) return;
+        await new Promise((resolve,reject) => { waiter = {resolve,reject,label}; });
+        assert.equal(text, label);
+      },
+    };
+  }};
+  return {dialog,
+    render(value) { text = value; if (waiter && text === waiter.label) waiter.resolve(); },
+    expire() { assert(waiter, 'A bounded visibility wait must be pending'); waiter.reject(new Error('Cart text visibility deadline exceeded')); },
+    counts() { return {waits, immediateReads}; },
+  };
+}
+test('actual cart statement waits for delayed exact item rendering',async()=>{
+  const cart=delayedCart(); let finished=false;
+  const pending=cartReadiness()(cart.dialog,assert).then(()=>{finished=true;});
+  await Promise.resolve(); assert.equal(finished,false);
+  assert.deepEqual(cart.counts(),{waits:1,immediateReads:0});
+  cart.render('Free Size / Red · Qty 1'); await pending; assert.equal(finished,true);
+});
+for(const wrong of [null,'Free Size / Blue · Qty 1','Free Size / Red · Qty 2'])
+  test(`actual cart statement rejects missing/incorrect text: ${JSON.stringify(wrong)}`,async()=>{
+    const cart=delayedCart(); let finished=false;
+    const pending=cartReadiness()(cart.dialog,assert).then(()=>{finished=true;});
+    const rejected=assert.rejects(pending,/Cart text visibility deadline exceeded/);
+    cart.render(wrong); await Promise.resolve(); assert.equal(finished,false);
+    assert.deepEqual(cart.counts(),{waits:1,immediateReads:0});
+    cart.expire(); await rejected; assert.equal(finished,false);
+  });
+test('original immediate visibility mutation fails before delayed cart rendering',async()=>{
+  const start=harness.indexOf(cartReadyStart)+cartReadyStart.length;
+  const end=harness.indexOf('await overflow();',start);
+  const original=harness.slice(0,start)+
+    "\nassert(await dialog.getByText('Free Size / Red · Qty 1',{exact:true}).isVisible());\n"+
+    harness.slice(end);
+  const cart=delayedCart();
+  await assert.rejects(cartReadiness(original)(cart.dialog,assert),assert.AssertionError);
+  assert.deepEqual(cart.counts(),{waits:0,immediateReads:1});
+  cart.render('Free Size / Red · Qty 1');
+});
