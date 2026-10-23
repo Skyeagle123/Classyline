@@ -1,0 +1,92 @@
+name: V2.1 isolated Chromium qualification
+on:
+  push:
+    branches: [phase/storefront-v21-browser-qualification]
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/v21-isolated-browser.yml
+      - ops/v21-browser/**
+      - docs/v21-isolated-browser.md
+permissions:
+  contents: read
+concurrency:
+  group: v21-isolated-browser-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  isolated-browser:
+    if: >-
+      github.repository == 'Skyeagle123/Classyline' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/phase/storefront-v21-browser-qualification') ||
+       (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == 'Skyeagle123/Classyline' &&
+        github.head_ref == 'phase/storefront-v21-browser-qualification'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out qualification harness candidate only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: harness
+          persist-credentials: false
+      - name: Check out fixed accepted application separately
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 04feef6a48968e736d99a072efbf98750feb7bdf
+          path: application
+          persist-credentials: false
+      - name: Set up pinned Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Verify source identities and credential-free execution
+        env:
+          HARNESS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = Skyeagle123/Classyline
+          test "$(node --version)" = v24.19.0
+          test "$(git -C harness rev-parse HEAD)" = "$HARNESS_SHA"
+          test "$(git -C application rev-parse HEAD)" = 04feef6a48968e736d99a072efbf98750feb7bdf
+          test "$(git -C application rev-parse 'HEAD^{tree}')" = 8fcdaf50e3e2a900c900d37d0f9ad3ecaa2a6ed7
+          test -z "$(git -C application status --porcelain)"
+          test -z "${CLOUDFLARE_API_TOKEN:-}${CLOUDFLARE_API_KEY:-}${CLOUDFLARE_ACCOUNT_ID:-}${R2_ACCESS_KEY_ID:-}${R2_SECRET_ACCESS_KEY:-}"
+      - name: Install application and isolated tooling from separate lockfiles
+        run: |
+          set -euo pipefail
+          npm ci --prefix application --ignore-scripts --no-audit --no-fund
+          npm ci --prefix harness/ops/v21-browser --ignore-scripts --no-audit --no-fund
+          test "$(node -p "require('./harness/ops/v21-browser/node_modules/playwright/package.json').version")" = 1.62.1
+      - name: Run credential-free harness and workflow safety regressions
+        run: |
+          set -euo pipefail
+          cd harness
+          node --test ops/v21-browser/offline.test.mjs
+      - name: Install official pinned Playwright Chromium and OS libraries
+        run: node harness/ops/v21-browser/node_modules/playwright/cli.js install --with-deps chromium --only-shell
+      - name: Build exact accepted static application
+        run: |
+          set -euo pipefail
+          npm --prefix application run build
+          test -z "$(git -C application status --porcelain)"
+      - name: Qualify isolated UI using synthetic responses only
+        env:
+          EVIDENCE_DIR: ${{ runner.temp }}/classyline-v21-browser-evidence
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          git -C harness rev-parse HEAD > "$EVIDENCE_DIR/harness-sha.txt"
+          git -C harness rev-parse 'HEAD^{tree}' > "$EVIDENCE_DIR/harness-tree.txt"
+          node harness/ops/v21-browser/qualify.mjs "$GITHUB_WORKSPACE/application" "$EVIDENCE_DIR" 2>&1 | tee "$EVIDENCE_DIR/browser.log"
+      - name: Preserve synthetic screenshots and network evidence even on failure
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: v21-isolated-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/classyline-v21-browser-evidence
+          if-no-files-found: warn
+          retention-days: 14
