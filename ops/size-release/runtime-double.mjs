@@ -21,7 +21,7 @@ const temp = mkdtempSync(join(tmpdir(), 'classyline-wrangler-test-'));
 let calls = 0, writes = 0, observed = false;
 let recoveryDrift = false;
 const boundaryEvents = [];
-let historyReads = 0, projectReads = 0, mainReads = 0, rollbackReads = 0;
+let historyReads = 0, projectReads = 0, mainReads = 0, rollbackReads = 0, previewSnapshots = 0;
 let postHistoryReads = 0, postProjectReads = 0;
 let kills = 0;
 process.kill = (pid, signal) => {
@@ -48,6 +48,21 @@ if (scenario === 'false-arm') process.env.RELEASE_ARMED = 'false';
 if (scenario === 'empty-arm') process.env.RELEASE_ARMED = '';
 if (scenario === 'uppercase-arm') process.env.RELEASE_ARMED = 'TRUE';
 Object.assign(process.env,{REVIEWED_CONTROLLER_SHA:'c'.repeat(40),REVIEWED_CONTROLLER_TREE:'d'.repeat(40),BROWSER_RUN_ID:'40020000000',BROWSER_HARNESS_SHA:'a'.repeat(40),BROWSER_HARNESS_TREE:'b'.repeat(40),BROWSER_ARTIFACT_ID:'88',BROWSER_ARTIFACT_DIGEST:'sha256:'+'e'.repeat(64),INSTALL_SKIPPED_ID:'33333333-0000-0000-0000-000000000001'});
+// Explicit test receipt; never derived from the mocked live history response.
+const previewRecords=[
+ {id:'f374e640-1719-4f6d-ae22-86303756ab6e',project_id:projectID,project_name:'classyline2',environment:'preview',branch:'phase/storefront-size-browser-qualification',commit:'3b14920c32940f628b50220aec292926aa2cd4c6',created_on:'2026-10-23T21:33:31.336319Z'},
+ {id:'7165ba03-ceb4-4508-a63c-8dddcdb76083',project_id:projectID,project_name:'classyline2',environment:'preview',branch:'phase/storefront-size-release-preparation',commit:'250c59087e0d0cef284c40a9a6455f25298be0c5',created_on:'2026-10-23T21:34:50.920995Z'}
+];
+const receipt={version:1,repository:'Skyeagle123/Classyline',controller_sha:process.env.GITHUB_SHA,controller_tree:process.env.REVIEWED_CONTROLLER_TREE,records:structuredClone(previewRecords)};
+if(scenario==='manifest-wrong-controller')receipt.controller_sha='f'.repeat(40);
+if(scenario==='manifest-wrong-tree')receipt.controller_tree='f'.repeat(40);
+if(scenario==='manifest-duplicate-entry')receipt.records.push(structuredClone(receipt.records[0]));
+if(scenario==='manifest-unapproved-branch')receipt.records[0].branch='unapproved';
+process.env.PREVIEW_SKIPS_MANIFEST=JSON.stringify(receipt);
+process.env.PREVIEW_SKIPS_SHA256='sha256:'+createHash('sha256').update(process.env.PREVIEW_SKIPS_MANIFEST).digest('hex');
+if(scenario==='manifest-missing')delete process.env.PREVIEW_SKIPS_MANIFEST;
+if(scenario==='manifest-missing-digest')delete process.env.PREVIEW_SKIPS_SHA256;
+if(scenario==='manifest-wrong-digest')process.env.PREVIEW_SKIPS_SHA256='sha256:'+'0'.repeat(64);
 mkdirSync(join(temp,'control','ops'),{recursive:true});
 symlinkSync(new URL('.',import.meta.url).pathname,join(temp,'control','ops','size-release'));
 const recovery = createRecoveryAPI(process.env, scenario, true);
@@ -193,6 +208,7 @@ globalThis.fetch = async (url, options) => {
       const query = new URL(url).searchParams;
       const environment=query.get('env');assert(['production','preview'].includes(environment));
       assert.equal(query.get('per_page'),'10');const page=Number(query.get('page'));historyReads++;
+      if(environment==='preview'&&page===1)previewSnapshots++;
       const known=JSON.parse(readFileSync(new URL('./history-baseline.json',import.meta.url)))[environment];
       const idle=name=>({name,status:'idle',started_on:null,ended_on:null});
       const skip=(id,sha)=>({...deployment(id,sha),is_skipped:true,deployment_trigger:{type:'github:push',metadata:{branch:'main',commit_hash:sha,commit_dirty:false}},latest_stage:idle('queued'),stages:['queued','initialize','clone_repo','build','deploy'].map(idle)});
@@ -207,7 +223,28 @@ globalThis.fetch = async (url, options) => {
        if(scenario==='skipped-missing')result=result.filter(d=>d.id!=='e346342b-626e-4d1b-962c-b688f24e2bab');
        if(scenario==='skipped-started')result.find(d=>d.id==='e346342b-626e-4d1b-962c-b688f24e2bab').stages[1].started_on='now';
        if(scenario==='history-altered')result.at(-1).deployment_trigger.metadata.commit_hash='other';
-      }else if(scenario==='preview-competitor')result.push({...deployment(otherID,'other'),environment:'preview'});
+      }else {
+       for(const r of previewRecords)result.unshift({...skip(r.id,r.commit),...r,deployment_trigger:{type:'github:push',metadata:{branch:r.branch,commit_hash:r.commit,commit_dirty:false}}});
+       if(scenario==='preview-competitor')result.push({...deployment(otherID,'other'),environment:'preview'});
+       if(scenario==='preview-missing-supplement')result=result.filter(d=>d.id!==previewRecords[0].id);
+       if(scenario==='preview-duplicate-supplement')result.push(structuredClone(result[0]));
+       if(scenario==='preview-extra-skipped')result.push({...skip(otherID,'e'.repeat(40)),environment:'preview'});
+       if(scenario==='preview-altered-source')result[0].deployment_trigger.metadata.commit_hash='e'.repeat(40);
+       if(scenario==='preview-altered-branch')result[0].deployment_trigger.metadata.branch='unapproved';
+       if(scenario==='preview-unknown-status')result[0].latest_stage.status='unknown';
+       if(scenario==='preview-started-stage')result[0].stages[1].started_on='2026-10-23T21:35:00Z';
+       if(scenario==='preview-altered-project')result[0].project_id='wrong';
+       if(scenario==='preview-altered-environment')result[0].environment='production';
+       if(scenario==='preview-dirty')result[0].deployment_trigger.metadata.commit_dirty=true;
+       if(scenario==='preview-missing-original')result=result.filter(d=>d.id!==known[0].id);
+       if(scenario==='preview-altered-original')result.find(d=>d.id===known[0].id).deployment_trigger.metadata.commit_hash='e'.repeat(40);
+       if(scenario==='preview-late-stage'&&previewSnapshots>=2)result[0].stages[2].ended_on='2026-10-23T21:35:00Z';
+       if(scenario==='preview-late-original-field'&&previewSnapshots>=2)result.find(d=>d.id===known[0].id).url+='altered';
+       if(scenario==='preview-post-stage'&&observed)result[0].stages[2].status='success';
+       if(scenario==='preview-post-original-field'&&observed)result.find(d=>d.id===known[0].id).url+='altered';
+       if(scenario==='manifest-late-change'&&previewSnapshots>=2)process.env.PREVIEW_SKIPS_MANIFEST+=' ';
+       if(scenario==='manifest-late-digest'&&previewSnapshots>=2)process.env.PREVIEW_SKIPS_SHA256='sha256:'+'0'.repeat(64);
+      }
       const total=result.length;result=result.slice((page-1)*10,page*10);
       body={success:true,result,result_info:{page,per_page:10,count:result.length,total_count:total,total_pages:Math.ceil(total/10)}};
       if(scenario==='pagination-truncated'&&page===2)body.result.pop();

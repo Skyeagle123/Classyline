@@ -55,6 +55,8 @@ jobs:
       BROWSER_ARTIFACT_ID: ${{ vars.CLASSYLINE_SIZE_BROWSER_ARTIFACT_ID }}
       BROWSER_ARTIFACT_DIGEST: ${{ vars.CLASSYLINE_SIZE_BROWSER_ARTIFACT_DIGEST }}
       INSTALL_SKIPPED_ID: ${{ vars.CLASSYLINE_SIZE_INSTALL_SKIPPED_ID }}
+      PREVIEW_SKIPS_MANIFEST: ${{ vars.CLASSYLINE_SIZE_PREVIEW_SKIPS_MANIFEST }}
+      PREVIEW_SKIPS_SHA256: ${{ vars.CLASSYLINE_SIZE_PREVIEW_SKIPS_SHA256 }}
       CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
 
     steps:
@@ -395,7 +397,8 @@ jobs:
                 (s?.name === 'deploy' && s.status === 'success'), 'Competing/unknown Production deployment');
             }
           }
-          const {verifySkipped,verifyBaselineHistory}=await import(new URL('file://' + e.GITHUB_WORKSPACE + '/control/ops/size-release/history.mjs'));
+          const {verifySkipped,verifyBaselineHistory,previewHistoryVerifier}=await import(new URL('file://' + e.GITHUB_WORKSPACE + '/control/ops/size-release/history.mjs'));
+          const previewVerifier=previewHistoryVerifier(e);
           function pinnedSkippedHistory(list) {verifySkipped(list,e.GITHUB_SHA,e.INSTALL_SKIPPED_ID);}
           function candidateHistory(list, acceptedID = null) {
             pinnedSkippedHistory(list);
@@ -417,8 +420,8 @@ jobs:
           rollbackIdentity((await cf(root + '/deployments/' + baseline)).result);
           const before = await history();
           verifyBaselineHistory(before,e.INSTALL_SKIPPED_ID);
-          const previewBefore=await history('preview');noActive(previewBefore);verifyBaselineHistory(previewBefore,null,'preview');
-          const previewIDs=historyIDs(previewBefore);
+          const previewBefore=await history('preview');noActive(previewBefore);
+          const previewEvidence=previewVerifier.verify(previewBefore);
           noActive(before);
           const initialIDs = historyIDs(before);
           candidateHistory(before);
@@ -486,8 +489,8 @@ jobs:
           check(knownIDs.size === initialIDs.size && [...knownIDs].every(id => initialIDs.has(id)),
             'Production history changed during preflight');
           async function verifyPreview() {
-            const list=await history('preview');noActive(list);const ids=historyIDs(list);
-            check(ids.size===previewIDs.size&&[...ids].every(id=>previewIDs.has(id)),'Preview history drift');
+            const list=await history('preview');noActive(list);
+            previewVerifier.verify(list);
           }
           function reconcile(list, acceptedID) {
             noActive(list);
@@ -503,7 +506,8 @@ jobs:
             identity(fresh[0], acceptedID, candidate);
           }
           save('preflight.json', {baseline, baseline_sha: baselineSHA, bindings,
-            known_production_deployments: [...knownIDs], workflow_sha: e.GITHUB_SHA});
+            known_production_deployments: [...knownIDs], workflow_sha: e.GITHUB_SHA,
+            preview_history: previewEvidence});
           const recoveryEvidence = await verifyV21(recoveryGet);
           await mainUnchanged();
           verifyInputs();
@@ -623,6 +627,7 @@ jobs:
           save('accepted-deployment.json', {id: d.id, url: d.url, sha: candidate,
             environment: 'production', uses_functions: true, deployment_bindings: deployedBindings,
             project_bindings: afterBindings, rollback_deployment: baseline,
+            preview_history: previewEvidence,
             cli_exit_success: true, max_create_transport_dispatches: 1, disarming_verified: false, accepted: true});
           console.log(`Canonical deployment verified: ${d.id}; RELEASED remains pending independent disarming verification.`);
           NODE
