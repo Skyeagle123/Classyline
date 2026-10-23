@@ -1,0 +1,11 @@
+{
+  "name": "classyline-v21-isolated-browser-qualification",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Credential-free browser qualification tooling; separate from application dependencies.",
+  "dependencies": {
+    "playwright": "1.62.1",
+    "yaml": "2.8.2"
+  }
+}
