@@ -1,5 +1,5 @@
 name: Controlled ClassyLine V2.1 Production deployment
-run-name: V2.1 code release 9ce02cc by @${{ github.actor }}
+run-name: V2.1 code release 0ce95a7 by @${{ github.actor }}
 
 # Release execution requires separate Owner approval and an explicitly armed window.
 # Owner policy: one workflow execution / one pages deploy invocation; Wrangler's
@@ -9,7 +9,7 @@ run-name: V2.1 code release 9ce02cc by @${{ github.actor }}
 # pending builds and verify the baseline. Configure the environment:
 # owner-only required reviewer, main-only deployment branch, no admin bypass,
 # CLOUDFLARE_API_TOKEN as an ENVIRONMENT secret (never a repository secret).
-# Preparation only: both unconditional blockers remain until separately reviewed enablement.
+# Activation proposal only: unpublished and unapproved for installation or execution.
 # This new fixed V2.1 workflow permits only its first dispatch and preserves all three V2 runs.
 # Keep environment variable CLASSYLINE_RELEASE_ARMED absent/false until the
 # Owner approves the exact installed workflow and release window.
@@ -50,11 +50,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
 
     steps:
-      - name: V2.1 preparation remains disabled pending independent acceptance
-        run: |
-          echo 'BLOCKED: V2.1 release controller is preparation only.'
-          exit 1
-
       - name: Require separately armed release window
         env:
           RELEASE_ARMED: ${{ vars.CLASSYLINE_RELEASE_ARMED }}
@@ -130,8 +125,8 @@ jobs:
             const controller = await get('/git/commits/' + e.GITHUB_SHA);
             assert.equal(controller.sha, e.GITHUB_SHA);
             assert.match(controller.tree?.sha, /^[a-f0-9]{40}$/);
-            // A reviewed squash installation from this exact baseline is the only supported installation.
-            assert.deepEqual(controller.parents?.map(p => p.sha), ['0ce95a706a88c63a914c25b142d4fc6878de66d8']);
+            // A reviewed activation squash from this exact installed baseline is required.
+            assert.deepEqual(controller.parents?.map(p => p.sha), ['54c5a3ac9cf11e1aa5aca762220c7267289702e0']);
             const expected = [
               [39629341749, 1, '492fb4a963f9a0c9a8a24cf783a47cbe44ae7586',
                 '2632c6bd097c61af2eff1b48cefb186b1ad3802d', 'completed', 'success'],
@@ -268,7 +263,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, reviewed official commit
         with:
           repository: Skyeagle123/Classyline
-          ref: 9ce02cce69d5774df46c7555543a7f95262c8507
+          ref: 0ce95a706a88c63a914c25b142d4fc6878de66d8
           path: app
           persist-credentials: false
           fetch-depth: 1
@@ -290,7 +285,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 9ce02cce69d5774df46c7555543a7f95262c8507
+          test "$(git rev-parse HEAD)" = 0ce95a706a88c63a914c25b142d4fc6878de66d8
           test "$(git rev-parse 'HEAD^{tree}')" = 8266d7f79405fca39374298b4695687b225de4c7
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
           test -f package-lock.json
@@ -359,7 +354,7 @@ jobs:
           for (const path of controlFiles) files.push({path: `control-source/${path}`,
             sha256: createHash('sha256').update(readFileSync(join(control, path))).digest('hex')});
           const provenance = {
-            application_sha: '9ce02cce69d5774df46c7555543a7f95262c8507',
+            application_sha: '0ce95a706a88c63a914c25b142d4fc6878de66d8',
             application_tree: '8266d7f79405fca39374298b4695687b225de4c7',
             accepted_squash_main: '0ce95a706a88c63a914c25b142d4fc6878de66d8',
             ci_tested_checkout: '4f1770c12451aed3495f66e3990e399016249ada',
@@ -385,7 +380,7 @@ jobs:
           import {existsSync, lstatSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
           import {join} from 'node:path';
           const e = process.env;
-          const candidate = '9ce02cce69d5774df46c7555543a7f95262c8507';
+          const candidate = '0ce95a706a88c63a914c25b142d4fc6878de66d8';
           const baseline = '9f36717b-a93f-410b-858a-4e9c0e4314fe';
           const baselineSHA = '45ac09182cca5cc989fbae1c967c6e7e849e63c3';
           const projectID = '25d5c0d3-f248-4d69-b5a3-feacfcb66dec';
@@ -396,7 +391,7 @@ jobs:
           }
           function check(ok, message) { if (!ok) throw new Error(message); }
           // Source-review gate; the independent runtime release arm must also pass.
-          const RELEASE_IMPLEMENTATION_REVIEWED = false;
+          const RELEASE_IMPLEMENTATION_REVIEWED = true;
           check(RELEASE_IMPLEMENTATION_REVIEWED, 'BLOCKED: Wrangler release implementation awaits independent review');
           check(e.RELEASE_ARMED === 'true', 'Release window is not armed');
           check(Boolean(e.CLOUDFLARE_API_TOKEN), 'Missing protected environment token; stop');
@@ -463,8 +458,8 @@ jobs:
             const controller = await get('/git/commits/' + e.GITHUB_SHA);
             assert.equal(controller.sha, e.GITHUB_SHA);
             assert.match(controller.tree?.sha, /^[a-f0-9]{40}$/);
-            // A reviewed squash installation from this exact baseline is the only supported installation.
-            assert.deepEqual(controller.parents?.map(p => p.sha), ['0ce95a706a88c63a914c25b142d4fc6878de66d8']);
+            // A reviewed activation squash from this exact installed baseline is required.
+            assert.deepEqual(controller.parents?.map(p => p.sha), ['54c5a3ac9cf11e1aa5aca762220c7267289702e0']);
             const expected = [
               [39629341749, 1, '492fb4a963f9a0c9a8a24cf783a47cbe44ae7586',
                 '2632c6bd097c61af2eff1b48cefb186b1ad3802d', 'completed', 'success'],
@@ -692,6 +687,8 @@ jobs:
               if (page === totalPages) {
                 check(all.length === totalCount && seen.size === totalCount,
                   'Incomplete deployment history inventory');
+                // Every complete snapshot, including discovery after an uncertain CLI result.
+                pinnedSkippedHistory(all);
                 return all;
               }
             }
@@ -702,6 +699,35 @@ jobs:
               const s = d.latest_stage;
               check(d.is_skipped === true || ['failure', 'canceled', 'cancelled'].includes(s?.status) ||
                 (s?.name === 'deploy' && s.status === 'success'), 'Competing/unknown Production deployment');
+            }
+          }
+          // The approved squash SHA has one pre-existing, never-started Git-push
+          // record. It is not a deployment attempt. No other exception is allowed.
+          function pinnedSkippedHistory(list) {
+            const skippedID = '104abcf0-b542-4ea5-b655-70abab5339ba';
+            const matches = list.filter(d => d.id === skippedID);
+            check(matches.length === 1, 'Missing or duplicate pinned skipped-history evidence');
+            const d = matches[0];
+            const m = d.deployment_trigger?.metadata;
+            const idle = stage => stage?.status === 'idle' &&
+              stage.started_on === null && stage.ended_on === null;
+            const names = ['queued', 'initialize', 'clone_repo', 'build', 'deploy'];
+            check(d.id === skippedID && d.project_id === projectID && d.project_name === 'classyline2' &&
+              d.environment === 'production' && d.is_skipped === true &&
+              d.deployment_trigger?.type === 'github:push' && m?.branch === 'main' &&
+              m.commit_hash === candidate && m.commit_dirty === false &&
+              d.latest_stage?.name === 'queued' && idle(d.latest_stage) &&
+              Array.isArray(d.stages) && d.stages.length === names.length &&
+              d.stages.every((stage, index) => stage.name === names[index] && idle(stage)),
+              'Candidate Production attempt exists or skipped-history evidence changed; no retry');
+          }
+          function candidateHistory(list, acceptedID = null) {
+            pinnedSkippedHistory(list);
+            for (const d of list) {
+              if (d.id === acceptedID || d.id === '104abcf0-b542-4ea5-b655-70abab5339ba') continue;
+              check(![candidate, '9ce02cce69d5774df46c7555543a7f95262c8507']
+                .includes(d.deployment_trigger?.metadata?.commit_hash),
+                'Candidate Production attempt exists; no retry');
             }
           }
           function historyIDs(list) {
@@ -718,8 +744,7 @@ jobs:
           const before = await history();
           noActive(before);
           const initialIDs = historyIDs(before);
-          check(!before.some(d => d.deployment_trigger?.metadata?.commit_hash === candidate),
-            'Candidate already has a Production attempt; inspect history instead of retrying');
+          candidateHistory(before);
           // Rehash source/build/controller inputs again immediately before the CLI.
           const {createHash} = await import('node:crypto');
           const provenance = JSON.parse(readFileSync(join(evidence, 'provenance.json')));
@@ -779,13 +804,13 @@ jobs:
           identity(finalProject.canonical_deployment, baseline, baselineSHA);
           const finalHistory = await history();
           noActive(finalHistory);
-          check(!finalHistory.some(d => d.deployment_trigger?.metadata?.commit_hash === candidate),
-            'Candidate Production attempt appeared during preflight');
+          candidateHistory(finalHistory);
           const knownIDs = historyIDs(finalHistory);
           check(knownIDs.size === initialIDs.size && [...knownIDs].every(id => initialIDs.has(id)),
             'Production history changed during preflight');
           function reconcile(list, acceptedID) {
             noActive(list);
+            candidateHistory(list, acceptedID);
             const ids = list.map(d => d.id);
             check(ids.every(id => typeof id === 'string' && id.length > 0) &&
               new Set(ids).size === ids.length, 'Unverifiable deployment history IDs');
@@ -805,7 +830,7 @@ jobs:
           check(JSON.stringify(project(current)) === JSON.stringify(bindings), 'Pre-upload configuration drift');
           identity(current.canonical_deployment, baseline, baselineSHA);
           rollbackIdentity((await cf(root + '/deployments/' + baseline)).result);
-          const preUpload = await history(); noActive(preUpload);
+          const preUpload = await history(); noActive(preUpload); candidateHistory(preUpload);
           const preUploadIDs = historyIDs(preUpload);
           check(preUploadIDs.size === knownIDs.size && [...preUploadIDs].every(id => knownIDs.has(id)),
             'Production history changed before creation');
