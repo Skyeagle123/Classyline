@@ -315,11 +315,26 @@ test('future hosted controller validation is automatic and credential-free',()=>
 });
 
 
-test('both controller parent guards pin the exact installed activation baseline',()=>{
- const pin="assert.deepEqual(controller.parents?.map(p => p.sha), ['54c5a3ac9cf11e1aa5aca762220c7267289702e0']);";
+test('both controller parent guards pin the exact reviewed installation baseline',()=>{
+ const pin="assert.deepEqual(controller.parents?.map(p => p.sha), ['aaed520c284e533a9d2227107ce62b4be5579f50']);";
  assert.equal(yaml.split(pin).length-1,2);
  assert.doesNotMatch(yaml,/controller.parents[^\n]+0ce95a/);
 });
+test('future direct-child squash of reviewed main passes both guards with one mocked invocation',()=>{
+ const r=run(release,releaseMock,'success'),info=report(r);
+ assert.equal(r.status,0,r.stderr);assert.equal(info.calls,1);
+ assert.equal(info.recoveryReads.inventories,2);
+ assert.equal(info.artifacts['accepted-deployment.json'].accepted,true);
+});
+for(const ancestry of ['old-pin','previous-main','missing','multiple'])
+ for(const phase of ['initial','final'])test(`controller parent ${phase} guard rejects ${ancestry} ancestry`,()=>{
+  const scenario=(phase==='final'?'late-':'')+'controller-parent-'+ancestry;
+  const r=run(release,releaseMock,scenario),info=report(r);
+  assert.notEqual(r.status,0);assert.equal(info.calls,0);
+  assert.equal(info.artifacts['accepted-deployment.json'],undefined);
+  assert.equal(info.recoveryReads.inventories,phase==='initial'?1:2);
+  assert.match(r.stderr,/Expected values to be strictly deep-equal/);
+ });
 test('controller-parent drift in final guard blocks after valid initial guard',()=>{
  const r=run(release,releaseMock,'late-controller-parent'),info=report(r);
  assert.notEqual(r.status,0);assert.equal(info.calls,0);assert.equal(info.recoveryReads.inventories,2);
@@ -388,25 +403,44 @@ test('mutation control detects missing validation of discovery snapshots',()=>{
  assert.equal(info.artifacts['accepted-deployment.json'].accepted,true);
 });
 
-test('dedicated activation CI adds one exact branch and retains credential isolation',()=>{
+test('dedicated release CI retains exact branch admission and credential isolation',()=>{
  const ci=readFileSync(new URL('../.github/workflows/v21-release-offline.yml',import.meta.url),'utf8');
- assert.match(ci,/branches: \[phase\/storefront-v21-production-release, phase\/storefront-v21-activation\]/);
+ assert.match(ci,/branches: \[phase\/storefront-v21-production-release, phase\/storefront-v21-activation, phase\/storefront-v21-final-parent-pin\]/);
  assert.match(ci,/branches: \[main\]/);
- assert.doesNotMatch(ci,/secrets\.|environment:|workflow_dispatch|pull_request_target|CLOUDFLARE_API_TOKEN|pages deploy|gh workflow/);
+ assert.doesNotMatch(ci,/secrets\s*[.\[]|environment:|workflow_dispatch|workflow_call|workflow_run|pull_request_target|CLOUDFLARE_API_TOKEN|GH_TOKEN|GITHUB_TOKEN|github\.token|pages deploy|gh workflow/);
  assert.match(ci,/permissions:\n  contents: read\n/);
+ assert.equal(ci.split('permissions:\n')[1].split('jobs:\n')[0],'  contents: read\n');
  assert.match(ci,/node --test ops\/\*\.test\.mjs/);
  assert.match(ci,/node ops\/validate-offline-workflows.mjs/);
  for(const a of ci.matchAll(/uses: (\S+)/g))assert.match(a[1],/@[a-f0-9]{40}$/);
 });
+test('release CI push trigger admits exactly the three reviewed branches',()=>{
+ const ci=readFileSync(new URL('../.github/workflows/v21-release-offline.yml',import.meta.url),'utf8');
+ const branches=ci.match(/^  push:\n    branches: \[([^\]\n]+)\]$/m);
+ assert(branches,'Expected explicit push branch list');
+ assert.deepEqual(branches[1].split(',').map(branch=>branch.trim()),[
+  'phase/storefront-v21-production-release','phase/storefront-v21-activation',
+  'phase/storefront-v21-final-parent-pin',
+ ]);
+});
 for(const [event,ref,head,repo,allowed] of [
+ ['push','refs/heads/phase/storefront-v21-final-parent-pin','','Skyeagle123/Classyline',true],
  ['push','refs/heads/phase/storefront-v21-activation','','Skyeagle123/Classyline',true],
  ['push','refs/heads/phase/storefront-v21-production-release','','Skyeagle123/Classyline',true],
  ['pull_request','refs/pull/13/merge','phase/storefront-v21-activation','Skyeagle123/Classyline',true],
  ['pull_request','refs/pull/13/merge','phase/storefront-v21-production-release','Skyeagle123/Classyline',true],
+ ['pull_request','refs/pull/15/merge','phase/storefront-v21-final-parent-pin','Skyeagle123/Classyline',true],
  ['push','refs/heads/main','','Skyeagle123/Classyline',false],
  ['push','refs/heads/phase/storefront-v21-activation-evil','','Skyeagle123/Classyline',false],
  ['pull_request','refs/pull/13/merge','unapproved','Skyeagle123/Classyline',false],
  ['push','refs/heads/phase/storefront-v21-activation','','other/Classyline',false],
+ ['push','refs/heads/phase/storefront-v21-final-parent-pin-evil','','Skyeagle123/Classyline',false],
+ ['push','refs/heads/phase/storefront-v21-final-parent-PIN','','Skyeagle123/Classyline',false],
+ ['push','refs/heads/unapproved','','Skyeagle123/Classyline',false],
+ ['pull_request','refs/pull/15/merge','phase/storefront-v21-final-parent-pin-evil','Skyeagle123/Classyline',false],
+ ['pull_request','refs/pull/15/merge','main','Skyeagle123/Classyline',false],
+ ['pull_request','refs/pull/15/merge','phase/storefront-v21-final-parent-pin','other/Classyline',false],
+ ['push','refs/heads/phase/storefront-v21-final-parent-pin','','other/Classyline',false],
 ])test('actual credential-free CI branch condition: '+event+' '+ref+' '+head+' '+repo,()=>{
  const ci=readFileSync(new URL('../.github/workflows/v21-release-offline.yml',import.meta.url),'utf8');
  const expression=ci.split('    if: >-\n')[1].split('    runs-on:')[0].trim();

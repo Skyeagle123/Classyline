@@ -1,7 +1,7 @@
 name: V2.1 release controller offline safety validation
 on:
   push:
-    branches: [phase/storefront-v21-production-release, phase/storefront-v21-activation]
+    branches: [phase/storefront-v21-production-release, phase/storefront-v21-activation, phase/storefront-v21-final-parent-pin]
   pull_request:
     branches: [main]
     paths:
@@ -19,9 +19,11 @@ jobs:
       github.repository == 'Skyeagle123/Classyline' &&
       (github.ref == 'refs/heads/phase/storefront-v21-production-release' ||
        github.ref == 'refs/heads/phase/storefront-v21-activation' ||
+       github.ref == 'refs/heads/phase/storefront-v21-final-parent-pin' ||
        (github.event_name == 'pull_request' &&
         (github.head_ref == 'phase/storefront-v21-production-release' ||
-         github.head_ref == 'phase/storefront-v21-activation')))
+         github.head_ref == 'phase/storefront-v21-activation' ||
+         github.head_ref == 'phase/storefront-v21-final-parent-pin')))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
