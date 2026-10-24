@@ -1,0 +1,68 @@
+name: Size toolchain remediation offline qualification
+on:
+  push:
+    branches: [phase/storefront-size-toolchain-remediation]
+    paths:
+      - .github/workflows/size-toolchain-offline.yml
+      - package.json
+      - package-lock.json
+      - ops/size-toolchain/**
+      - ops/size-release-recovery/**
+      - ops/validate-offline-workflows.mjs
+      - docs/size-toolchain-recovery-design.md
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/size-toolchain-offline.yml
+      - package.json
+      - package-lock.json
+      - ops/size-toolchain/**
+      - ops/size-release-recovery/**
+      - ops/validate-offline-workflows.mjs
+      - docs/size-toolchain-recovery-design.md
+permissions:
+  contents: read
+jobs:
+  qualify:
+    if: >-
+      github.repository == 'Skyeagle123/Classyline' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/phase/storefront-size-toolchain-remediation') ||
+       (github.event_name == 'pull_request' && github.base_ref == 'main' &&
+        github.event.pull_request.head.repo.full_name == 'Skyeagle123/Classyline' &&
+        github.head_ref == 'phase/storefront-size-toolchain-remediation'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+      CLASSYLINE_VALIDATION_TOOLS: ${{ github.workspace }}/ops/offline-validation
+    steps:
+      - name: Check out exact candidate without persisted credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Set up reviewed patched Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Install locked dependencies without lifecycle scripts
+        run: |
+          set -euo pipefail
+          node -e "require('./ops/size-toolchain/runtime.cjs').requireRuntime()"
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ci --prefix ops/offline-validation --ignore-scripts --no-audit --no-fund
+      - name: Complete isolated qualification with exact test counts
+        run: node ops/size-toolchain/ci.mjs
+      - name: Retain credential-free qualification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: size-toolchain-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/classyline-toolchain-qualification
+          if-no-files-found: error
+          retention-days: 14

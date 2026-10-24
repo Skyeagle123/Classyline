@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "repository": "Skyeagle123/Classyline",
+  "run_id": 40070135911,
+  "workflow_id": 394632411,
+  "path": ".github/workflows/classyline-production-size-update.yml",
+  "run_number": 1,
+  "run_attempt": 1,
+  "head_sha": "e08316796a14476712bcf0f79f6606c62c7bc294",
+  "head_tree": "97f29ba8066225d323531154b4227f3168794609",
+  "actor": "Skyeagle123",
+  "actor_id": 125151458,
+  "created_at": "2026-10-24T06:25:15Z",
+  "job_id": 120801596986,
+  "steps": [
+    {
+      "number": 1,
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 2,
+      "name": "Require separately armed release window",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 3,
+      "name": "Check out reviewed release controller",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 4,
+      "name": "Check out approved application only",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 5,
+      "name": "Verify reviewed controller checkout",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 6,
+      "name": "Set up Node 24",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 7,
+      "name": "Verify approved CI and dispatch identity",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 8,
+      "name": "Verify source and locked tooling",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 9,
+      "name": "Validate and build complete application",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "number": 10,
+      "name": "Prepare and verify pinned deployment transport",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 11,
+      "name": "Record source and artifact provenance",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 12,
+      "name": "Preflight, one Wrangler deployment invocation, and read-only verification",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 13,
+      "name": "Retain credential-free release evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 14,
+      "name": "Require independent disarming readback",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 26,
+      "name": "Post Set up Node 24",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 27,
+      "name": "Post Check out approved application only",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 28,
+      "name": "Post Check out reviewed release controller",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 29,
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "environment_id": 24902198946,
+  "normalized_log_sha256": "3ec8b151e0b81671960d8e64fe8f73ce33fedf50529f4613d4f53022da88cd73",
+  "log_normalization": "CRLF to LF; trim trailing whitespace; append one LF",
+  "zero_create_dispatches": true
+}
