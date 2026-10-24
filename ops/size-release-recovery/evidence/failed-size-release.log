@@ -1,0 +1,774 @@
+﻿2026-10-24T06:25:27.2956380Z Current runner version: '2.338.0'
+2026-10-24T06:25:27.2982675Z ##[group]Runner Image Provisioner
+2026-10-24T06:25:27.2983512Z Hosted Compute Agent
+2026-10-24T06:25:27.2984239Z Version: 20261012.601
+2026-10-24T06:25:27.2984908Z Commit: f3dc54e1fb89da6852db922499a0233137369e1d
+2026-10-24T06:25:27.2985909Z Build Date: 2026-10-12T17:48:21Z
+2026-10-24T06:25:27.2986628Z Worker ID: {5aa3875b-ab8d-412d-8135-1ab279e5791e}
+2026-10-24T06:25:27.2987347Z Region: eastus
+2026-10-24T06:25:27.2987965Z Cloud: Azure
+2026-10-24T06:25:27.2988585Z ##[endgroup]
+2026-10-24T06:25:27.2990115Z ##[group]Operating System
+2026-10-24T06:25:27.2990765Z Ubuntu
+2026-10-24T06:25:27.2991369Z 24.04.5
+2026-10-24T06:25:27.2991910Z LTS
+2026-10-24T06:25:27.2992475Z ##[endgroup]
+2026-10-24T06:25:27.2993095Z ##[group]Runner Image
+2026-10-24T06:25:27.2993733Z Image: ubuntu-24.04
+2026-10-24T06:25:27.2994348Z Version: 20261012.334.1
+2026-10-24T06:25:27.2996172Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-24T06:25:27.2997969Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+2026-10-24T06:25:27.2998965Z ##[endgroup]
+2026-10-24T06:25:27.3000243Z ##[group]GITHUB_TOKEN Permissions
+2026-10-24T06:25:27.3002422Z Actions: read
+2026-10-24T06:25:27.3003172Z Contents: read
+2026-10-24T06:25:27.3003746Z Metadata: read
+2026-10-24T06:25:27.3004336Z ##[endgroup]
+2026-10-24T06:25:27.3006913Z Secret source: Actions
+2026-10-24T06:25:27.3008019Z Cache mode: write
+2026-10-24T06:25:27.3009114Z Prepare workflow directory
+2026-10-24T06:25:27.3551396Z Prepare all required actions
+2026-10-24T06:25:27.3603083Z Getting action download info
+2026-10-24T06:25:27.6053206Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-24T06:25:27.7325296Z Download action repository 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-10-24T06:25:27.8578643Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-10-24T06:25:28.1494491Z Complete job name: deploy
+2026-10-24T06:25:28.2254637Z ##[group]Run test "$RELEASE_ARMED" = true
+2026-10-24T06:25:28.2255353Z [36;1mtest "$RELEASE_ARMED" = true[0m
+2026-10-24T06:25:28.2496189Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-24T06:25:28.2497305Z env:
+2026-10-24T06:25:28.2497728Z   CI: true
+2026-10-24T06:25:28.2498289Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:28.2498972Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:28.2499838Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:28.2500565Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:28.2501194Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:28.2502008Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:28.2502744Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:28.2503635Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:28.2504712Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:28.2512370Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:28.2520347Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:28.2521347Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:28.2522000Z   RELEASE_ARMED: true
+2026-10-24T06:25:28.2522454Z ##[endgroup]
+2026-10-24T06:25:28.2956443Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-10-24T06:25:28.2957329Z with:
+2026-10-24T06:25:28.2957840Z   repository: Skyeagle123/Classyline
+2026-10-24T06:25:28.2958500Z   ref: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:28.2959168Z   path: control
+2026-10-24T06:25:28.2959713Z   persist-credentials: false
+2026-10-24T06:25:28.2960258Z   fetch-depth: 1
+2026-10-24T06:25:28.2960716Z   submodules: false
+2026-10-24T06:25:28.2961154Z   lfs: false
+2026-10-24T06:25:28.2965260Z   token: ***
+2026-10-24T06:25:28.2965846Z   ssh-strict: true
+2026-10-24T06:25:28.2966287Z   ssh-user: git
+2026-10-24T06:25:28.2966709Z   clean: true
+2026-10-24T06:25:28.2967174Z   sparse-checkout-cone-mode: true
+2026-10-24T06:25:28.2967703Z   fetch-tags: false
+2026-10-24T06:25:28.2968162Z   show-progress: true
+2026-10-24T06:25:28.2968630Z   set-safe-directory: true
+2026-10-24T06:25:28.2969162Z   allow-unsafe-pr-checkout: false
+2026-10-24T06:25:28.2969674Z env:
+2026-10-24T06:25:28.2970103Z   CI: true
+2026-10-24T06:25:28.2970592Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:28.2971252Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:28.2972112Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:28.2972824Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:28.2973450Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:28.2974259Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:28.2974950Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:28.2976220Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:28.2977267Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:28.3054851Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:28.3063014Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:28.3064012Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:28.3064658Z ##[endgroup]
+2026-10-24T06:25:28.4149039Z Syncing repository: Skyeagle123/Classyline
+2026-10-24T06:25:28.4151806Z ##[group]Getting Git version info
+2026-10-24T06:25:28.4153434Z Working directory is '/home/runner/work/Classyline/Classyline/control'
+2026-10-24T06:25:28.4155882Z [command]/usr/bin/git version
+2026-10-24T06:25:28.4246235Z git version 2.55.0
+2026-10-24T06:25:28.4272410Z ##[endgroup]
+2026-10-24T06:25:28.4287078Z Temporarily overriding HOME='/home/runner/work/_temp/af6ef67f-778a-4614-84b3-37010d0d681c' before making global git config changes
+2026-10-24T06:25:28.4289367Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-24T06:25:28.4293429Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Classyline/Classyline/control
+2026-10-24T06:25:28.4357979Z ##[group]Initializing the repository
+2026-10-24T06:25:28.4368008Z [command]/usr/bin/git init /home/runner/work/Classyline/Classyline/control
+2026-10-24T06:25:28.4469069Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-24T06:25:28.4472460Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-24T06:25:28.4474916Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-24T06:25:28.4477031Z hint: call:
+2026-10-24T06:25:28.4478258Z hint:
+2026-10-24T06:25:28.4479617Z hint: 	git config --global init.defaultBranch <name>
+2026-10-24T06:25:28.4481051Z hint:
+2026-10-24T06:25:28.4482417Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-24T06:25:28.4484435Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-24T06:25:28.4486237Z hint:
+2026-10-24T06:25:28.4487233Z hint: 	git branch -m <name>
+2026-10-24T06:25:28.4488342Z hint:
+2026-10-24T06:25:28.4489887Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-24T06:25:28.4492745Z Initialized empty Git repository in /home/runner/work/Classyline/Classyline/control/.git/
+2026-10-24T06:25:28.4497248Z [command]/usr/bin/git remote add origin https://github.com/Skyeagle123/Classyline
+2026-10-24T06:25:28.4547457Z ##[endgroup]
+2026-10-24T06:25:28.4548743Z ##[group]Disabling automatic garbage collection
+2026-10-24T06:25:28.4552079Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-24T06:25:28.4588458Z ##[endgroup]
+2026-10-24T06:25:28.4589581Z ##[group]Setting up auth
+2026-10-24T06:25:28.4596225Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T06:25:28.4650228Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T06:25:28.5012476Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T06:25:28.5058234Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T06:25:28.5296323Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T06:25:28.5337374Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T06:25:28.5568826Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-24T06:25:28.5614381Z ##[endgroup]
+2026-10-24T06:25:28.5616754Z ##[group]Fetching the repository
+2026-10-24T06:25:28.5625737Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:28.7730625Z From https://github.com/Skyeagle123/Classyline
+2026-10-24T06:25:28.7732671Z  * branch            e08316796a14476712bcf0f79f6606c62c7bc294 -> FETCH_HEAD
+2026-10-24T06:25:28.7737758Z ##[endgroup]
+2026-10-24T06:25:28.7739881Z ##[group]Determining the checkout info
+2026-10-24T06:25:28.7741976Z ##[endgroup]
+2026-10-24T06:25:28.7766670Z [command]/usr/bin/git sparse-checkout disable
+2026-10-24T06:25:28.7826999Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-24T06:25:28.7849485Z ##[group]Checking out the ref
+2026-10-24T06:25:28.7853152Z [command]/usr/bin/git checkout --progress --force e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:28.8006133Z Note: switching to 'e08316796a14476712bcf0f79f6606c62c7bc294'.
+2026-10-24T06:25:28.8007523Z 
+2026-10-24T06:25:28.8008559Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-24T06:25:28.8010923Z changes and commit them, and you can discard any commits you make in this
+2026-10-24T06:25:28.8013000Z state without impacting any branches by switching back to a branch.
+2026-10-24T06:25:28.8014599Z 
+2026-10-24T06:25:28.8015638Z If you want to create a new branch to retain commits you create, you may
+2026-10-24T06:25:28.8017035Z do so (now or later) by using -c with the switch command. Example:
+2026-10-24T06:25:28.8017846Z 
+2026-10-24T06:25:28.8018192Z   git switch -c <new-branch-name>
+2026-10-24T06:25:28.8018978Z 
+2026-10-24T06:25:28.8019343Z Or undo this operation with:
+2026-10-24T06:25:28.8020066Z 
+2026-10-24T06:25:28.8020367Z   git switch -
+2026-10-24T06:25:28.8020791Z 
+2026-10-24T06:25:28.8021449Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-24T06:25:28.8022501Z 
+2026-10-24T06:25:28.8023330Z HEAD is now at e083167 [CF-Pages-Skip] Install reviewed ClassyLine size update controller
+2026-10-24T06:25:28.8026815Z ##[endgroup]
+2026-10-24T06:25:28.8062967Z [command]/usr/bin/git log -1 --format=%H
+2026-10-24T06:25:28.8091404Z e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:28.8102882Z ##[group]Removing auth
+2026-10-24T06:25:28.8108481Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T06:25:28.8144413Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T06:25:28.8372182Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T06:25:28.8400236Z http.https://github.com/.extraheader
+2026-10-24T06:25:28.8409058Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-24T06:25:28.8451392Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T06:25:28.8674604Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T06:25:28.8711499Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T06:25:28.8941559Z ##[endgroup]
+2026-10-24T06:25:28.9359314Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-10-24T06:25:28.9360861Z with:
+2026-10-24T06:25:28.9361680Z   repository: Skyeagle123/Classyline
+2026-10-24T06:25:28.9362878Z   ref: 00b25b282d66818632a2d214e7a52ffbd0f8a1cb
+2026-10-24T06:25:28.9364033Z   path: app
+2026-10-24T06:25:28.9364855Z   persist-credentials: false
+2026-10-24T06:25:28.9366219Z   fetch-depth: 1
+2026-10-24T06:25:28.9367058Z   submodules: false
+2026-10-24T06:25:28.9367879Z   lfs: false
+2026-10-24T06:25:28.9378642Z   token: ***
+2026-10-24T06:25:28.9379471Z   ssh-strict: true
+2026-10-24T06:25:28.9380312Z   ssh-user: git
+2026-10-24T06:25:28.9381112Z   clean: true
+2026-10-24T06:25:28.9381969Z   sparse-checkout-cone-mode: true
+2026-10-24T06:25:28.9383025Z   fetch-tags: false
+2026-10-24T06:25:28.9383898Z   show-progress: true
+2026-10-24T06:25:28.9384821Z   set-safe-directory: true
+2026-10-24T06:25:28.9386112Z   allow-unsafe-pr-checkout: false
+2026-10-24T06:25:28.9387146Z env:
+2026-10-24T06:25:28.9387917Z   CI: true
+2026-10-24T06:25:28.9388715Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:28.9390042Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:28.9392053Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:28.9393515Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:28.9394751Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:28.9396687Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:28.9398135Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:28.9399994Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:28.9402186Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:28.9418235Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:28.9435050Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:28.9437302Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:28.9438592Z ##[endgroup]
+2026-10-24T06:25:29.0323489Z Syncing repository: Skyeagle123/Classyline
+2026-10-24T06:25:29.0326700Z ##[group]Getting Git version info
+2026-10-24T06:25:29.0329040Z Working directory is '/home/runner/work/Classyline/Classyline/app'
+2026-10-24T06:25:29.0354247Z [command]/usr/bin/git version
+2026-10-24T06:25:29.0401152Z git version 2.55.0
+2026-10-24T06:25:29.0426461Z ##[endgroup]
+2026-10-24T06:25:29.0442263Z Temporarily overriding HOME='/home/runner/work/_temp/1a2d1231-d521-4304-9987-405db3865cc4' before making global git config changes
+2026-10-24T06:25:29.0446814Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-24T06:25:29.0449899Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Classyline/Classyline/app
+2026-10-24T06:25:29.0486735Z ##[group]Initializing the repository
+2026-10-24T06:25:29.0491158Z [command]/usr/bin/git init /home/runner/work/Classyline/Classyline/app
+2026-10-24T06:25:29.0534678Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-24T06:25:29.0538606Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-24T06:25:29.0542752Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-24T06:25:29.0545632Z hint: call:
+2026-10-24T06:25:29.0547105Z hint:
+2026-10-24T06:25:29.0548797Z hint: 	git config --global init.defaultBranch <name>
+2026-10-24T06:25:29.0550898Z hint:
+2026-10-24T06:25:29.0553226Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-24T06:25:29.0556803Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-24T06:25:29.0559491Z hint:
+2026-10-24T06:25:29.0561077Z hint: 	git branch -m <name>
+2026-10-24T06:25:29.0562752Z hint:
+2026-10-24T06:25:29.0565002Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-24T06:25:29.0568950Z Initialized empty Git repository in /home/runner/work/Classyline/Classyline/app/.git/
+2026-10-24T06:25:29.0575084Z [command]/usr/bin/git remote add origin https://github.com/Skyeagle123/Classyline
+2026-10-24T06:25:29.0593624Z ##[endgroup]
+2026-10-24T06:25:29.0596403Z ##[group]Disabling automatic garbage collection
+2026-10-24T06:25:29.0598659Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-24T06:25:29.0634614Z ##[endgroup]
+2026-10-24T06:25:29.0637349Z ##[group]Setting up auth
+2026-10-24T06:25:29.0642924Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T06:25:29.0681955Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T06:25:29.0938455Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T06:25:29.0993430Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T06:25:29.1331382Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T06:25:29.1380026Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T06:25:29.1648684Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-24T06:25:29.1692708Z ##[endgroup]
+2026-10-24T06:25:29.1694220Z ##[group]Fetching the repository
+2026-10-24T06:25:29.1703913Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 00b25b282d66818632a2d214e7a52ffbd0f8a1cb
+2026-10-24T06:25:29.3296967Z From https://github.com/Skyeagle123/Classyline
+2026-10-24T06:25:29.3298250Z  * branch            00b25b282d66818632a2d214e7a52ffbd0f8a1cb -> FETCH_HEAD
+2026-10-24T06:25:29.3302851Z ##[endgroup]
+2026-10-24T06:25:29.3304581Z ##[group]Determining the checkout info
+2026-10-24T06:25:29.3307071Z ##[endgroup]
+2026-10-24T06:25:29.3312677Z [command]/usr/bin/git sparse-checkout disable
+2026-10-24T06:25:29.3359667Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-24T06:25:29.3396751Z ##[group]Checking out the ref
+2026-10-24T06:25:29.3399712Z [command]/usr/bin/git checkout --progress --force 00b25b282d66818632a2d214e7a52ffbd0f8a1cb
+2026-10-24T06:25:29.3528684Z Note: switching to '00b25b282d66818632a2d214e7a52ffbd0f8a1cb'.
+2026-10-24T06:25:29.3529965Z 
+2026-10-24T06:25:29.3530908Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-24T06:25:29.3532512Z changes and commit them, and you can discard any commits you make in this
+2026-10-24T06:25:29.3534677Z state without impacting any branches by switching back to a branch.
+2026-10-24T06:25:29.3536062Z 
+2026-10-24T06:25:29.3537295Z If you want to create a new branch to retain commits you create, you may
+2026-10-24T06:25:29.3538945Z do so (now or later) by using -c with the switch command. Example:
+2026-10-24T06:25:29.3539880Z 
+2026-10-24T06:25:29.3540531Z   git switch -c <new-branch-name>
+2026-10-24T06:25:29.3541478Z 
+2026-10-24T06:25:29.3541969Z Or undo this operation with:
+2026-10-24T06:25:29.3542584Z 
+2026-10-24T06:25:29.3542995Z   git switch -
+2026-10-24T06:25:29.3543552Z 
+2026-10-24T06:25:29.3544404Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-24T06:25:29.3545339Z 
+2026-10-24T06:25:29.3546654Z HEAD is now at 00b25b2 [CF-Pages-Skip] Integrate reviewed ClassyLine size ordering
+2026-10-24T06:25:29.3550239Z ##[endgroup]
+2026-10-24T06:25:29.3582998Z [command]/usr/bin/git log -1 --format=%H
+2026-10-24T06:25:29.3611176Z 00b25b282d66818632a2d214e7a52ffbd0f8a1cb
+2026-10-24T06:25:29.3620964Z ##[group]Removing auth
+2026-10-24T06:25:29.3624640Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T06:25:29.3660071Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T06:25:29.3896819Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T06:25:29.3923694Z http.https://github.com/.extraheader
+2026-10-24T06:25:29.3932980Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-24T06:25:29.3974424Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T06:25:29.4208004Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T06:25:29.4243671Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T06:25:29.4471447Z ##[endgroup]
+2026-10-24T06:25:29.4615071Z ##[group]Run set -euo pipefail
+2026-10-24T06:25:29.4616404Z [36;1mset -euo pipefail[0m
+2026-10-24T06:25:29.4617413Z [36;1mtest "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"[0m
+2026-10-24T06:25:29.4618587Z [36;1mtest -z "$(git -C control status --porcelain=v1 --untracked-files=all)"[0m
+2026-10-24T06:25:29.4684447Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-24T06:25:29.4685898Z env:
+2026-10-24T06:25:29.4686733Z   CI: true
+2026-10-24T06:25:29.4687681Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:29.4688653Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:29.4689772Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:29.4690776Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:29.4691702Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:29.4692768Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:29.4693796Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:29.4694914Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:29.4696478Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:29.4702112Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:29.4708655Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:29.4709859Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:29.4710796Z ##[endgroup]
+2026-10-24T06:25:29.5066600Z ##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+2026-10-24T06:25:29.5067712Z with:
+2026-10-24T06:25:29.5068487Z   node-version: 24.19.0
+2026-10-24T06:25:29.5069289Z   always-auth: false
+2026-10-24T06:25:29.5070093Z   check-latest: false
+2026-10-24T06:25:29.5073886Z   token: ***
+2026-10-24T06:25:29.5074654Z env:
+2026-10-24T06:25:29.5075807Z   CI: true
+2026-10-24T06:25:29.5076729Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:29.5078028Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:29.5079146Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:29.5080152Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:29.5081092Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:29.5082171Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:29.5083150Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:29.5084305Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:29.5085692Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:29.5091197Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:29.5097448Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:29.5098634Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:29.5099556Z ##[endgroup]
+2026-10-24T06:25:29.6545953Z Attempting to download 24.19.0...
+2026-10-24T06:25:29.6654744Z (node:2676) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-24T06:25:29.6657806Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-24T06:25:30.1525961Z Acquiring 24.19.0 - x64 from https://github.com/actions/node-versions/releases/download/24.19.0-30872449280/node-24.19.0-linux-x64.tar.gz
+2026-10-24T06:25:30.5529724Z Extracting ...
+2026-10-24T06:25:30.5649047Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/3dd2a036-f28d-46f7-b4d9-503504b0c509 -f /home/runner/work/_temp/0569a560-d011-429b-b3fd-6cc88ed07ab0
+2026-10-24T06:25:31.8722197Z Adding to the cache ...
+2026-10-24T06:25:33.8158473Z ##[group]Environment details
+2026-10-24T06:25:34.0492819Z node: v24.19.0
+2026-10-24T06:25:34.0493118Z npm: 11.17.0
+2026-10-24T06:25:34.0493383Z yarn: 1.22.22
+2026-10-24T06:25:34.0494013Z ##[endgroup]
+2026-10-24T06:25:34.0680110Z ##[group]Run node --input-type=module <<'NODE'
+2026-10-24T06:25:34.0680559Z [36;1mnode --input-type=module <<'NODE'[0m
+2026-10-24T06:25:34.0680902Z [36;1mimport assert from 'node:assert/strict';[0m
+2026-10-24T06:25:34.0681227Z [36;1mconst e = process.env;[0m
+2026-10-24T06:25:34.0681596Z [36;1massert.equal(e.GITHUB_REPOSITORY, 'Skyeagle123/Classyline');[0m
+2026-10-24T06:25:34.0682067Z [36;1massert.equal(e.GITHUB_REPOSITORY_ID, '1096008352');[0m
+2026-10-24T06:25:34.0682504Z [36;1massert.equal(e.GITHUB_REPOSITORY_OWNER_ID, '125151458');[0m
+2026-10-24T06:25:34.0682919Z [36;1massert.equal(e.GITHUB_REF, 'refs/heads/main');[0m
+2026-10-24T06:25:34.0683324Z [36;1massert.equal(e.GITHUB_EVENT_NAME, 'workflow_dispatch');[0m
+2026-10-24T06:25:34.0683721Z [36;1massert.equal(e.GITHUB_ACTOR, 'Skyeagle123');[0m
+2026-10-24T06:25:34.0684066Z [36;1massert.equal(e.GITHUB_ACTOR_ID, '125151458');[0m
+2026-10-24T06:25:34.0684722Z [36;1massert.equal(e.GITHUB_TRIGGERING_ACTOR, 'Skyeagle123');[0m
+2026-10-24T06:25:34.0685125Z [36;1massert.equal(e.GITHUB_RUN_ATTEMPT, '1');[0m
+2026-10-24T06:25:34.0685746Z [36;1mconst base = 'https://api.github.com/repos/Skyeagle123/Classyline';[0m
+2026-10-24T06:25:34.0686199Z [36;1masync function get(path) {[0m
+2026-10-24T06:25:34.0686553Z [36;1m  const r = await fetch(base + path, {redirect: 'error',[0m
+2026-10-24T06:25:34.0687229Z [36;1m    headers: {Authorization: `*** Accept: 'application/vnd.github+json',[0m
+2026-10-24T06:25:34.0687801Z [36;1m      'X-GitHub-Api-Version': '2022-11-28'}, signal: AbortSignal.timeout(20000)});[0m
+2026-10-24T06:25:34.0688336Z [36;1m  if (!r.ok) throw new Error(`GitHub read failed: HTTP ${r.status}`);[0m
+2026-10-24T06:25:34.0688716Z [36;1m  return r.json();[0m
+2026-10-24T06:25:34.0688979Z [36;1m}[0m
+2026-10-24T06:25:34.0689610Z [36;1mconst {verifySizeRelease:verifyV21}=await import(new URL('file://' + process.env.GITHUB_WORKSPACE + '/control/ops/size-release/github-guard.mjs'));[0m
+2026-10-24T06:25:34.0690291Z [36;1mawait verifyV21(get);[0m
+2026-10-24T06:25:34.0690666Z [36;1mconsole.log('Approved candidate CI and Owner dispatch verified.');[0m
+2026-10-24T06:25:34.0691067Z [36;1mNODE[0m
+2026-10-24T06:25:34.0759300Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-24T06:25:34.0759674Z env:
+2026-10-24T06:25:34.0759914Z   CI: true
+2026-10-24T06:25:34.0760120Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:34.0760468Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:34.0760920Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:34.0761282Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:34.0761597Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:34.0762005Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:34.0762365Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:34.0762832Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:34.0763381Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:34.0767821Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:34.0772113Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:34.0772646Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:34.0775809Z   GH_TOKEN: ***
+2026-10-24T06:25:34.0776051Z   RELEASE_ARMED: true
+2026-10-24T06:25:34.0776277Z ##[endgroup]
+2026-10-24T06:25:39.2783676Z Approved candidate CI and Owner dispatch verified.
+2026-10-24T06:25:39.2870577Z ##[group]Run set -euo pipefail
+2026-10-24T06:25:39.2870920Z [36;1mset -euo pipefail[0m
+2026-10-24T06:25:39.2871290Z [36;1mtest "$(git rev-parse HEAD)" = 00b25b282d66818632a2d214e7a52ffbd0f8a1cb[0m
+2026-10-24T06:25:39.2871827Z [36;1mtest "$(git rev-parse 'HEAD^{tree}')" = 823de98f6faa7fcb65ea980f771f1c7318561694[0m
+2026-10-24T06:25:39.2872497Z [36;1mtest -z "$(git status --porcelain=v1 --untracked-files=all)"[0m
+2026-10-24T06:25:39.2872866Z [36;1mtest -f package-lock.json[0m
+2026-10-24T06:25:39.2873333Z [36;1mfor config in wrangler.toml wrangler.json wrangler.jsonc .env .env.local .dev.vars .npmrc; do[0m
+2026-10-24T06:25:39.2873813Z [36;1m  test ! -e "$config"[0m
+2026-10-24T06:25:39.2874047Z [36;1mdone[0m
+2026-10-24T06:25:39.2874256Z [36;1mnpm ci --ignore-scripts[0m
+2026-10-24T06:25:39.2874528Z [36;1mnode --input-type=module <<'NODE'[0m
+2026-10-24T06:25:39.2874859Z [36;1mimport assert from 'node:assert/strict';[0m
+2026-10-24T06:25:39.2875213Z [36;1mimport {readFileSync} from 'node:fs';[0m
+2026-10-24T06:25:39.2875863Z [36;1massert.equal(process.versions.node, '24.19.0');[0m
+2026-10-24T06:25:39.2876260Z [36;1mconst p = JSON.parse(readFileSync('package.json'));[0m
+2026-10-24T06:25:39.2876719Z [36;1mconst w = JSON.parse(readFileSync('node_modules/wrangler/package.json'));[0m
+2026-10-24T06:25:39.2877200Z [36;1massert.equal(p.devDependencies.wrangler, '4.150.0');[0m
+2026-10-24T06:25:39.2877555Z [36;1massert.equal(w.version, '4.150.0');[0m
+2026-10-24T06:25:39.2877832Z [36;1mNODE[0m
+2026-10-24T06:25:39.2940010Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-24T06:25:39.2940356Z env:
+2026-10-24T06:25:39.2940537Z   CI: true
+2026-10-24T06:25:39.2940733Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:39.2941071Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:39.2941524Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:39.2941879Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:39.2942203Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:39.2942607Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:39.2942963Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:39.2943409Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:39.2943960Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:39.2948129Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:39.2952361Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:39.2952874Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:39.2953190Z ##[endgroup]
+2026-10-24T06:25:45.9844918Z 
+2026-10-24T06:25:45.9846082Z added 95 packages, and audited 96 packages in 7s
+2026-10-24T06:25:45.9846483Z 
+2026-10-24T06:25:45.9848056Z 27 packages are looking for funding
+2026-10-24T06:25:45.9848695Z   run `npm fund` for details
+2026-10-24T06:25:46.0297148Z 
+2026-10-24T06:25:46.0298055Z 3 vulnerabilities (2 moderate, 1 high)
+2026-10-24T06:25:46.0298581Z 
+2026-10-24T06:25:46.0299119Z To address all issues (including breaking changes), run:
+2026-10-24T06:25:46.0300432Z   npm audit fix --force
+2026-10-24T06:25:46.0300747Z 
+2026-10-24T06:25:46.0300981Z Run `npm audit` for details.
+2026-10-24T06:25:46.1273909Z ##[group]Run set -euo pipefail
+2026-10-24T06:25:46.1274262Z [36;1mset -euo pipefail[0m
+2026-10-24T06:25:46.1274500Z [36;1mnpm test[0m
+2026-10-24T06:25:46.1274715Z [36;1mnpm run security:check[0m
+2026-10-24T06:25:46.1274985Z [36;1mnpm audit --audit-level=high[0m
+2026-10-24T06:25:46.1275251Z [36;1mnpm run build[0m
+2026-10-24T06:25:46.1275824Z [36;1mnpm run build:functions[0m
+2026-10-24T06:25:46.1339184Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-24T06:25:46.1339530Z env:
+2026-10-24T06:25:46.1339716Z   CI: true
+2026-10-24T06:25:46.1339919Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:46.1340265Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:46.1340715Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:46.1341074Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:46.1341393Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:46.1341828Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:46.1342168Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:46.1342610Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:46.1343148Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:46.1347370Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:46.1351625Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:46.1352137Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:46.1352454Z ##[endgroup]
+2026-10-24T06:25:46.2396513Z 
+2026-10-24T06:25:46.2397828Z > classyline@1.0.0 test
+2026-10-24T06:25:46.2398460Z > node --test tests/*.test.js
+2026-10-24T06:25:46.2398786Z 
+2026-10-24T06:25:46.4407466Z ✔ missing storage fails closed (49.53783ms)
+2026-10-24T06:25:46.4697558Z ✔ catalog uses persisted products without customer information (42.065653ms)
+2026-10-24T06:25:46.5047547Z ✔ COD stores order, reserves stock and returns safe receipt (34.811105ms)
+2026-10-24T06:25:46.5427967Z ✔ idempotent retry never reserves twice; key reuse rejects altered payload (37.176368ms)
+2026-10-24T06:25:46.5727199Z ✔ prices cannot be overridden and unknown fees are rejected (31.03613ms)
+2026-10-24T06:25:46.5968309Z ✔ out of stock, duplicate and invalid quantity rejected (26.421277ms)
+2026-10-24T06:25:46.6197876Z ✔ transaction rolls back all order writes when concurrent stock changes (22.056703ms)
+2026-10-24T06:25:46.6535910Z ✔ no-cookie admin and forged browser authorization denied (29.640215ms)
+2026-10-24T06:25:46.7177771Z ✔ login cookie is secure and session token stored only as hash; logout revokes it (66.121505ms)
+2026-10-24T06:25:46.7476834Z ✔ cross-origin writes rejected (30.387319ms)
+2026-10-24T06:25:46.8929890Z ✔ login fails closed and rate limited (141.530478ms)
+2026-10-24T06:25:46.9467546Z ✔ expiry enforced server-side (57.590438ms)
+2026-10-24T06:25:47.0058233Z ✔ cancellation restores stock once and illegal transitions rejected (58.170459ms)
+2026-10-24T06:25:47.0533787Z ✔ server-side product and regional config persistence and image scheme validation (48.975258ms)
+2026-10-24T06:25:47.0856900Z ✔ JSON content type, malformed body and body limit enforced (28.473596ms)
+2026-10-24T06:25:47.1656218Z ✔ transaction rejects intervening catalog and delivery changes (84.371638ms)
+2026-10-24T06:25:47.2249993Z ✔ stale inventory editor cannot overwrite checkout reservations (60.307326ms)
+2026-10-24T06:25:47.2406848Z ✔ 21st-unit limit leaves Add, Remove and Checkout ready; removal and a fresh checkout work without reload (63.442675ms)
+2026-10-24T06:25:47.2409313Z ✔ maximum-cart-size error preserves healthy state; Remove and subsequent Add clear it normally (12.562764ms)
+2026-10-24T06:25:47.2411700Z ✔ quota/storage failures are fatal even when an older render state exists, and healthy reconciliation clears them (1.68829ms)
+2026-10-24T06:25:47.2414318Z ✔ missing locks and corrupted records remain fatal; ordinary error classification cannot bypass reconciliation (0.894219ms)
+2026-10-24T06:25:47.2416749Z ✔ locking and unexpected failure values fail closed rather than being mistaken for ordinary action errors (0.401389ms)
+2026-10-24T06:25:47.2418814Z ✔ confirmed first order cannot be duplicated by a stale second tab; deliberate Add starts a new cart (59.517562ms)
+2026-10-24T06:25:47.2421042Z ✔ receipt close/add/reopen preserves new products and same-variant additions through repeated recovery and acknowledgement (12.59911ms)
+2026-10-24T06:25:47.2422969Z ✔ lost response consumes only original lot IDs after cross-tab additions (9.488015ms)
+2026-10-24T06:25:47.2424643Z ✔ remove/re-add while unresolved creates new lots that old receipt cannot consume (8.702551ms)
+2026-10-24T06:25:47.2426351Z ✔ cart edits and delayed receipt share the checkout lock (4.440216ms)
+2026-10-24T06:25:47.2428190Z ✔ parallel cart writers reconcile storage; stale version or altered snapshot fails before network (4.852566ms)
+2026-10-24T06:25:47.2430314Z ✔ receipt consumption write failure keeps original key; recovery consumes once and preserves additions (8.060365ms)
+2026-10-24T06:25:47.2432606Z ✔ acknowledgement failure between marker removal and journal write remains recoverable without clearing new items (5.573721ms)
+2026-10-24T06:25:47.2434620Z ✔ stale acknowledgement cannot affect a newer attempt or its new items (7.473036ms)
+2026-10-24T06:25:47.2436987Z ✔ R1 legacy key recovery retains unknown cart contents and requires version-bound explicit new-order review (7.664752ms)
+2026-10-24T06:25:47.2438190Z ✔ cancelled recovered receipt consumes only its snapshot; another order requires deliberate fresh Add (11.927209ms)
+2026-10-24T06:25:47.2439157Z ✔ malformed shared state, lost journal, unsupported locks and read failures fail closed (2.630799ms)
+2026-10-24T06:25:47.2440189Z ✔ shared journal contains snapshot/version/consumption only, never customer payload (4.791862ms)
+2026-10-24T06:25:47.2441092Z ✔ pre-request marker persistence failure leaves recoverable journal and sends no order (3.823215ms)
+2026-10-24T06:25:47.2442057Z ✔ failed session-storage acknowledgement and failed marker deletion retain consumed attempt and new lots (5.527736ms)
+2026-10-24T06:25:47.2443019Z ✔ consumed attempt rejects contradictory missing receipt without unlocking or erasing new lots (7.533609ms)
+2026-10-24T06:25:47.2443928Z ✔ notifications announce shared versions and consumption without stale React state persistence (6.350191ms)
+2026-10-24T06:25:47.2444762Z ✔ all six persisted collections match samples without invented badge fields (1.47341ms)
+2026-10-24T06:25:47.2446449Z ✔ synthetic samples are labelled, inactive and never assert a discount (0.378676ms)
+2026-10-24T06:25:47.2447749Z ✔ editing preserves stock snapshot for optimistic server checks (0.39691ms)
+2026-10-24T06:25:47.2449046Z ✔ product form rejects duplicate variants and fractional/negative stock (0.740402ms)
+2026-10-24T06:25:47.2451037Z ✔ rendered UI escapes merchandise text and exposes labelled structured controls (75.518642ms)
+2026-10-24T06:25:47.2452513Z ✔ Header and Contact Us Footer expose exactly the approved safe contact links (15.173066ms)
+2026-10-24T06:25:47.2453883Z ✔ mobile contact button has an accessible name and sends no cart/order payload (0.671723ms)
+2026-10-24T06:25:47.2517358Z ✔ actual owner template: exact headers, row values, missing image blocks import (31.914485ms)
+2026-10-24T06:25:47.2523685Z ✔ export roundtrip preserves multi-variant and dangerous text as literal strings (22.10825ms)
+2026-10-24T06:25:47.2525779Z ✔ formula cells are reported per row, not evaluated from cached values (28.573985ms)
+2026-10-24T06:25:47.2557116Z ✔ file/expanded limits, malformed archive, macros, DTD, headers and excess rows rejected (130.706759ms)
+2026-10-24T06:25:47.2586918Z ✔ blank rows skipped, physical row numbers retained, corrupted XML rejected (10.558965ms)
+2026-10-24T06:25:47.2588678Z ✔ duplicate SKUs are rejected case-insensitively on every duplicate row (0.427277ms)
+2026-10-24T06:25:47.2590269Z ✔ strict price, status, variants, categories and image input validation (3.105085ms)
+2026-10-24T06:25:47.2592095Z ✔ all catalog import/export endpoints enforce auth, expiry and same origin (51.959295ms)
+2026-10-24T06:25:47.2593620Z ✔ preview performs no catalog writes; invalid row blocks entire import (9.375406ms)
+2026-10-24T06:25:47.2595330Z ✔ atomic create persists collection/draft, export includes drafts but public catalog excludes them (13.10657ms)
+2026-10-24T06:25:47.2597450Z ✔ update preserves variant IDs/omitted variants and reports unchanged export roundtrip (20.200689ms)
+2026-10-24T06:25:47.2599039Z ✔ no confirmation, tampered payload/ticket and another session cannot write (10.167956ms)
+2026-10-24T06:25:47.2600744Z ✔ catalog/stock change after preview requires fresh review and makes no import writes (32.164887ms)
+2026-10-24T06:25:47.2602542Z ✔ transaction race rolls back all products, stock, collections, audit and receipt (11.197287ms)
+2026-10-24T06:25:47.2604235Z ✔ late write failure rolls back earlier successful writes in the batch (9.072732ms)
+2026-10-24T06:25:47.2606487Z ✔ lost-response retry cannot reset stock after checkout-like reservation; concurrent confirms execute once (16.613175ms)
+2026-10-24T06:25:47.2608247Z ✔ preview expiration and schema prerequisite fail closed (7.643223ms)
+2026-10-24T06:25:47.2609878Z ✔ public successful empty catalog never reintroduces a draft through preview overlay (1.25938ms)
+2026-10-24T06:25:47.2612081Z ✔ real local COD reservation and cancellation invalidate old import snapshots; export excludes customer data (12.019902ms)
+2026-10-24T06:25:47.2613965Z ✔ JSON API row/body limits and variant identity conflicts roll back (6.629922ms)
+2026-10-24T06:25:47.2615792Z ✔ Excel admin UI has labelled upload and safe initial confirmation state (81.385435ms)
+2026-10-24T06:25:47.2887655Z ✔ maximum 50-product/100-variant batch stays under Free D1 query budget and atomic (47.885364ms)
+2026-10-24T06:25:47.3097613Z ✔ mounted editor retains selection during Product ID/title edits and resets only on intentional product switch (40.10146ms)
+2026-10-24T06:25:47.3127322Z ✔ mounted editor resets selected image after a successful intentional form save/reset (50.33729ms)
+2026-10-24T06:25:47.3154957Z ✔ mounted Cancel upload remains usable, restores editing and ignores late success; retry requires explicit action (14.657143ms)
+2026-10-24T06:25:47.3157879Z ✔ mounted upload timeout restores editing and ignores delayed receipt body without retry (12.734665ms)
+2026-10-24T06:25:47.3159925Z ✔ unmount aborts an in-flight upload; a pre-cancelled request never starts (11.103201ms)
+2026-10-24T06:25:47.3161619Z ✔ original owner image is byte-identical to recovered photograph (8.42356ms)
+2026-10-24T06:25:47.3163509Z ✔ owner merchandise price, SKU, variant and explicit collections (2.31475ms)
+2026-10-24T06:25:47.3165382Z ✔ display fallback excluded from production root, custom domains and unrelated branches (1.884497ms)
+2026-10-24T06:25:47.3168280Z ✔ preview displays without D1, isolated per load and authoritative server record wins (0.582998ms)
+2026-10-24T06:25:47.3170154Z ✔ rendered card and responsive detail show real image, price and disabled ordering (82.349542ms)
+2026-10-24T06:25:47.3501525Z ✔ local selected-image previews are allowed by image CSP without weakening scripts or connections (17.948634ms)
+2026-10-24T06:25:47.3527854Z ✔ real JPEG/PNG validation and conditional R2 storage confirm success before returning a reference (58.83588ms)
+2026-10-24T06:25:47.3669464Z ✔ unsupported, empty, truncated and forged image content never reaches R2 (18.766062ms)
+2026-10-24T06:25:47.3763214Z ✔ declared and actual oversized bodies are rejected, including false content-length (9.320344ms)
+2026-10-24T06:25:47.3973979Z ✔ PNG decompression bombs, illegal filters, animation and extreme dimensions are bounded (21.4272ms)
+2026-10-24T06:25:47.4027664Z ✔ metadata is stripped without re-encoding pixels; safe JPEG orientation is retained (4.52889ms)
+2026-10-24T06:25:47.4072943Z ✔ JPEG pixel-limit rejection explains the limit before decoding or storage (4.776013ms)
+2026-10-24T06:25:47.4108568Z ✔ JPEG decoder-budget rejection is actionable and never writes an image (4.166195ms)
+2026-10-24T06:25:47.4170193Z ✔ indexed PNG palette references are validated after scanline unfiltering (4.229315ms)
+2026-10-24T06:25:47.4243342Z ✔ administrator authorization and same-origin enforcement precede storage (5.614578ms)
+2026-10-24T06:25:47.4371922Z ✔ missing R2, failed writes, unconfirmed writes and collisions fail closed with sanitized errors (14.696997ms)
+2026-10-24T06:25:47.4673027Z ✔ per-session and global upload limits reject before extra storage writes (30.403449ms)
+2026-10-24T06:25:47.4959664Z ✔ draft/orphan images require an admin session; only actively referenced images are public (22.579157ms)
+2026-10-24T06:25:47.5047165Z ✔ delivery never exposes arbitrary/private objects, query aliases or corrupt object metadata (12.553748ms)
+2026-10-24T06:25:47.5400638Z ✔ uploaded references survive Excel round-trip and retain existing image compatibility (35.909145ms)
+2026-10-24T06:25:47.5487262Z ✔ image-only editor replacement preserves identity, status, price and variant stock (8.049111ms)
+2026-10-24T06:25:47.5543862Z ✔ client only accepts confirmed 201 references and fails safely for storage/network errors (2.420468ms)
+2026-10-24T06:25:47.5732045Z ✔ WebP uploads fail closed for lossy/lossless content and spoofed MIME; no decoder is shipped (24.899447ms)
+2026-10-24T06:25:47.5981835Z ✔ PNG canonicalization preserves validated pixels and produces one stable stream (2.888521ms)
+2026-10-24T06:25:47.6248829Z ✔ multi-chunk PNG DEFLATE completion retains valid scanlines and canonical output (43.572788ms)
+2026-10-24T06:25:47.6506871Z ✔ PNG rejects trailing junk, duplicate Adler checksums, extra streams and truncated DEFLATE (19.124049ms)
+2026-10-24T06:25:47.7056426Z ✔ native decoder accepts stored, fixed and dynamic Huffman streams with stable canonical pixels (61.102178ms)
+2026-10-24T06:25:48.0246231Z ✔ stored block LEN/NLEN corruption and truncation agree with strict reference decoder (8.034604ms)
+2026-10-24T06:25:48.4617596Z ✔ multiple stored blocks and near-limit valid PNG avoid growing-buffer copies (730.008006ms)
+2026-10-24T06:25:48.4620077Z ℹ {"case":"valid-stored","bytes":2096506,"pulls":256,"inputBytes":2096449,"maxInputChunk":8192,"outputBytes":2096128,"maxOutputChunk":8192,"copiedBytes":4196790}
+2026-10-24T06:25:48.4622417Z ℹ {"case":"valid-stored","bytes":2097152,"pulls":256,"inputBytes":2096449,"maxInputChunk":8192,"outputBytes":2096128,"maxOutputChunk":8192,"copiedBytes":4196774}
+2026-10-24T06:25:48.9417197Z ✔ large suffixes and truncated stored blocks reject with bounded stream work (496.381798ms)
+2026-10-24T06:25:48.9418965Z ℹ {"case":"suffix","bytes":262227,"pulls":16,"inputBytes":131072,"maxInputChunk":8192,"outputBytes":14,"maxOutputChunk":14,"copiedBytes":262208}
+2026-10-24T06:25:48.9421434Z ℹ {"case":"suffix","bytes":1048659,"pulls":16,"inputBytes":131072,"maxInputChunk":8192,"outputBytes":14,"maxOutputChunk":14,"copiedBytes":1048616}
+2026-10-24T06:25:48.9423255Z ℹ {"case":"suffix","bytes":2097152,"pulls":16,"inputBytes":131072,"maxInputChunk":8192,"outputBytes":14,"maxOutputChunk":14,"copiedBytes":2097109}
+2026-10-24T06:25:48.9425037Z ℹ {"case":"truncated-stored","bytes":2096490,"pulls":256,"inputBytes":2096433,"maxInputChunk":8192,"outputBytes":2088643,"maxOutputChunk":8192,"copiedBytes":4185076}
+2026-10-24T06:25:48.9496468Z ✔ decompression bomb cancels before unbounded output is delivered (9.817962ms)
+2026-10-24T06:25:48.9506517Z ✔ JPEG APP14 strips private/trailing payloads and only retains one fixed Adobe transform (2.661125ms)
+2026-10-24T06:25:48.9593498Z ✔ disabling new WebP uploads preserves existing WebP delivery, Draft privacy and Excel references (12.888784ms)
+2026-10-24T06:25:48.9853604Z ✔ new legacy and unsupported protocol submissions reject before every database write, including expiry and admission counters (65.331382ms)
+2026-10-24T06:25:48.9855793Z ✔ upgrade-required response is non-mutating even with missing key or malformed request body (5.076113ms)
+2026-10-24T06:25:48.9857428Z ✔ current protocol creates an order and preserves normal validation and inventory guards (14.81064ms)
+2026-10-24T06:25:48.9859401Z ✔ existing R1 keys recover and replay without protocol header while changed payload never mutates stock (9.851806ms)
+2026-10-24T06:25:48.9861308Z ✔ expired legacy saved-key retry still returns cancelled receipt and releases stock exactly once (8.180967ms)
+2026-10-24T06:25:48.9863299Z ✔ mixed-version confirmed first order rejects a legacy fresh-key replay with no second order or stock reservation (7.384552ms)
+2026-10-24T06:25:48.9865327Z ✔ header-free recovery retires missing legacy attempts; protocol declaration cannot resurrect them (5.764378ms)
+2026-10-24T06:25:48.9867832Z ✔ an outdated tab receives reload guidance and keeps its key until safe recovery retires the rejected attempt (9.668474ms)
+2026-10-24T06:25:48.9869946Z ✔ versioned cart client sends current protocol with bound snapshot and unchanged idempotency behavior (7.108696ms)
+2026-10-24T06:25:48.9871657Z ✔ 30-minute expiry restores stock exactly once and old key returns cancelled receipt (70.663614ms)
+2026-10-24T06:25:48.9873196Z ✔ catalog and order submission release overdue reservations on demand (14.084906ms)
+2026-10-24T06:25:48.9874793Z ✔ confirmed reservations are not expired and cannot restore twice through cancellation (14.54288ms)
+2026-10-24T06:25:48.9876573Z ✔ late confirmation is rejected even after expiry sweep race (59.809377ms)
+2026-10-24T06:25:48.9878081Z ✔ phone admission is transactional across rotating IPs and concurrent checkouts (7.629598ms)
+2026-10-24T06:25:48.9879545Z ✔ phone rate limit follows canonical phone even across different IPs (6.871594ms)
+2026-10-24T06:25:48.9881027Z ✔ store-wide admission rate cannot be bypassed by rotating phone and IP (5.185537ms)
+2026-10-24T06:25:48.9897873Z ✔ legacy pending orders acquire deadlines without deleting order evidence (4.942944ms)
+2026-10-24T06:25:48.9899340Z ✔ authenticated admin reads immutable line snapshots, anonymous access is denied (51.565512ms)
+2026-10-24T06:25:48.9900325Z ✔ phone syntax normalizes supported local/international formats and rejects digit-free input (0.819931ms)
+2026-10-24T06:25:48.9901159Z ✔ invalid phone cannot create order or reserve stock (4.068794ms)
+2026-10-24T06:25:48.9901930Z ✔ recovery returns saved receipt without personal information or new reservation (6.44628ms)
+2026-10-24T06:25:48.9902801Z ✔ recovery retires missing key; a delayed original submission can never commit (5.217026ms)
+2026-10-24T06:25:48.9903673Z ✔ recovery racing an already-validated submission rejects its final atomic insert (6.813636ms)
+2026-10-24T06:25:48.9904428Z ✔ recovery is same-origin, UUID bounded and rate-limited (5.008256ms)
+2026-10-24T06:25:48.9905261Z ✔ lost response survives reload: recover original receipt before allowing replacement (10.542134ms)
+2026-10-24T06:25:48.9906902Z ✔ never-arrived request is retired on reload before replacement (10.211367ms)
+2026-10-24T06:25:48.9907794Z ✔ cross-tab lock prevents simultaneous duplicate submissions (0.912693ms)
+2026-10-24T06:25:48.9908603Z ✔ storage failure and unavailable cross-tab locks fail closed before network (0.405397ms)
+2026-10-24T06:25:48.9909405Z ✔ recovery network failure keeps durable key and blocks replacement (0.869342ms)
+2026-10-24T06:25:48.9910556Z ✔ 0002 rollback rehearsal rejects incompatible parent writes without loss; compatible roll-forward recovers exact orders and retired keys (72.653134ms)
+2026-10-24T06:25:48.9911603Z ✔ size comparator: children ages with uppercase Y suffix (3.313023ms)
+2026-10-24T06:25:48.9912385Z ✔ size comparator: children ages with lowercase and uppercase suffixes preserve labels (0.354582ms)
+2026-10-24T06:25:48.9913235Z ✔ size comparator: numeric and Y age labels share numeric order but stay distinct (0.451944ms)
+2026-10-24T06:25:48.9914229Z ✔ size comparator: children ages mixed with standard and Free Size options (0.272068ms)
+2026-10-24T06:25:48.9914836Z ✔ size comparator: all standard sizes (0.334494ms)
+2026-10-24T06:25:48.9915299Z ✔ size comparator: numeric clothing sizes (0.23612ms)
+2026-10-24T06:25:48.9916166Z ✔ size comparator: decimal sizes (0.563351ms)
+2026-10-24T06:25:48.9916694Z ✔ size comparator: large numeric sizes are exact (0.188922ms)
+2026-10-24T06:25:48.9917273Z ✔ size comparator: equivalent numeric labels stay distinct (0.253834ms)
+2026-10-24T06:25:48.9917834Z ✔ size comparator: standard aliases stay distinct (1.349919ms)
+2026-10-24T06:25:48.9918399Z ✔ size comparator: mixed formats and separate Free Size (0.228586ms)
+2026-10-24T06:25:48.9919002Z ✔ size comparator: case and whitespace only affect comparison (1.139817ms)
+2026-10-24T06:25:48.9919670Z ✔ size comparator: unrecognized labels are retained deterministically (0.187039ms)
+2026-10-24T06:25:48.9920210Z ✔ size comparator: Free Size alone (0.093014ms)
+2026-10-24T06:25:48.9920618Z ✔ size comparator: empty list (0.281706ms)
+2026-10-24T06:25:48.9922079Z ✔ size comparator is reflexive, antisymmetric and transitive (287.84032ms)
+2026-10-24T06:25:48.9923178Z ✔ variant options keep exact label identities, colors and source objects (0.954782ms)
+2026-10-24T06:25:48.9924037Z ✔ CL-FLARE-GIRLS-001: exact reported order corrected without changing variants (2.149201ms)
+2026-10-24T06:25:48.9924863Z ✔ CL-FLARE-GIRLS-001: product card presents the same ordered labels and price (30.376639ms)
+2026-10-24T06:25:48.9926038Z ✔ CL-FLARE-GIRLS-001: mounted product sizes and both colors add exact variant IDs (57.174352ms)
+2026-10-24T06:25:48.9926858Z ✔ CL-FLARE-PLUS-001: exact reported order corrected without changing variants (0.572368ms)
+2026-10-24T06:25:48.9927631Z ✔ CL-FLARE-PLUS-001: product card presents the same ordered labels and price (0.706709ms)
+2026-10-24T06:25:48.9928403Z ✔ CL-FLARE-PLUS-001: mounted product sizes and both colors add exact variant IDs (13.677405ms)
+2026-10-24T06:25:48.9929170Z ✔ CL-FLARE-REG-001: exact reported order corrected without changing variants (0.818457ms)
+2026-10-24T06:25:48.9929932Z ✔ CL-FLARE-REG-001: product card presents the same ordered labels and price (0.521784ms)
+2026-10-24T06:25:48.9930685Z ✔ CL-FLARE-REG-001: mounted product sizes and both colors add exact variant IDs (8.169576ms)
+2026-10-24T06:25:48.9931466Z ✔ synthetic-children-Y: exact reported order corrected without changing variants (0.360844ms)
+2026-10-24T06:25:48.9932247Z ✔ synthetic-children-Y: product card presents the same ordered labels and price (0.665131ms)
+2026-10-24T06:25:48.9933047Z ✔ synthetic-children-Y: mounted product sizes and both colors add exact variant IDs (12.253658ms)
+2026-10-24T06:25:48.9933825Z ✔ color-dependent missing, sold-out and ambiguous sizes remain unavailable (7.087855ms)
+2026-10-24T06:25:48.9934597Z ✔ numeric, Y and y labels never substitute variant identity or availability (3.898805ms)
+2026-10-24T06:25:48.9935306Z ✔ mixed Free Size and standard options remain separately selectable (1.887042ms)
+2026-10-24T06:25:48.9937284Z ✔ retained size filter uses global sorting and preserves exact selection values (1.025083ms)
+2026-10-24T06:25:48.9939057Z ✔ swatches accept only own allowlisted colors, never inherited properties (1.721302ms)
+2026-10-24T06:25:48.9940360Z ✔ category aliases ignore inherited properties and preserve literal legacy labels (0.527534ms)
+2026-10-24T06:25:48.9941189Z ✔ one taxonomy exposes all 16 clothing and five nested accessory categories (1.534434ms)
+2026-10-24T06:25:48.9941942Z ✔ Shop All, groups and explicit New In/Sale tags preserve existing metadata (0.389026ms)
+2026-10-24T06:25:48.9942740Z ✔ tiles use eligible public images and neutral fallbacks; draft image is never selected (7.991994ms)
+2026-10-24T06:25:48.9943621Z ✔ navigation disclosure has independent New In/Shop/Sale and keyboard/mobile close behavior (32.684176ms)
+2026-10-24T06:25:48.9944599Z ✔ variant identities preserve exact multiword colors, existing sizes and ambiguous combinations fail closed (0.909587ms)
+2026-10-24T06:25:48.9946283Z ✔ mounted independent controls disable impossible sizes and send only the exact chosen variant to cart (47.266018ms)
+2026-10-24T06:25:48.9947166Z ✔ out-of-stock and display-only products cannot be added (3.710534ms)
+2026-10-24T06:25:48.9947919Z ✔ every expanded and legacy category round-trips through the actual Excel contract (158.065955ms)
+2026-10-24T06:25:48.9948780Z ✔ Excel category validation uses a named range with all labels, never a truncated inline list (2.633064ms)
+2026-10-24T06:25:48.9949535Z ✔ per-product Excel variant limit remains 20, not silently split (0.347889ms)
+2026-10-24T06:25:48.9950457Z ✔ expanded categories persist via authenticated API and preview-confirm-export without inventory or privacy changes (82.270142ms)
+2026-10-24T06:25:48.9951455Z ✔ responsive navigation and product columns retain mobile touch and desktop layout constraints (0.703683ms)
+2026-10-24T06:25:48.9952299Z ✔ invalid WhatsApp configuration 0: hidden/refused, COD independently persists (79.301211ms)
+2026-10-24T06:25:48.9953089Z ✔ invalid WhatsApp configuration 1: hidden/refused, COD independently persists (7.0086ms)
+2026-10-24T06:25:48.9953851Z ✔ invalid WhatsApp configuration 2: hidden/refused, COD independently persists (6.625194ms)
+2026-10-24T06:25:48.9954610Z ✔ invalid WhatsApp configuration 3: hidden/refused, COD independently persists (6.546527ms)
+2026-10-24T06:25:48.9955371Z ✔ invalid WhatsApp configuration 4: hidden/refused, COD independently persists (5.613486ms)
+2026-10-24T06:25:48.9956534Z ✔ invalid WhatsApp configuration 5: hidden/refused, COD independently persists (5.176441ms)
+2026-10-24T06:25:48.9957302Z ✔ invalid WhatsApp configuration 6: hidden/refused, COD independently persists (5.741996ms)
+2026-10-24T06:25:48.9958067Z ✔ invalid WhatsApp configuration 7: hidden/refused, COD independently persists (11.529817ms)
+2026-10-24T06:25:48.9958837Z ✔ invalid WhatsApp configuration 8: hidden/refused, COD independently persists (6.09825ms)
+2026-10-24T06:25:48.9959592Z ✔ invalid WhatsApp configuration 9: hidden/refused, COD independently persists (6.471527ms)
+2026-10-24T06:25:48.9960363Z ✔ invalid WhatsApp configuration 10: hidden/refused, COD independently persists (6.295218ms)
+2026-10-24T06:25:48.9961121Z ✔ invalid WhatsApp configuration 11: hidden/refused, COD independently persists (6.417617ms)
+2026-10-24T06:25:48.9961883Z ✔ invalid WhatsApp configuration 12: hidden/refused, COD independently persists (4.973562ms)
+2026-10-24T06:25:48.9962638Z ✔ invalid WhatsApp configuration 13: hidden/refused, COD independently persists (4.918619ms)
+2026-10-24T06:25:48.9963394Z ✔ invalid WhatsApp configuration 14: hidden/refused, COD independently persists (4.730558ms)
+2026-10-24T06:25:48.9964156Z ✔ invalid WhatsApp configuration 15: hidden/refused, COD independently persists (4.748672ms)
+2026-10-24T06:25:48.9964916Z ✔ invalid WhatsApp configuration 16: hidden/refused, COD independently persists (5.119474ms)
+2026-10-24T06:25:48.9966136Z ✔ invalid WhatsApp configuration 17: hidden/refused, COD independently persists (5.769647ms)
+2026-10-24T06:25:48.9968037Z ✔ configured WhatsApp saves one pending order, uses saved details, and recovers without duplicate stock reservation (9.095694ms)
+2026-10-24T06:25:48.9969643Z ✔ valid WhatsApp configuration does not remove COD and cross-origin order requests still fail (3.72449ms)
+2026-10-24T06:25:48.9970675Z ✔ all 21 recognized current catalog labels map to fixed CSS colors without modifying variant identities (0.538044ms)
+2026-10-24T06:25:48.9971785Z ✔ rendered color buttons always show a safe circle, including unknown labels and light colors (19.375068ms)
+2026-10-24T06:25:48.9972920Z ✔ mounted color/size selection retains accessible pressed state and only adds the exact available variant (13.55195ms)
+2026-10-24T06:25:48.9973490Z ℹ tests 206
+2026-10-24T06:25:48.9973698Z ℹ suites 0
+2026-10-24T06:25:48.9973898Z ℹ pass 206
+2026-10-24T06:25:48.9974095Z ℹ fail 0
+2026-10-24T06:25:48.9974305Z ℹ cancelled 0
+2026-10-24T06:25:48.9974514Z ℹ skipped 0
+2026-10-24T06:25:48.9974745Z ℹ todo 0
+2026-10-24T06:25:48.9975000Z ℹ duration_ms 2714.240814
+2026-10-24T06:25:49.0973664Z 
+2026-10-24T06:25:49.0974453Z > classyline@1.0.0 security:check
+2026-10-24T06:25:49.0975142Z > node scripts/security-check.mjs
+2026-10-24T06:25:49.0975729Z 
+2026-10-24T06:25:49.1309510Z Frontend secret/auth and injection checks passed
+2026-10-24T06:25:49.1399631Z Repository credential-pattern scan passed
+2026-10-24T06:25:49.9406732Z # npm audit report
+2026-10-24T06:25:49.9407029Z 
+2026-10-24T06:25:49.9407415Z undici  7.0.0 - 7.30.0
+2026-10-24T06:25:49.9408384Z Severity: high
+2026-10-24T06:25:49.9409714Z undici vulnerable to Denial of Service via unbounded memory in the EventSource parser - https://github.com/advisories/GHSA-4qv8-2p9j-2685
+2026-10-24T06:25:49.9411719Z undici vulnerable to Subresource Integrity bypass via non-lowercase algorithm tokens - https://github.com/advisories/GHSA-f72v-6w45-q472
+2026-10-24T06:25:49.9413820Z undici vulnerable to Denial of Service via unhandled error on excessive content-encodings - https://github.com/advisories/GHSA-xjj6-f33q-929c
+2026-10-24T06:25:49.9415160Z fix available via `npm audit fix --force`
+2026-10-24T06:25:49.9416195Z Will install wrangler@4.35.0, which is a breaking change
+2026-10-24T06:25:49.9416812Z node_modules/undici
+2026-10-24T06:25:49.9417223Z   miniflare  >=4.20250906.1
+2026-10-24T06:25:49.9417745Z   Depends on vulnerable versions of undici
+2026-10-24T06:25:49.9418252Z   node_modules/miniflare
+2026-10-24T06:25:49.9418706Z     wrangler  <=0.0.0-31bfd374c || >=4.36.0
+2026-10-24T06:25:49.9419062Z     Depends on vulnerable versions of miniflare
+2026-10-24T06:25:49.9419388Z     node_modules/wrangler
+2026-10-24T06:25:49.9419548Z 
+2026-10-24T06:25:49.9419714Z 3 vulnerabilities (2 moderate, 1 high)
+2026-10-24T06:25:49.9419901Z 
+2026-10-24T06:25:49.9420122Z To address all issues (including breaking changes), run:
+2026-10-24T06:25:49.9420462Z   npm audit fix --force
+2026-10-24T06:25:49.9563648Z ##[error]Process completed with exit code 1.
+2026-10-24T06:25:49.9683703Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-24T06:25:49.9684134Z with:
+2026-10-24T06:25:49.9684414Z   name: classyline-size-production-evidence-40070135911-1
+2026-10-24T06:25:49.9684825Z   path: /home/runner/work/_temp/classyline-evidence/*.json
+
+2026-10-24T06:25:49.9685159Z   if-no-files-found: ignore
+2026-10-24T06:25:49.9685731Z   retention-days: 14
+2026-10-24T06:25:49.9685967Z   compression-level: 6
+2026-10-24T06:25:49.9686183Z   overwrite: false
+2026-10-24T06:25:49.9686402Z   include-hidden-files: false
+2026-10-24T06:25:49.9686637Z env:
+2026-10-24T06:25:49.9686808Z   CI: true
+2026-10-24T06:25:49.9687002Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:49.9687324Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:49.9687760Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:49.9688120Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:49.9688455Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:49.9689080Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:49.9689425Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:49.9689876Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:49.9690417Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:49.9694340Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:49.9698842Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:49.9699361Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:49.9699675Z ##[endgroup]
+2026-10-24T06:25:50.1393627Z (node:3024) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-24T06:25:50.1394486Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-24T06:25:50.1410033Z No files were found with the provided path: /home/runner/work/_temp/classyline-evidence/*.json. No artifacts will be uploaded.
+2026-10-24T06:25:50.1596658Z ##[group]Run echo 'Owner must return CLASSYLINE_RELEASE_ARMED=false and verify it independently. Workflow cannot change or attest the effective arm after a failed/cancelled runner.'
+2026-10-24T06:25:50.1598014Z [36;1mecho 'Owner must return CLASSYLINE_RELEASE_ARMED=false and verify it independently. Workflow cannot change or attest the effective arm after a failed/cancelled runner.'[0m
+2026-10-24T06:25:50.1664052Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-24T06:25:50.1664638Z env:
+2026-10-24T06:25:50.1664948Z   CI: true
+2026-10-24T06:25:50.1665288Z   WRANGLER_SEND_METRICS: false
+2026-10-24T06:25:50.1666125Z   REVIEWED_CONTROLLER_SHA: e08316796a14476712bcf0f79f6606c62c7bc294
+2026-10-24T06:25:50.1666898Z   REVIEWED_CONTROLLER_TREE: 97f29ba8066225d323531154b4227f3168794609
+2026-10-24T06:25:50.1667533Z   BROWSER_RUN_ID: 40027645776
+2026-10-24T06:25:50.1668079Z   BROWSER_HARNESS_SHA: 3b14920c32940f628b50220aec292926aa2cd4c6
+2026-10-24T06:25:50.1668815Z   BROWSER_HARNESS_TREE: b10e3a77f4cc2483f154788026155fe7fffa4252
+2026-10-24T06:25:50.1669429Z   BROWSER_ARTIFACT_ID: 12533985660
+2026-10-24T06:25:50.1670141Z   BROWSER_ARTIFACT_DIGEST: sha256:48f4bbdb9975a587d13f5c35963b515cfd5601a6bed87eb7fba0c17fcd5d1b5e
+2026-10-24T06:25:50.1671003Z   INSTALL_SKIPPED_ID: ceba0a45-4aa1-4ccd-9b4e-a7eaf696a038
+2026-10-24T06:25:50.1677894Z   PREVIEW_SKIPS_MANIFEST: {"version":1,"repository":"Skyeagle123/Classyline","controller_sha":"e08316796a14476712bcf0f79f6606c62c7bc294","controller_tree":"97f29ba8066225d323531154b4227f3168794609","records":[{"id":"f374e640-1719-4f6d-ae22-86303756ab6e","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-browser-qualification","commit":"3b14920c32940f628b50220aec292926aa2cd4c6","created_on":"2026-10-23T21:33:31.336319Z"},{"id":"7165ba03-ceb4-4508-a63c-8dddcdb76083","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"250c59087e0d0cef284c40a9a6455f25298be0c5","created_on":"2026-10-23T21:34:50.920995Z"},{"id":"98565ad4-23db-499d-8e76-61f470fce361","project_id":"25d5c0d3-f248-4d69-b5a3-feacfcb66dec","project_name":"classyline2","environment":"preview","branch":"phase/storefront-size-release-preparation","commit":"1c26f32fe7e160165bc4093a37836524c5d8adbc","created_on":"2026-10-23T22:14:15.421295Z"}]}
+2026-10-24T06:25:50.1682415Z   PREVIEW_SKIPS_SHA256: sha256:3f95d9e1167901892ef01b9d417550b6d05fe15228b87e911f668c9228719648
+2026-10-24T06:25:50.1682944Z   CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+2026-10-24T06:25:50.1683265Z ##[endgroup]
+2026-10-24T06:25:50.1794630Z Owner must return CLASSYLINE_RELEASE_ARMED=false and verify it independently. Workflow cannot change or attest the effective arm after a failed/cancelled runner.
+2026-10-24T06:25:50.1951972Z Post job cleanup.
+2026-10-24T06:25:50.2825080Z [command]/usr/bin/git version
+2026-10-24T06:25:50.2872268Z git version 2.55.0
+2026-10-24T06:25:50.2918166Z Temporarily overriding HOME='/home/runner/work/_temp/bb4917c6-5bc2-4ab0-8501-bb8d11ffbcb8' before making global git config changes
+2026-10-24T06:25:50.2919770Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-24T06:25:50.2924008Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Classyline/Classyline/app
+2026-10-24T06:25:50.2970634Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T06:25:50.3013016Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T06:25:50.3278684Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T06:25:50.3318748Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T06:25:50.3601480Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T06:25:50.3644425Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T06:25:50.4069219Z Post job cleanup.
+2026-10-24T06:25:50.4964963Z [command]/usr/bin/git version
+2026-10-24T06:25:50.5012145Z git version 2.55.0
+2026-10-24T06:25:50.5054793Z Temporarily overriding HOME='/home/runner/work/_temp/5e2d8a32-7fe7-475d-9afb-a670ae8377e8' before making global git config changes
+2026-10-24T06:25:50.5056592Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-24T06:25:50.5062396Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Classyline/Classyline/control
+2026-10-24T06:25:50.5105553Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T06:25:50.5143278Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T06:25:50.5405706Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T06:25:50.5446411Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T06:25:50.5711719Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T06:25:50.5756042Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T06:25:50.6148747Z Cleaning up orphan processes
+2026-10-24T06:25:50.6504702Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
