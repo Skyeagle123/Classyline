@@ -41,6 +41,6 @@
       "ops/v21-production-workflow.test.mjs",
       "ops/wrangler-process.test.mjs"
     ],
-    "count": 1092
+    "count": 1096
   }
 }

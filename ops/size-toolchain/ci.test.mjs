@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
+import {readFileSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createRequire} from 'node:module';
@@ -85,4 +86,67 @@ test('runner requires complete tests, zero audit findings and network-denied bui
   assert.match(source, /vulnerabilities\?\.total, 0/);
   assert.match(source, /offline-boundary.cjs/);
   assert.doesNotMatch(source, /--omit|audit fix|pages.*deploy|fetch\(/);
+});
+
+// Historical consumed controllers build separately pinned application sources.
+// Keep their complete bytes immutable; they are not current-toolchain CI routes.
+const consumed = {
+  'classyline-production-manual.yml': '4eb841baff287a4570bb2607102d6207c1edf55d17bf65f9078c0c89e66cf572',
+  'classyline-production-v21.yml': '53a20e23aed55f9052727ab2def4c9cb3c2c5bd71aba8706bf6343cc65a6c234',
+  'classyline-production-size-update.yml': '0d83ead2ae7fe390eea537a708e44adbe662c700a5603070a09ace257bcf65b4',
+};
+const digest = text => createHash('sha256').update(text).digest('hex');
+const workflows = new Map(readdirSync(join(ROOT, '.github/workflows')).filter(n => /\.ya?ml$/.test(n)).map(name => {
+  const text = readFileSync(join(ROOT, '.github/workflows', name), 'utf8');
+  const document = parseDocument(text, {version: '1.2', uniqueKeys: true, strict: true});
+  assert.equal(document.errors.length, 0);
+  return [name, {text, workflow: document.toJS()}];
+}));
+function verifyToolchainRuntimePins(inventory) {
+  for (const [name, hash] of Object.entries(consumed))
+    assert.equal(digest(inventory.get(name).text), hash, 'Consumed controller changed');
+  const routes = [];
+  for (const [name, {workflow}] of inventory) {
+    if (Object.hasOwn(consumed, name)) continue;
+    for (const [id, job] of Object.entries(workflow.jobs)) {
+      let node;
+      for (const step of job.steps || []) {
+        if (step.uses?.startsWith('actions/setup-node@')) node = step.with?.['node-version'];
+        if (/\b(?:npm run (?:build:functions|toolchain:prepare)|node ops\/size-toolchain\/(?:ci|prepare)\.mjs|wrangler (?:pages|deploy))\b/.test(step.run || '')) {
+          assert.equal(node, '24.22.1', 'Exact patched Node must precede toolchain execution: ' + name + ':' + id);
+          routes.push(name + ':' + id);
+        }
+      }
+    }
+  }
+  return [...new Set(routes)].sort();
+}
+test('Storefront correction changes only the exact Node pin', () => {
+  const text = workflows.get('storefront.yml').text;
+  assert.equal((text.match(/node-version: '24\.22\.1'/g) || []).length, 1);
+  assert.equal(digest(text.replace("node-version: '24.22.1'", 'node-version: 24')),
+    '3bf5c02ad2ad23b5dda1cb382ccdf4f362e549174917daaaa59a26745480a9ec');
+});
+test('every current remediated-toolchain workflow requires the exact patched Node runtime', () => {
+  assert.deepEqual(verifyToolchainRuntimePins(workflows), ['size-toolchain-offline.yml:qualify', 'storefront.yml:check']);
+});
+test('both toolchain CI routes reject floating, stale, substituted and missing Node pins', () => {
+  for (const [name, id] of [['storefront.yml', 'check'], ['size-toolchain-offline.yml', 'qualify']])
+    for (const pin of [24, '24', '24.x', '24.21.0', '24.22.0', 'latest', undefined]) {
+      const changed = structuredClone(workflows);
+      changed.get(name).workflow.jobs[id].steps.find(s => s.uses?.startsWith('actions/setup-node@')).with['node-version'] = pin;
+      assert.throws(() => verifyToolchainRuntimePins(changed), /Exact patched Node/, name + ': ' + pin);
+    }
+});
+test('toolchain commands reject missing or late setup and a subsequent runtime downgrade', () => {
+  for (const [name, id] of [['storefront.yml', 'check'], ['size-toolchain-offline.yml', 'qualify']])
+    for (const mutation of ['missing', 'late', 'downgrade']) {
+      const changed = structuredClone(workflows), steps = changed.get(name).workflow.jobs[id].steps;
+      const index = steps.findIndex(s => s.uses?.startsWith('actions/setup-node@'));
+      const setup = steps[index];
+      if (mutation === 'missing') steps.splice(index, 1);
+      if (mutation === 'late') {steps.splice(index, 1); steps.push(setup);}
+      if (mutation === 'downgrade') steps.splice(index + 1, 0, {...setup, with: {'node-version': '24.21.0'}});
+      assert.throws(() => verifyToolchainRuntimePins(changed), /Exact patched Node/, name + ': ' + mutation);
+    }
 });

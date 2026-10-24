@@ -46,7 +46,7 @@ try {
     checkEnvContexts(workflow.env, ['github', 'secrets', 'inputs', 'vars'], `${name}: env`);
     if (name === 'storefront.yml')
       assert.equal(createHash('sha256').update(text).digest('hex'),
-        '3bf5c02ad2ad23b5dda1cb382ccdf4f362e549174917daaaa59a26745480a9ec',
+        '8ad2fa7eeaff4f9fb49a38bca177c038d942871cf9c755dccd6808cf28a148b0',
         'Accepted application CI changed; review its Action references separately');
     workflows.set(name, {text, workflow}); counts.yaml++;
     for (const [jobId, job] of Object.entries(workflow.jobs)) {
