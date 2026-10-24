@@ -128,7 +128,7 @@ test('Storefront correction changes only the exact Node pin', () => {
     '3bf5c02ad2ad23b5dda1cb382ccdf4f362e549174917daaaa59a26745480a9ec');
 });
 test('every current remediated-toolchain workflow requires the exact patched Node runtime', () => {
-  assert.deepEqual(verifyToolchainRuntimePins(workflows), ['size-toolchain-offline.yml:qualify', 'storefront.yml:check']);
+  assert.deepEqual(verifyToolchainRuntimePins(workflows), ['classyline-production-size-recovery.yml:deploy', 'size-recovery-offline.yml:qualify', 'size-toolchain-offline.yml:qualify', 'storefront.yml:check']);
 });
 test('both toolchain CI routes reject floating, stale, substituted and missing Node pins', () => {
   for (const [name, id] of [['storefront.yml', 'check'], ['size-toolchain-offline.yml', 'qualify']])
