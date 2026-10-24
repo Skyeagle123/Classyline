@@ -1,0 +1,791 @@
+{
+  "version": 2,
+  "wrangler_version": "4.150.0",
+  "undici_version": "7.30.1",
+  "original_cli_sha256": "71da1f9bcf69a9f56c4ff4f68e71315365d03db8ea11207577b47a8e1a0a1064",
+  "prepared_cli_sha256": "ccc8700cb7712503437d1a662e266b10399cdcdeea3850a61d8706f29622f2bd",
+  "undici_tarball_integrity": "sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==",
+  "undici_tarball_sha256": "c98bd3881137c11341e8be8d2ec509ebf973b6f8b36d0a4c6d2afcda15e0d712",
+  "undici_files": {
+    "LICENSE": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27",
+    "README.md": "2c963a2f4d040fb3d18202bb3f23cf0e33f15fdbb16f0f07c5c4c9fc265b4b32",
+    "docs/docs/api/Agent.md": "e77f5a46d93d27a70c33f3533e4fffb9d3ff75d002e314c29998cfc718c02156",
+    "docs/docs/api/BalancedPool.md": "eadeec57b37da6bcb7bdff5127269149318380ed037b3a2137781c2945b88a69",
+    "docs/docs/api/CacheStorage.md": "37e458d8baff658682379bf4196a9085fd7bae0aa76560a23896a9f5d447e498",
+    "docs/docs/api/CacheStore.md": "c2df38ab5a312e7b7b0cdb941a0fd34b51612b3d13f2d70b89a6bcb47366387a",
+    "docs/docs/api/Client.md": "a540c06c59d01c2014fa38fa893ae2d6a5022cd792f0f3d59227b0fec3dc1bdd",
+    "docs/docs/api/ClientStats.md": "a568b57ed687a80393f3059937e941f9f5368772c7829e4c9685a2fa745c106e",
+    "docs/docs/api/Connector.md": "c363feda8c4bb65f09379df7f2d0164f88336a2487b3043876c275b2d04a01ed",
+    "docs/docs/api/ContentType.md": "b7418622c803d210b744fa1e705505a1c62829ec95b557fbc3071cc68b4fdcbd",
+    "docs/docs/api/Cookies.md": "5510c1cac6d2b79b81ce74a664b98012099013ff160b294e1b9caf33b23e8e4b",
+    "docs/docs/api/Debug.md": "e2097e6df91877e52b575b926ff3d43962aa778e6eca34f748a0c63f918dcff2",
+    "docs/docs/api/DiagnosticsChannel.md": "770d93dfd812f62037c29059ff91753a4aab0b97d865a8009a3c7d3b278d5179",
+    "docs/docs/api/Dispatcher.md": "0ab6e9a16ac733bb2e2c6021d68cc6eaedda6b59155d68af734d83d6d0e3cb3d",
+    "docs/docs/api/EnvHttpProxyAgent.md": "a0eb830a46a3b42bc813462c6998cb6c568d918f1438401c11a96b94529293f2",
+    "docs/docs/api/Errors.md": "2ce5a5d33c4960b94f441e62bc313fd30c8427afcf87c5fcd057c78d35eec9ea",
+    "docs/docs/api/EventSource.md": "4f6abf7c96d473ffb15fe5224df7bc994fe03ae22b5903dbf8bd8f6fee6a9ab6",
+    "docs/docs/api/Fetch.md": "0b861a7836a78316ce7415533735c4319e3b882cc982ef7d2735d29d6a2a3c2a",
+    "docs/docs/api/GlobalInstallation.md": "b2f8d71146d8fe804a489ef9e4f780214ba816f6f45f19ca94bde732266e89b5",
+    "docs/docs/api/H2CClient.md": "bf1f6bf6a0073158e748693a6ae527053c2e85ec8e87d2411c525fdd1aa82d39",
+    "docs/docs/api/MockAgent.md": "2410634ae6cae9b353d55144c93326d3317df7a05f03d55cbda8c7a81a0cbfb6",
+    "docs/docs/api/MockCallHistory.md": "b059d5b2a953cd8d44237f95f2927e47fcd475177599832716f2534705daa02d",
+    "docs/docs/api/MockCallHistoryLog.md": "3fe81715f164747a9156904a704ae3b5c15b25d9c8415df77a4400621b8c1320",
+    "docs/docs/api/MockClient.md": "ef57c87aab22d39f1549cd8bd178317f6a1188f57b4b891356c4c6c0e058a5db",
+    "docs/docs/api/MockErrors.md": "862b81346856a128b577cb7825500cb5b09095203f97f6e01dcb3a583b50947b",
+    "docs/docs/api/MockPool.md": "eadb07b70b40f1d9ccad70a878787f2c99e1bb83d4f06155456e4ea059c8894a",
+    "docs/docs/api/Pool.md": "4919c5265b241d0067bc8068c92cb2e30793c3bdb7139f1323a4e116d2b611e5",
+    "docs/docs/api/PoolStats.md": "eae89aa388a6cb3b0a96c30736f6f5e6f4df81eaea706485b7fad5ea3f7253f2",
+    "docs/docs/api/ProxyAgent.md": "daff25867159019e49bf0c3a60624fabad94e92bae84c1224329f02632890cd9",
+    "docs/docs/api/RedirectHandler.md": "0bf06eb4c1895f4eda3efcc6ad59d8a3f354c1a54832e3e2120e052e430deac3",
+    "docs/docs/api/RetryAgent.md": "4b2b419ff9d278e8c1a20a418b9babcff971c9c948556e04e6e8d6e33e3deb91",
+    "docs/docs/api/RetryHandler.md": "390712a1791393ba727c464cd0e7913975e77c9ed25dfd99b33930574e52c0a6",
+    "docs/docs/api/RoundRobinPool.md": "1b796f65d4126bd75d3fdc1765f077759da1bf9dd9fbec637e559a25f22a6e7d",
+    "docs/docs/api/SnapshotAgent.md": "83ae2c7e9df88c9f951df5f4f37ceddfcdcff7d31d131a8aa005843d324fec86",
+    "docs/docs/api/Socks5ProxyAgent.md": "c335f2224671d055841cb4b63563ba5bcc35dabc2ca76b2489d6a6da17e48f47",
+    "docs/docs/api/Util.md": "c61bedd14de49978130b2a390bde9e83b79c7ed34a0decdb4a3c4eec1f925fb9",
+    "docs/docs/api/WebSocket.md": "9c4e9e208c803e0d893392609f5d2156a8b1216e792ea3dbe4b2ac98d1a2fc69",
+    "docs/docs/api/api-lifecycle.md": "315bef8bb747c29b2690ffcbc79713df854b5e43a4616de93ae5f842c9f75621",
+    "docs/docs/best-practices/client-certificate.md": "f04bc4291917e454069c88f1a81326f0935a205930034930c01096b5d37e566b",
+    "docs/docs/best-practices/crawling.md": "e29aef651867d2c66928d2da7401b81fb69939ac88f9b5374091f73b70ef62d2",
+    "docs/docs/best-practices/mocking-request.md": "71bd60cfc22c379fa679704bfe27622e4b316b43de0b9b190a7784ba31b4989f",
+    "docs/docs/best-practices/proxy.md": "e37e207295e581d9984557f485316060785bc0aaae4b94c02fcd46356bdb1591",
+    "docs/docs/best-practices/undici-vs-builtin-fetch.md": "255b781d22e486e30fc32f8d893c1a4d292f6a6b98eb74d6343781e3e803cfa8",
+    "docs/docs/best-practices/writing-tests.md": "4c0d5a920208aa6395f58134077b40a5e201c645b28007276743b53e82696d91",
+    "index-fetch.js": "155df504376841f714239ffbb43c7fbbfe3532c44aafe19ca7fd1615a18d5f1d",
+    "index.d.ts": "b3fb72492a07a76f7bfa29ecadd029eea081df11512e4dfe6f930a5a9cb1fb75",
+    "index.js": "dca95e2bbf4bae18325a4e5d9c887427a8a63a1345ed92a46f1067360dec0ffa",
+    "lib/api/abort-signal.js": "46ac3527affb69036384c8baec5bf34ba567adb336921c7a62e8f471bb827f37",
+    "lib/api/api-connect.js": "d8ca4a5cbff898afb26573cca18b9aab2928d8113d5d8897b5fc193ef343fcf0",
+    "lib/api/api-pipeline.js": "46265a16bb621e8723a98da72824cb92a43cb27b912f336919e5c73049710772",
+    "lib/api/api-request.js": "93474854999d0a80815ed132640d50e3ed2cbc74b3bc9ec84704b923c7ca6a35",
+    "lib/api/api-stream.js": "9da4d699b6746216898b44a1beabb6e65de8c6aab825df51890da563f42d8aff",
+    "lib/api/api-upgrade.js": "86659d0e904788981bd2d3de9a391f35630099ba21b8b898619eac62c514b429",
+    "lib/api/index.js": "a7b4b74ea6b81b2401f8659c138df54fd3f2c45450741682c026abb4cf133096",
+    "lib/api/readable.js": "ee3cbcc13aad446dad1c2fe3105f21fb2c7761776c2c6634980a760c4cdd4669",
+    "lib/cache/memory-cache-store.js": "531953d14bf94d58df4997b73c03683854ad206fd62585ba54261b28292fdec7",
+    "lib/cache/sqlite-cache-store.js": "cac3e06815ba09fd686755476b6dd683905fb630c3e39df49c78238fa26db3b6",
+    "lib/core/connect.js": "8835a2e706fcee60c8fd0bb46ff5482690e762a4b57875334eaf0b6e55399823",
+    "lib/core/constants.js": "feeb46180cfa4623da75627c9c3a5d5f38945644c30b7afe37415437ed71bca2",
+    "lib/core/diagnostics.js": "907ce2d66cede91b860a1c1318ebdf0d9577c0f747a3b35510162c63489f28bc",
+    "lib/core/errors.js": "c69b7a060b711e4cd97f3ff05eb18cf4ec7a08ce5d618c54a567baf6f1a47481",
+    "lib/core/request.js": "3352c955f070baa991c4c7bd648c63732b120ebddd10cae01b2ee848cd172bbb",
+    "lib/core/socks5-client.js": "5ee3d782919a74b4c0fc0aac0da1d39abd759f7c017f7b3d4b932ccafddd1be7",
+    "lib/core/socks5-utils.js": "830467b148e86786f41c356667625721dfd9bef27fd85ada0fb498bda9a19016",
+    "lib/core/symbols.js": "c627771d811b9b9014e837934bd2e4fdb5f5b1e9313fe129a1d6268c6b3cf707",
+    "lib/core/tree.js": "c9fc9938718f33d77a6ed1abac5e564531ac9f9436cde2867243d50cd6c0b4e8",
+    "lib/core/util.js": "a53177756a60479215b577b895867e92e3ce0d61ab479fb642cd4420e84cc165",
+    "lib/dispatcher/agent.js": "1b05aeaae1a23bcde54c200211d6292991b30f3a8c39c2dfca3efaa439caf5d7",
+    "lib/dispatcher/balanced-pool.js": "90989fe532a02854d88c5f4af9c8bbec33f24d2318d3b4534f1128e273e5463d",
+    "lib/dispatcher/client-h1.js": "fa69241601d9e1444898b9e2923e7a2064294f8b13a90ab058d886c11c6d256e",
+    "lib/dispatcher/client-h2.js": "e992a732c30c582676caf23193fb58097b4233ab328d0a77b7ff2c0338ad1eca",
+    "lib/dispatcher/client.js": "84205dc96cb9bf7432c4b3e80f0babaa11d6f4faf24ead3e7d9660e9d8fee0b3",
+    "lib/dispatcher/dispatcher-base.js": "a7df3add59b3cb9297373fba95ccd41851474b00c0f60e4b8ccc1394fe350d19",
+    "lib/dispatcher/dispatcher.js": "39907c123fd59f712111e719ba43426525c17ba0fcd279f6e892f829264dda0a",
+    "lib/dispatcher/env-http-proxy-agent.js": "1f572709bc4f0e0469579c37192c0d6376c1b4875b7667b80513706fbc13b41a",
+    "lib/dispatcher/fixed-queue.js": "5d72c9de20e74d2437afc97f9f9e8e202d79983a77d2a598ac9ab1e0a8d0052d",
+    "lib/dispatcher/h2c-client.js": "80188685d9c10d6904d8857668e835dbe16515b17b7e7bfa02b043f67be7afa4",
+    "lib/dispatcher/pool-base.js": "aa257609b208a90e73e110ac3b7c75b5599b310bb2b9bd15464c36216a94613a",
+    "lib/dispatcher/pool.js": "1c8056214b32004c8e38cdda2bbd67c4edd1aec1fed0a3681aad7b22d35273a1",
+    "lib/dispatcher/proxy-agent.js": "40f18bbc8b5c9512d4bdbf7bde47a787cbefe98d19f40d5703f5286a67bf5f53",
+    "lib/dispatcher/retry-agent.js": "465e9429750441852cb0ed19bd669dbe2eca2b531ce6966040551a9b6550ae30",
+    "lib/dispatcher/round-robin-pool.js": "af12924b9556033697f61a2671318fbde98c84536e991bd0700c076e8467fc92",
+    "lib/dispatcher/socks5-proxy-agent.js": "9a7a9cb6cbbaccc867a6c36541ff95f89fa3863dcb5548eb46c449b2333174b3",
+    "lib/encoding/index.js": "7ea8fe81ff3c9d054f3ef8bb67bfe260b2e930c51d5d5563ca2ef19a218a5909",
+    "lib/global.js": "d8e78f218c7bbefdec657f3ae81e31a7f811df511fe951e3a35e3dac1e368e21",
+    "lib/handler/cache-handler.js": "70cca7b93d3686c5e40fb0718c2c3c5b0c00972d09db7f52c533ca03830a9ce1",
+    "lib/handler/cache-revalidation-handler.js": "85a375bc55f22471cfa3d900d6f901a004a580fc68ca9aeb9c2885f330c7b01e",
+    "lib/handler/decorator-handler.js": "a3c2f832c5e58c7f8e33388c7b1a10880906caca9a077492b73d7f8a1c6963e3",
+    "lib/handler/deduplication-handler.js": "37b403ac8c5ae1b5dadc7117e925e7844cb50ec4239043559d897806282277c3",
+    "lib/handler/redirect-handler.js": "da8da5ea976b2273d21f13d55ce1f020418f3abb98773a6b94fbe457e1eb5d6c",
+    "lib/handler/retry-handler.js": "7ca077f088a84e4e4c1bb3bdc6524808b90e4aa21ec36382a03cb14080f727a8",
+    "lib/handler/unwrap-handler.js": "618c664b488381f63ea43b8b3b1d26c3ee3a0272259941ab79410c0d6d8eaae0",
+    "lib/handler/wrap-handler.js": "d8a2903c97106d27840633053f007e916744f4091c6ebf0756b368f147ae13a8",
+    "lib/interceptor/cache.js": "cb7c1a724c51b1a1834a9e8fe2e6f1bd84312e55a4e7c7099b941085b2d6ff62",
+    "lib/interceptor/decompress.js": "551e0d10a87cad93332e61b73d3866c4b43efb1fb2ac75c779a395e853a898df",
+    "lib/interceptor/deduplicate.js": "ff08e37261e35221586120cdc85ce08981064e7b1726e1089c116c70bfe20627",
+    "lib/interceptor/dns.js": "fd57881ded93891ffc1590c4bfbd906bae084b02f3e9c86f52118df1cec540a9",
+    "lib/interceptor/dump.js": "30d035bae71552ef4cd19b264728482abb9a7b5f82af47ffb9ad81e2541ea4bc",
+    "lib/interceptor/redirect.js": "07e2ba6095945d7d374dfd6dd17450676f55cbd088400c19b9a1bf8a0010599e",
+    "lib/interceptor/response-error.js": "9cb06334d1c1f791784005789cc5afb9daea396c7f5e0c962af90538b4843e10",
+    "lib/interceptor/retry.js": "488cf270ae143cc13a6ecf82ba523314fdbb17fd9ee08677c4488d4410f047c3",
+    "lib/llhttp/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lib/llhttp/constants.d.ts": "9a9b4b9f5e08bd6c88bb2ad56007441e20b34b103dad02883d84e6e7c5c04e03",
+    "lib/llhttp/constants.js": "90c4858736745781548d464e51224ce9353162cd87bc8142be803bc2937184ba",
+    "lib/llhttp/llhttp-wasm.js": "344f7ae80c983694372d9234584a1261ef5492ab219d6e573e933f5d1c715b00",
+    "lib/llhttp/llhttp_simd-wasm.js": "52c16227482700834512f2c2257eb44652f39b11f868600562274f476025e4bd",
+    "lib/llhttp/utils.d.ts": "c79b06274bc1e38c70aa5259a1279290afd5b914fc01438efb0ea54a617a9ffb",
+    "lib/llhttp/utils.js": "e21afcaf44b0fec37acfff86945e4526541e990ac0efd2f1efa2ea9f2b259b6b",
+    "lib/mock/mock-agent.js": "f612291584fede3068afa88c7bbf0821248d4809925f6dcac32bd7d0fdbd3274",
+    "lib/mock/mock-call-history.js": "da183e702da0f0066ea534681118d65b5ac97415662df6b74f978ae831b1674b",
+    "lib/mock/mock-client.js": "108d91ef5f916d094a78d92a4d81f2cd4bfe20708ae6307d8197de81d826ce5c",
+    "lib/mock/mock-errors.js": "b5bd959401de99d8129ba272dddfdb62708247f684a8186aa4d858e2780d64ee",
+    "lib/mock/mock-interceptor.js": "f2ac4fe03eb49b31afb0f4c8636e4b63c5ca2f17c8ac34cb613028ab08f072ea",
+    "lib/mock/mock-pool.js": "763d77ce68f6315f384b5e897b87ea2e2034b69d29e2d6d2da37ae8a0679197c",
+    "lib/mock/mock-symbols.js": "b90b7dc21d5a18c2e5255b0916bf75e880eef32ca45ab312a581547041638e20",
+    "lib/mock/mock-utils.js": "4720ec7096039fb8f0044e8dd3b22d4eaebd8e7ce61f814908b92bac406f6444",
+    "lib/mock/pending-interceptors-formatter.js": "9d3737f40ba601fd7a9c6dd28a328e6797686ff08da712dcd0a0f011d5639f8d",
+    "lib/mock/snapshot-agent.js": "54f61cfe219a66dc2b17d0535c06429093105f321d9a60bf4b439225c028f6c1",
+    "lib/mock/snapshot-recorder.js": "9bf63c8b207b6f6e7fe4400b32d8322cfc185735d6ecfbd87a2691a8fba82922",
+    "lib/mock/snapshot-utils.js": "0971c847787d90abcb0bf4e1d76161a2f82651169cc8e637b26875fecab666f8",
+    "lib/util/cache.js": "3c4dc94325aa355f99d20f3ea878c13299dbc73986f1caaaf8d0d3cd8dffce5d",
+    "lib/util/date.js": "153ad641cbdb4cc5acacc8b50b79684166e29b838192bf98b2d32e2871ff7522",
+    "lib/util/promise.js": "123edb8cf7eb03156beb04a3482c5cb86bddf3f8348b857edb263cae38bc482b",
+    "lib/util/runtime-features.js": "eda04942c74b6c80341e3df2112968bcd1810271aab9215261306811c3ee60a4",
+    "lib/util/stats.js": "d62ae00eaf72f33cc990a3a835d70b9c7d2f10d47acffa0e631ea82145b7c34e",
+    "lib/util/timers.js": "4e5ef13ce9e1ca6de8a656b95e2425602bacbd6010af1da3ce573f8d8f573119",
+    "lib/web/cache/cache.js": "60015d174411d4094837ce8f1d44a4ad0b4946c26a49d28e5d95f6d840ac4f82",
+    "lib/web/cache/cachestorage.js": "f9cccd19fbc185edac7624e542b0864412d71c2083177f3c6902b34d2b07d461",
+    "lib/web/cache/util.js": "638d5c2424a730e6d2400ac518765b3fc9b50e2b3816b65fb7b46f93c66a5930",
+    "lib/web/cookies/constants.js": "85a24ae49eb5954e15363049bbc68967f01aae7260246daa3f49ad375429acb4",
+    "lib/web/cookies/index.js": "a50afdf4011c253e6e64b231a9914e7c516ce0352be9fe40ec60651fb2d7c4e8",
+    "lib/web/cookies/parse.js": "e944335c29c178fb565d330b6b2ff51ada12e36c408a5b42b886cb89d7f56b13",
+    "lib/web/cookies/util.js": "a753d4774e7f75a01cf846c00ab6d14f1438698502344883e1ffa83aceb74769",
+    "lib/web/eventsource/eventsource-stream.js": "975c5c6430fe441579cfd1f684684409ec53a616f04b1c5bf0424f7c73e1864f",
+    "lib/web/eventsource/eventsource.js": "b93ba8f94f140fec3f9b8d4a923a075c58a87c948576c41d838b4bb89f0301fc",
+    "lib/web/eventsource/util.js": "40be55b091614715abc90794a686016e3139273f8dafcc6cac1bb7afa7db4643",
+    "lib/web/fetch/LICENSE": "a21d6c8d3fc631198b97e57584697f7f9c37805c71c6cf9a12e4442b40394b88",
+    "lib/web/fetch/body.js": "fd7e1fe68e263f3296ecf0f4f799b3099717ecd8c9626db9bab73b7a4db7eb7d",
+    "lib/web/fetch/constants.js": "030e21057cdd1758db16eb0e86806be93b7616e5f46d9a93b90a9a8e99672423",
+    "lib/web/fetch/data-url.js": "acd2ae8c00e035a8b3c816c8a5f75eebfe12ab7db61158488cc350f92785fcd4",
+    "lib/web/fetch/formdata-parser.js": "d5d048201a040865a4376e423fd78b102ad164cb51ad7b0ade56897c7318bd6b",
+    "lib/web/fetch/formdata.js": "957184704f2ef215849411f702bdb9bcff1f42d81dfc0f69b16ff62670bf936a",
+    "lib/web/fetch/global.js": "6b38813b82ec8d5002009640515d35f83ab96d4f8e0066d71fae89324079a289",
+    "lib/web/fetch/headers.js": "0ca9bcb1cb174a19311b27f55b954d53e5adc06d6aa935c42df96c9a4453d0a7",
+    "lib/web/fetch/index.js": "2cf8903bb2c17d83794edbd800adac4e8077cf9a21d315acf812d2f614e24bd6",
+    "lib/web/fetch/request.js": "b4b36815f3c0d082ab8f413a27085f0b197f8cdf04880db15bf7d1f0084d780a",
+    "lib/web/fetch/response.js": "0c376c359711217831d095d8139fb62b290c77dca1fe93e708d1b081074812fc",
+    "lib/web/fetch/util.js": "765b5cfb803401dbb591b1e28d22fd6a9fd6db4c0bf2ec5f86dc89e39429e016",
+    "lib/web/infra/index.js": "6be7dbc932b91c3eb012bd404c7608fed97861646162f76d9448b173e5b0091c",
+    "lib/web/subresource-integrity/Readme.md": "0d3da607c6e6d7420679c47e869bdc926266cc94d39fb243d9cd3f9a217986f8",
+    "lib/web/subresource-integrity/subresource-integrity.js": "ac59fabbef7d6ad839d723ba3ed1690953d0849ad231970a8bfdfbc0df6d1ae9",
+    "lib/web/webidl/index.js": "3242d1bfd31cac178a66dd4113da3dbf1d4e886439853be233f71922dd9853c0",
+    "lib/web/websocket/connection.js": "97657a119b4e6c47ac97c34752af8400ddb2584f3dea60b2ce51410f1b4e6def",
+    "lib/web/websocket/constants.js": "e7b6d0550a367ba9edfb68b14bd3fbe44fd3042faf76901567b8c3ffc2ccfa84",
+    "lib/web/websocket/events.js": "d88278a61f86bf66e3be1722d13a469e4af7bb8f767241f7f0aab104b92bc38b",
+    "lib/web/websocket/frame.js": "d848070d5865bcec4e85d8b5785b6dd3ab4fbc388b28e3cfcad9805c1a83a789",
+    "lib/web/websocket/permessage-deflate.js": "da8d8dc29515bce2ba4def5c3f811f8644eeb5d4819bc521d5811fbbdda4afb7",
+    "lib/web/websocket/receiver.js": "49af2273aed723f96415a6685866dfcced1bb55fa016d87913880ea735e1703d",
+    "lib/web/websocket/sender.js": "5c5e162f1252d9c91d5cd30ae59c722f1e1cd7df86f03bf45fe085915c2d72e9",
+    "lib/web/websocket/stream/websocketerror.js": "41fafec8f19753c6718b024c95afec6e6407197250ffbe56d81549d715bb0bcc",
+    "lib/web/websocket/stream/websocketstream.js": "b059a716dc53fccde7443ed89567dfbcf0ffa019e41d5f71a09fe98e0e33430d",
+    "lib/web/websocket/util.js": "bb4a7bd7f2bf57e45245e41e05cc8d0bdb55feabfd16bbaff7a381863ba5907f",
+    "lib/web/websocket/websocket.js": "afdb5256fc5d0e8873fb4aca42b1787e15aca4ef39966ca255464c571e1edf2a",
+    "package.json": "0e62f63508558cd8bc44dbf61baee562907ff4bbd147bf837ded998c2bf62a28",
+    "scripts/strip-comments.js": "72257817367403f268d17f35d61030ec57698063c14e15b7133ac28850d9c7b5",
+    "types/README.md": "c8cced6ec588c55b07e35733258cb7d6b63e3426ee7490aa9267aab4bda0fb20",
+    "types/agent.d.ts": "7befaf0e76b5671be1d47b77fcc65f2b0aad91cc26529df1904f4a7c46d216e9",
+    "types/api.d.ts": "8aee8b6d4f9f62cf3776cda1305fb18763e2aade7e13cea5bbe699112df85214",
+    "types/balanced-pool.d.ts": "4d327f7d72ad0918275cea3eee49a6a8dc8114ae1d5b7f3f5d0774de75f7439a",
+    "types/cache-interceptor.d.ts": "98498b101803bb3dde9f76a56e65c14b75db1cc8bec5f4db72be541570f74fc5",
+    "types/cache.d.ts": "c46e079fe54c76f95c67fb89081b3e399da2c7d109e7dca8e4b58d83e332e605",
+    "types/client-stats.d.ts": "68834d631c8838c715f225509cfc3927913b9cc7a4870460b5b60c8dbdb99baf",
+    "types/client.d.ts": "bf67c9351f30264c3e720afc837bd7dd6276eeddcf4aa2bf36a9f10de3a1ef2c",
+    "types/connector.d.ts": "14e9acf826baba0ef4b5665704084896e7bcc06f65a9ab13af7e93d27d6b7069",
+    "types/content-type.d.ts": "2e85db9e6fd73cfa3d7f28e0ab6b55417ea18931423bd47b409a96e4a169e8e6",
+    "types/cookies.d.ts": "59af37caec41ecf7b2e76059c9672a49e682c1a2aa6f9d7dc78878f53aa284d6",
+    "types/diagnostics-channel.d.ts": "12950411eeab8563b349cb7959543d92d8d02c289ed893d78499a19becb5a8cc",
+    "types/dispatcher.d.ts": "171b96f31e3fbdb55fe570f2a29a5ee47223fdca95a84ea2142e4cc4feaf9dfe",
+    "types/env-http-proxy-agent.d.ts": "80aae6afc67faa5ac0b32b5b8bc8cc9f7fa299cff15cf09cc2e11fd28c6ae29e",
+    "types/errors.d.ts": "eec76bf6b9346f3f95fa402621b889489e96930e72295b0369022f332e9b4a6a",
+    "types/eventsource.d.ts": "adf27937dba6af9f08a68c5b1d3fce0ca7d4b960c57e6d6c844e7d1a8e53adae",
+    "types/fetch.d.ts": "3ac40516c33b87f751f7507346933081a26cdb8a3e11a6b3aa07d23f803c85db",
+    "types/formdata.d.ts": "4ac80270b6787c2b77a2d98a9714a71f4363c24b5890314f3ba582c94bfbe779",
+    "types/global-dispatcher.d.ts": "ea6bc8de8b59f90a7a3960005fd01988f98fd0784e14bc6922dde2e93305ec7d",
+    "types/global-origin.d.ts": "36107995674b29284a115e21a0618c4c2751b32a8766dd4cb3ba740308b16d59",
+    "types/h2c-client.d.ts": "e85d7f8068f6a26710bff0cc8c0fc5e47f71089c3780fbede05857331d2ddec9",
+    "types/handlers.d.ts": "d243db6b25788f439e7e2f03c05688e92f46764351673bb0e7b2f3631232e186",
+    "types/header.d.ts": "23cd712e2ce083d68afe69224587438e5914b457b8acf87073c22494d706a3d0",
+    "types/index.d.ts": "114f493b30f364255290472111b5a4791d5902c308645670cd0401429cbc6930",
+    "types/interceptors.d.ts": "1d5e86e300d9fdeb1e3e88aa4f24d780f045195fcb2dbc24b68bf49c9f816c5e",
+    "types/mock-agent.d.ts": "9666f2f84b985b62400d2e5ab0adae9ff44de9b2a34803c2c5bd3c8325b17dc0",
+    "types/mock-call-history.d.ts": "0b6e25234b4eec6ed96ab138d96eb70b135690d7dd01f3dd8a8ab291c35a683a",
+    "types/mock-client.d.ts": "40cd35c95e9cf22cfa5bd84e96408b6fcbca55295f4ff822390abb11afbc3dca",
+    "types/mock-errors.d.ts": "40b463c6766ca1b689bfcc46d26b5e295954f32ad43e37ee6953c0a677e4ae2b",
+    "types/mock-interceptor.d.ts": "0a60a292b89ca7218b8616f78e5bbd1c96b87e048849469cccb4355e98af959a",
+    "types/mock-pool.d.ts": "b1616b8959bf557feb16369c6124a97a0e74ed6f49d1df73bb4b9ddf68acf3f3",
+    "types/patch.d.ts": "addf417b9eb3f938fddf8d81e96393a165e4be0d4a8b6402292f9c634b1cb00d",
+    "types/pool-stats.d.ts": "914a0ae30d96d71915fc519ccb4efbf2b62c0ddfb3a3fc6129151076bc01dc60",
+    "types/pool.d.ts": "9c32412007b5662fd34a8eb04292fb5314ec370d7016d1c2fb8aa193c807fe22",
+    "types/proxy-agent.d.ts": "249b9cab7f5d628b71308c7d9bb0a808b50b091e640ba3ed6e2d0516f4a8d91d",
+    "types/readable.d.ts": "156a859e21ef3244d13afeeba4e49760a6afa035c149dda52f0c45ea8903b338",
+    "types/retry-agent.d.ts": "499e5b055a5aba1e1998f7311a6c441a369831c70905cc565ceac93c28083d53",
+    "types/retry-handler.d.ts": "f473cd2288991ff3221165dcf73cd5d24da30391f87e85b3dd4d0450c787a391",
+    "types/round-robin-pool.d.ts": "6ebe8ebb8659aaa9d1acbf3710d7dae3e923e97610238b9511c25dc39023a166",
+    "types/snapshot-agent.d.ts": "5b03a034c72146b61573aab280f295b015b9168470f2df05f6080a2122f9b4df",
+    "types/socks5-proxy-agent.d.ts": "d33ce35e3f9cfcc1d94eca415bdd3bde94d5b153ffdd33e6c4455c029986c630",
+    "types/util.d.ts": "5d0375ca7310efb77e3ef18d068d53784faf62705e0ad04569597ae0e755c401",
+    "types/utility.d.ts": "cdcf9ea426ad970f96ac930cd176d5c69c6c24eebd9fc580e1572d6c6a88f62c",
+    "types/webidl.d.ts": "091907b3f314415dc5827fd7e846e38d2c52b83b8f18f43e86b3c155917368a4",
+    "types/websocket.d.ts": "436d7b4543b340b0f3eef4310d524242e41369b9652aa9c70428767c4dcac455"
+  },
+  "bundled_modules": [
+    {
+      "path": "lib/core/symbols.js",
+      "wrapper": "require_symbols",
+      "sha256": "b8c52994df7fb4562773c56c2e7cb4a4c98b97629eb86aef4f9d5c61e5474d37"
+    },
+    {
+      "path": "lib/util/timers.js",
+      "wrapper": "require_timers",
+      "sha256": "1752dca5e6957c8802dc8618c07a6b75abd785d254914a673dcd185bd90f08fc"
+    },
+    {
+      "path": "lib/core/errors.js",
+      "wrapper": "require_errors",
+      "sha256": "ff22116dfc46241c288f187e94cb05deefda1e97520bfe25dd09330bfc481bf9"
+    },
+    {
+      "path": "lib/core/constants.js",
+      "wrapper": "require_constants",
+      "sha256": "31af9aa2f3f8ed180e814fa682c39f8c19c00c072cd2f08c4be3f6ff2691d99b"
+    },
+    {
+      "path": "lib/core/tree.js",
+      "wrapper": "require_tree",
+      "sha256": "60b2350bfa248fd1765428d828b0d957dc1e00be5aeded65f5850c791770375d"
+    },
+    {
+      "path": "lib/core/util.js",
+      "wrapper": "require_util",
+      "sha256": "ebbb7acfed687c56f22f5d183b66655deb10cee1d7208c965a97bab4b37f0f4b"
+    },
+    {
+      "path": "lib/util/stats.js",
+      "wrapper": "require_stats",
+      "sha256": "ce53e5d1ae62e638e02495261e9c22f2a942f71f892fe4722925231de640ade7"
+    },
+    {
+      "path": "lib/core/diagnostics.js",
+      "wrapper": "require_diagnostics",
+      "sha256": "895d05c36446fa342172b4c09b8147148095f46ffc134b3abde586193ceb0467"
+    },
+    {
+      "path": "lib/core/request.js",
+      "wrapper": "require_request",
+      "sha256": "8ba5cf57d1d4aeb1e00fb37c302c4856b421e7e50cf49cb5baf1736be6124df2"
+    },
+    {
+      "path": "lib/handler/wrap-handler.js",
+      "wrapper": "require_wrap_handler",
+      "sha256": "3576c1fd18f05166c8a8243146f4c45130508a639bc9969a31a4ab0cc2fa3908"
+    },
+    {
+      "path": "lib/dispatcher/dispatcher.js",
+      "wrapper": "require_dispatcher",
+      "sha256": "6cb42a3ed0cb3be254a8d3b41b39d2debe1dc263d01b2e52b6caaa8c86c00400"
+    },
+    {
+      "path": "lib/handler/unwrap-handler.js",
+      "wrapper": "require_unwrap_handler",
+      "sha256": "3d0f1966603b6b508b79ead258d2c5705e3e0e3da3e85b34076a0d7b8d3a3562"
+    },
+    {
+      "path": "lib/dispatcher/dispatcher-base.js",
+      "wrapper": "require_dispatcher_base",
+      "sha256": "7605d195e38c4fde92ad10d5c30f32840f9e36a6e204461be199e02976c7e3bd"
+    },
+    {
+      "path": "lib/core/connect.js",
+      "wrapper": "require_connect",
+      "sha256": "9a9ac2f081808c957be9afe51dc7e6a94e633aa1af9dda25d91400186174c3fd"
+    },
+    {
+      "path": "lib/llhttp/utils.js",
+      "wrapper": "require_utils",
+      "sha256": "6c433aa141f9afb5a59990a9490698a46afb51fd0c08c5714f21b8f5a9e17820"
+    },
+    {
+      "path": "lib/llhttp/constants.js",
+      "wrapper": "require_constants2",
+      "sha256": "0c40d034cf5fed94bf288351d9264d6b1ea54b3d77b8cb3f012f4a5498980767"
+    },
+    {
+      "path": "lib/llhttp/llhttp-wasm.js",
+      "wrapper": "require_llhttp_wasm",
+      "sha256": "6893ad0c48518287f56fd3d214463853e63acb13a872309e0c301104c6d34c82"
+    },
+    {
+      "path": "lib/llhttp/llhttp_simd-wasm.js",
+      "wrapper": "require_llhttp_simd_wasm",
+      "sha256": "2078d5c581ce23a4ddcb1bf4bfb6a1ab9bbb15d699a93249a9aaa035ced3f11e"
+    },
+    {
+      "path": "lib/web/fetch/constants.js",
+      "wrapper": "require_constants3",
+      "sha256": "ccbf343b49c94493f708de106af13578315d2dedcb53c288f832bb1dcb42f820"
+    },
+    {
+      "path": "lib/web/fetch/global.js",
+      "wrapper": "require_global",
+      "sha256": "9331a1e13a2c56b6b794f7e325952ba62126469207e8fba04c71828acd09847d"
+    },
+    {
+      "path": "lib/encoding/index.js",
+      "wrapper": "require_encoding",
+      "sha256": "c7e598d2c49218dbd4fa2d4917ee4f3b66b6283e788c198888a18ba580a12a17"
+    },
+    {
+      "path": "lib/web/infra/index.js",
+      "wrapper": "require_infra",
+      "sha256": "13f83b91efd2260048e812de57f995fda92b29d6f785600f6d095fba3164bc83"
+    },
+    {
+      "path": "lib/web/fetch/data-url.js",
+      "wrapper": "require_data_url",
+      "sha256": "17985012ce929fe1e3aae6871f56e7711ffa5e1e25f4203495fcb902dbe18e55"
+    },
+    {
+      "path": "lib/util/runtime-features.js",
+      "wrapper": "require_runtime_features",
+      "sha256": "3382b57960607d2afab5fa3e0b60df17d34d337df6570f75d10d9059691c7e01"
+    },
+    {
+      "path": "lib/web/webidl/index.js",
+      "wrapper": "require_webidl",
+      "sha256": "d040be3f7b7a3b8ef4388d845d0e60d4c2a6638b82d2f68c15151c7195c954f2"
+    },
+    {
+      "path": "lib/web/fetch/util.js",
+      "wrapper": "require_util2",
+      "sha256": "0947f8d94d74ad38f24d6c481108d5d467f9b1a262f36b3aad98db68958f8bf8"
+    },
+    {
+      "path": "lib/web/fetch/formdata.js",
+      "wrapper": "require_formdata",
+      "sha256": "44b2be9521799e9de1b72741964968f5e50fa36b73eb3f4330cfdee1d49721dd"
+    },
+    {
+      "path": "lib/web/fetch/formdata-parser.js",
+      "wrapper": "require_formdata_parser",
+      "sha256": "382155e560dea278a3326b454d5e59334148aa3bb2fb1eea5c6fc393da4eecb1"
+    },
+    {
+      "path": "lib/util/promise.js",
+      "wrapper": "require_promise",
+      "sha256": "9a8b17642e8aed7d8784641c3b81e5da88e6eaa35acc75dcd8c4bb563095dccc"
+    },
+    {
+      "path": "lib/web/fetch/body.js",
+      "wrapper": "require_body",
+      "sha256": "05179c333e4c03e5ce8c8903a3ab2eb222b7431fe32aa897ffd9f366f9f1dd41"
+    },
+    {
+      "path": "lib/dispatcher/client-h1.js",
+      "wrapper": "require_client_h1",
+      "sha256": "566ecaad0d496ad8fac99cb590504a1c5e568897a7a1fc4e4369ac820ca5b3dc"
+    },
+    {
+      "path": "lib/dispatcher/client-h2.js",
+      "wrapper": "require_client_h2",
+      "sha256": "73134563c725df070cb779c46a686166099a8ef0a853f41f17aa2732fb88ca42"
+    },
+    {
+      "path": "lib/dispatcher/client.js",
+      "wrapper": "require_client",
+      "sha256": "7144f7df9865502f34d7d83afe6e754203b3e13af5b2cfcfbcd9c50a80cae0d4"
+    },
+    {
+      "path": "lib/dispatcher/fixed-queue.js",
+      "wrapper": "require_fixed_queue",
+      "sha256": "bf20c662f17f2a30214941776ef8e3f99996c30dc695e7a6c696532cb3071b57"
+    },
+    {
+      "path": "lib/dispatcher/pool-base.js",
+      "wrapper": "require_pool_base",
+      "sha256": "74bc375e09022f6385ace604646236a17e46d39fb017e4d7ad8ce1139c5fe22f"
+    },
+    {
+      "path": "lib/dispatcher/pool.js",
+      "wrapper": "require_pool",
+      "sha256": "82656c0c765a1c0ff211445327cd31c1ea6ecef6a47a5607509757d3715be370"
+    },
+    {
+      "path": "lib/dispatcher/balanced-pool.js",
+      "wrapper": "require_balanced_pool",
+      "sha256": "e9857ae3ffb00358e57503a35532f64aedf74152218201c419e0f1b6b14f64fa"
+    },
+    {
+      "path": "lib/dispatcher/round-robin-pool.js",
+      "wrapper": "require_round_robin_pool",
+      "sha256": "eb06562f7c458a18fe844c50743b5a8911684404b0e0037d0eded20a0ca26a67"
+    },
+    {
+      "path": "lib/dispatcher/agent.js",
+      "wrapper": "require_agent",
+      "sha256": "e188023d92ec45c2071566cd61e14c8b46ecebff6a3bf9fd8c6d79bf95890090"
+    },
+    {
+      "path": "lib/core/socks5-utils.js",
+      "wrapper": "require_socks5_utils",
+      "sha256": "b086341db6e47b47b559d2b57854b3707754ff1fd95f47845a674b8344c739da"
+    },
+    {
+      "path": "lib/core/socks5-client.js",
+      "wrapper": "require_socks5_client",
+      "sha256": "6893c7da48165092fd3557a09c9312c62d1ccc975c664bb11befb6af100f1fea"
+    },
+    {
+      "path": "lib/dispatcher/socks5-proxy-agent.js",
+      "wrapper": "require_socks5_proxy_agent",
+      "sha256": "fbef776738bddbffdb2241b1ac384a1b632e3a177a0fe52c5e037d58e1fc33e2"
+    },
+    {
+      "path": "lib/dispatcher/proxy-agent.js",
+      "wrapper": "require_proxy_agent",
+      "sha256": "9b2c87759e23a23f4f3fe617a1ec08f5af1d0de701c55bc89fd1eba41d3e0360"
+    },
+    {
+      "path": "lib/dispatcher/env-http-proxy-agent.js",
+      "wrapper": "require_env_http_proxy_agent",
+      "sha256": "56402ad797aaca829e0250b600f68206b64d65d6189cb61c5c380844fcf04f00"
+    },
+    {
+      "path": "lib/handler/retry-handler.js",
+      "wrapper": "require_retry_handler",
+      "sha256": "9665d73338d7c453b6bcb47b1eba7e62825964ce93ea08ad3723fa4f78f0658e"
+    },
+    {
+      "path": "lib/dispatcher/retry-agent.js",
+      "wrapper": "require_retry_agent",
+      "sha256": "c96e162b5d50828b11c318491ed68a3c7619d438e163f75a996d418a41d3581e"
+    },
+    {
+      "path": "lib/dispatcher/h2c-client.js",
+      "wrapper": "require_h2c_client",
+      "sha256": "a8cf7df10ff9f093142efe16c2dd4c2a94d6459246da7e409ad1c314dc2d5e12"
+    },
+    {
+      "path": "lib/api/readable.js",
+      "wrapper": "require_readable",
+      "sha256": "7d6818628629145983fe5a9aff762421d95b223a713115f81fe5ea743c7b7a40"
+    },
+    {
+      "path": "lib/api/api-request.js",
+      "wrapper": "require_api_request",
+      "sha256": "b5332317864de9f12bee772b5b12538e595060ea23d672459502f97014c51b56"
+    },
+    {
+      "path": "lib/api/abort-signal.js",
+      "wrapper": "require_abort_signal",
+      "sha256": "4f3872bd23abafa98ca9aa332c9d779d1015bf1171bcbbf8877c87440798009f"
+    },
+    {
+      "path": "lib/api/api-stream.js",
+      "wrapper": "require_api_stream",
+      "sha256": "681b287ae054204be3de2e5a6c1533000aeb18bfaed9da6264a4904260e7e621"
+    },
+    {
+      "path": "lib/api/api-pipeline.js",
+      "wrapper": "require_api_pipeline",
+      "sha256": "471b2e88853c512874d388a5d9d615cf2b4dd8e55c6affc3cf80950d30ba4a8f"
+    },
+    {
+      "path": "lib/api/api-upgrade.js",
+      "wrapper": "require_api_upgrade",
+      "sha256": "27072b7494fbfdd9f257561cc6994414f9bf9631bf0db8f0358d3c593a559cec"
+    },
+    {
+      "path": "lib/api/api-connect.js",
+      "wrapper": "require_api_connect",
+      "sha256": "699074a08fec8156c372d95c686d77a6362066e7e3a29b293eab8b81cfdb0e99"
+    },
+    {
+      "path": "lib/api/index.js",
+      "wrapper": "require_api",
+      "sha256": "b9d0555f99c394d9a6d8a1608b6a6dd347a1bc33bff7eb4b5683a95207aa1af4"
+    },
+    {
+      "path": "lib/mock/mock-errors.js",
+      "wrapper": "require_mock_errors",
+      "sha256": "5a45eeb32815bf861f01ecf309457028cf8ccddde6b1d23e9befa80d78fce067"
+    },
+    {
+      "path": "lib/mock/mock-symbols.js",
+      "wrapper": "require_mock_symbols",
+      "sha256": "43f4e311ecd8b4e2f785076b43ce1c029b1133360deb9cef33811015bba2f64f"
+    },
+    {
+      "path": "lib/mock/mock-utils.js",
+      "wrapper": "require_mock_utils",
+      "sha256": "7b3a3e3cce6f8f7cb6271ebcf9afea223fc4ac8116b256ed542984f63fd1ede8"
+    },
+    {
+      "path": "lib/mock/mock-interceptor.js",
+      "wrapper": "require_mock_interceptor",
+      "sha256": "f106c4bb067c4e8cc7c5a8b7d9d1430ebba9cbf086cd5f93e494b4c1cf032c5c"
+    },
+    {
+      "path": "lib/mock/mock-client.js",
+      "wrapper": "require_mock_client",
+      "sha256": "153998951e92df15e49f7a14a0a7efd62728fd46734a7136adfd235e78e0e638"
+    },
+    {
+      "path": "lib/mock/mock-call-history.js",
+      "wrapper": "require_mock_call_history",
+      "sha256": "92d7439cc5eb1de30b14aea43b0ded43dd2afc4650653249c59be217f78b5ff8"
+    },
+    {
+      "path": "lib/mock/mock-pool.js",
+      "wrapper": "require_mock_pool",
+      "sha256": "24edd7abd0b60c95aaf6e0b20795380de26efab150414fadebadcef130826dc6"
+    },
+    {
+      "path": "lib/mock/pending-interceptors-formatter.js",
+      "wrapper": "require_pending_interceptors_formatter",
+      "sha256": "570f9af387e3f10affe4eeca9f8a2ad0ac2dbff750b5f7104b5545769e81416e"
+    },
+    {
+      "path": "lib/mock/mock-agent.js",
+      "wrapper": "require_mock_agent",
+      "sha256": "123195679833f5d92e6094af201387b9cee4726aeab2d9e72a426ffcbba02a04"
+    },
+    {
+      "path": "lib/mock/snapshot-utils.js",
+      "wrapper": "require_snapshot_utils",
+      "sha256": "200c0377d6e71f8c9168cb21da0753f860c64c43562957586ee21cc958795132"
+    },
+    {
+      "path": "lib/mock/snapshot-recorder.js",
+      "wrapper": "require_snapshot_recorder",
+      "sha256": "6608ae948040ca750e64607de3f3293880d456a3fc3179713e51714b74029d65"
+    },
+    {
+      "path": "lib/mock/snapshot-agent.js",
+      "wrapper": "require_snapshot_agent",
+      "sha256": "6df12765dd7acf0f28e3cc0c4b150a6345ac97a75ee21dc27095061d1caa34a2"
+    },
+    {
+      "path": "lib/global.js",
+      "wrapper": "require_global2",
+      "sha256": "fffb89aaffccd79856da7407af8009af07ec30c653871af34c33d41a0f3132aa"
+    },
+    {
+      "path": "lib/handler/decorator-handler.js",
+      "wrapper": "require_decorator_handler",
+      "sha256": "7925f880346e740c28e2ee029651e8a45dbf25ff6a4fca9b8a1eb944e25bd168"
+    },
+    {
+      "path": "lib/handler/redirect-handler.js",
+      "wrapper": "require_redirect_handler",
+      "sha256": "5810a7b8be2f3789a06831d4d15ff601ef23077f2f700fa5fc72fb7bf9e51600"
+    },
+    {
+      "path": "lib/interceptor/redirect.js",
+      "wrapper": "require_redirect",
+      "sha256": "8bc46db11bd8e9bbb876ed19f07bef89b8964ea7d0f92b02096f2a8d2dd88da4"
+    },
+    {
+      "path": "lib/interceptor/response-error.js",
+      "wrapper": "require_response_error",
+      "sha256": "a0725278beb786016cec43e3ed9710373b191bfbc5bbe229a5b167af52cb37aa"
+    },
+    {
+      "path": "lib/interceptor/retry.js",
+      "wrapper": "require_retry",
+      "sha256": "e628f0b85b97286e75be298635973562af68b61672d99b3dd1ac357f466e6c25"
+    },
+    {
+      "path": "lib/interceptor/dump.js",
+      "wrapper": "require_dump",
+      "sha256": "12ce16a032d6030b9250e1de1df028f447c753b966c9c2854c25120ca0962b6f"
+    },
+    {
+      "path": "lib/interceptor/dns.js",
+      "wrapper": "require_dns",
+      "sha256": "4431e802cefc8bd4196782f15b76b8cc07a6384431bb1e447fa4e7581f4c12f7"
+    },
+    {
+      "path": "lib/util/cache.js",
+      "wrapper": "require_cache",
+      "sha256": "e7f8cc2c7a62235934dedf9b9b6d1cec97a3933aab294ef71bd591b95c2b24a3"
+    },
+    {
+      "path": "lib/util/date.js",
+      "wrapper": "require_date",
+      "sha256": "524ec67cc7d35e1d804d10db38e88f985b4c96cca0b7ed8a078ac8159ab805b8"
+    },
+    {
+      "path": "lib/handler/cache-handler.js",
+      "wrapper": "require_cache_handler",
+      "sha256": "3f7b6c7493adb3c54966ef5729bf2cda98baf58b23a377ff59ca36627068d4f7"
+    },
+    {
+      "path": "lib/cache/memory-cache-store.js",
+      "wrapper": "require_memory_cache_store",
+      "sha256": "47b2bfb9587426ef86bb67c41abe520b0f00cad1651211a899dd7250b362f7ef"
+    },
+    {
+      "path": "lib/handler/cache-revalidation-handler.js",
+      "wrapper": "require_cache_revalidation_handler",
+      "sha256": "c2d92392770e84f6f8abebf01056a055cc3548783ecdc3811e5d8d2c82520d8f"
+    },
+    {
+      "path": "lib/interceptor/cache.js",
+      "wrapper": "require_cache2",
+      "sha256": "b36bdbdda86c22e78f8e10f932c7cc9fdfdbae11c7485a53201ff2ae505d4671"
+    },
+    {
+      "path": "lib/interceptor/decompress.js",
+      "wrapper": "require_decompress",
+      "sha256": "bc91d64c57b59fa77cc7423cc21eebba846843ca4ffbe6f14f91c7bbae5d5e14"
+    },
+    {
+      "path": "lib/handler/deduplication-handler.js",
+      "wrapper": "require_deduplication_handler",
+      "sha256": "1e038e131ad5fcc157f5f29e750966d8a175b3bb89940853639727ba47b07b43"
+    },
+    {
+      "path": "lib/interceptor/deduplicate.js",
+      "wrapper": "require_deduplicate",
+      "sha256": "bf9b839e61fe173d9a5b0dae3241ef6650838f5bafdb51cf15f888d5485e3150"
+    },
+    {
+      "path": "lib/cache/sqlite-cache-store.js",
+      "wrapper": "require_sqlite_cache_store",
+      "sha256": "37a8670cb79a242536182fc72616347c73ab3909b7e00ccdbc1d143970aacd87"
+    },
+    {
+      "path": "lib/web/fetch/headers.js",
+      "wrapper": "require_headers",
+      "sha256": "bf38e8b8be5807aecc32e3e8e8d829870f2e57ae60a4257762aea1e41c72e162"
+    },
+    {
+      "path": "lib/web/fetch/response.js",
+      "wrapper": "require_response",
+      "sha256": "c8203f1e358dfde7a430350b57c7539316bc4b7e7509c416e4c4df0fe1c7ada2"
+    },
+    {
+      "path": "lib/web/fetch/request.js",
+      "wrapper": "require_request2",
+      "sha256": "85a3f14a53dcfbc262d68a60788220a69bb4767f4c2b65ffc2895e7ab491be2e"
+    },
+    {
+      "path": "lib/web/subresource-integrity/subresource-integrity.js",
+      "wrapper": "require_subresource_integrity",
+      "sha256": "0c6fbe6fce5df49be3d353d0a78ca8a018c96ba2c6a4a2822d10177473fcc4f5"
+    },
+    {
+      "path": "lib/web/fetch/index.js",
+      "wrapper": "require_fetch",
+      "sha256": "dc302abadc7bdb14b275f1eb19a0a4d148a0d251ff06b9cf976927e065bf812a"
+    },
+    {
+      "path": "lib/web/cache/util.js",
+      "wrapper": "require_util3",
+      "sha256": "b718f8411b7119da0eb8a83ead36217eabfd08011df8dbe770122aaf2635593f"
+    },
+    {
+      "path": "lib/web/cache/cache.js",
+      "wrapper": "require_cache3",
+      "sha256": "6b844de9fd7b62883ba8aa5b2a15c4118ef7d2a95cd1ab17c31571a5c6ae1512"
+    },
+    {
+      "path": "lib/web/cache/cachestorage.js",
+      "wrapper": "require_cachestorage",
+      "sha256": "fa07f50aa0fe2d31f8ccebaa51b03add603b0471583449d45507c0b94e8e62f5"
+    },
+    {
+      "path": "lib/web/cookies/constants.js",
+      "wrapper": "require_constants4",
+      "sha256": "c0cf297146b6656b2f00ae9bb1c52284cc2dbc19ca7dc409d14b33e4c7e903c7"
+    },
+    {
+      "path": "lib/web/cookies/util.js",
+      "wrapper": "require_util4",
+      "sha256": "dd1df697b81ca148445e293978c6671c612f19e2a2efb339f346bfb3dd0e5e90"
+    },
+    {
+      "path": "lib/web/cookies/parse.js",
+      "wrapper": "require_parse",
+      "sha256": "be03ebad34f27fc97a97180ff2354b56273eb900283dde041a6f0a8409ef4037"
+    },
+    {
+      "path": "lib/web/cookies/index.js",
+      "wrapper": "require_cookies",
+      "sha256": "8ebcccd5ed6283a1d8a72f00f384bf6dc36eff4402f312d2af73bd7e6a461bfc"
+    },
+    {
+      "path": "lib/web/websocket/events.js",
+      "wrapper": "require_events",
+      "sha256": "8471f6d5d6eb1dc82062dd9237832008f3f1ce6da1993cac915e9d8fe0b61e50"
+    },
+    {
+      "path": "lib/web/websocket/constants.js",
+      "wrapper": "require_constants5",
+      "sha256": "431ae488ed6b6418184d2183c3c36b77057fdacd123880d7cf17a81b1e891192"
+    },
+    {
+      "path": "lib/web/websocket/util.js",
+      "wrapper": "require_util5",
+      "sha256": "7a4e3fe4f0cc588636ed194928ce4520ea714a4f48354dba8a8b9f133fac8f4b"
+    },
+    {
+      "path": "lib/web/websocket/frame.js",
+      "wrapper": "require_frame",
+      "sha256": "66dd839996f1cf204221267d140f298c958e37746b7459e764d25d045d3de500"
+    },
+    {
+      "path": "lib/web/websocket/connection.js",
+      "wrapper": "require_connection",
+      "sha256": "03d589ae0a4c95e32ea4504218abbd5748984248adbffc8869ade5c304ff16da"
+    },
+    {
+      "path": "lib/web/websocket/permessage-deflate.js",
+      "wrapper": "require_permessage_deflate",
+      "sha256": "33e98d443f1f8b19d6b5251f73c560dc639671a802b8346194a91ee52d04c448"
+    },
+    {
+      "path": "lib/web/websocket/receiver.js",
+      "wrapper": "require_receiver",
+      "sha256": "5a26a70a39b89a4b1903dc48f647028ace9a326c90a897602876e6b50ec927f6"
+    },
+    {
+      "path": "lib/web/websocket/sender.js",
+      "wrapper": "require_sender",
+      "sha256": "cf688d7e3f5f0e8fe3b3d02a21d024d21fa249b2e5a1604b54eda99f93e5a6b8"
+    },
+    {
+      "path": "lib/web/websocket/websocket.js",
+      "wrapper": "require_websocket",
+      "sha256": "c6866daec111dd9e9af3cdb441018c9d63bd4e8f5c92e00b26506636bb568af8"
+    },
+    {
+      "path": "lib/web/websocket/stream/websocketerror.js",
+      "wrapper": "require_websocketerror",
+      "sha256": "97595b2f2a5d25960688ce9f2e415f2dade2c190ad480c5c2922a755decfeced"
+    },
+    {
+      "path": "lib/web/websocket/stream/websocketstream.js",
+      "wrapper": "require_websocketstream",
+      "sha256": "170a3afc35c36ef83e47f5ad1e3d8213173ad1057486fc2d17feae30389bac8e"
+    },
+    {
+      "path": "lib/web/eventsource/util.js",
+      "wrapper": "require_util6",
+      "sha256": "c7f6ff0759fef121c4c312216fde7b2ffd60f04a1d16b0c9add6cca365f18092"
+    },
+    {
+      "path": "lib/web/eventsource/eventsource-stream.js",
+      "wrapper": "require_eventsource_stream",
+      "sha256": "dcf594ef1d8de58f331495504fd33f444664e0e02505f5f46eccc1193f8c0bb5"
+    },
+    {
+      "path": "lib/web/eventsource/eventsource.js",
+      "wrapper": "require_eventsource",
+      "sha256": "f236b8b25927290348109cb5a4808aa39f1b70fbd590452b7128550645cc1702"
+    },
+    {
+      "path": "index.js",
+      "wrapper": "require_undici",
+      "sha256": "5c601738f85c39495993e7da68d847c17097dc0da37e7d980245263efa6cb116"
+    }
+  ],
+  "guard_files": {
+    "ops/size-release/patch-wrangler.mjs": "4fa5aeb962ef8ef6c77caf5f04edc777f47ea7dbcb9dc11409b9da9885352f2b",
+    "ops/size-release/create-gate.cjs": "5f2c239b09c0dfd9e63f70907e3ba313e85f723ee4828d0d3c6573c469952d99",
+    "ops/size-toolchain/runtime.cjs": "5cc91c6c7369e72edb52216843aab9d429a07061515945d7911bd54a31349a27"
+  },
+  "node_version": "24.22.1",
+  "builtin_undici_version": "7.30.1",
+  "node_linux_x64_archive_sha256": "6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6"
+}

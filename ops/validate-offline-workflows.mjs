@@ -7,7 +7,9 @@ import {readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync} from 'nod
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 
-assert.equal(process.versions.node, '24.19.0', 'Unreviewed Node runtime');
+// Syntax-only legacy validation remains reproducible. The new execution guard
+// and remediation CI independently require exactly 24.22.1 / Undici 7.30.1.
+assert(['24.19.0', '24.22.1'].includes(process.versions.node), 'Unreviewed syntax-validation runtime');
 assert(process.env.CLASSYLINE_VALIDATION_TOOLS, 'Missing isolated validation dependencies');
 const require = createRequire(join(resolve(process.env.CLASSYLINE_VALIDATION_TOOLS), 'package.json'));
 assert.equal(require('yaml/package.json').version, '2.8.2');

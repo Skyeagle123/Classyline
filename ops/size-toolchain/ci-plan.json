@@ -1,0 +1,46 @@
+{
+  "application": {
+    "files": [
+      "tests/api.test.js",
+      "tests/cart-errors.test.js",
+      "tests/cart.test.js",
+      "tests/catalog-ui.test.js",
+      "tests/contact-links.test.js",
+      "tests/excel-import.test.js",
+      "tests/image-upload-ui.test.js",
+      "tests/preview-product.test.js",
+      "tests/product-images.test.js",
+      "tests/protocol.test.js",
+      "tests/remediation.test.js",
+      "tests/rollback.test.js",
+      "tests/size-ordering.test.js",
+      "tests/storefront-v2.test.js",
+      "tests/v21-compatibility.test.js"
+    ],
+    "count": 206
+  },
+  "size": {
+    "files": [
+      "tests/size-ordering.test.js"
+    ],
+    "count": 33
+  },
+  "security": {
+    "files": [
+      "ops/production-workflow.test.mjs",
+      "ops/recovery-workflow.test.mjs",
+      "ops/size-release-recovery/failed-release.test.mjs",
+      "ops/size-release/guard.test.mjs",
+      "ops/size-release/history.test.mjs",
+      "ops/size-release/retry.test.mjs",
+      "ops/size-release/toolchain.test.mjs",
+      "ops/size-release/workflow.test.mjs",
+      "ops/size-toolchain/ci.test.mjs",
+      "ops/size-toolchain/runtime.test.mjs",
+      "ops/size-toolchain/toolchain.test.mjs",
+      "ops/v21-production-workflow.test.mjs",
+      "ops/wrangler-process.test.mjs"
+    ],
+    "count": 1092
+  }
+}
