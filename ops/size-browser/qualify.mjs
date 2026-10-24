@@ -8,6 +8,7 @@ import {chromium} from 'playwright';
 import {SOURCE_SHA, SOURCE_TREE, COLORS, NUMBER, SIZE_CASES} from './fixtures.mjs';
 import {digest, staticServer, sandbox} from './isolation.mjs';
 import {assertSizeOrder,assertFixtureCart} from './size-readiness.mjs';
+import {verifyEvidence} from './result.mjs';
 
 export async function qualify(application, output) {
   for (const key of ['CLOUDFLARE_API_TOKEN','CLOUDFLARE_API_KEY','CLOUDFLARE_EMAIL','CLOUDFLARE_ACCOUNT_ID','D1_DATABASE_ID','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY'])
@@ -223,6 +224,10 @@ export async function qualify(application, output) {
     await writeFile(join(output,'network.json'),JSON.stringify({traffic,serverTraffic},null,2));
     await writeFile(join(output,'summary.json'),JSON.stringify(summary,null,2));
     console.log(JSON.stringify(summary,null,2));
+    if(summary.completed) {
+      const receipt=await verifyEvidence(output);
+      console.log('CLASSYLINE_BROWSER_RECEIPT='+JSON.stringify(receipt));
+    }
   }
 }
 if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {

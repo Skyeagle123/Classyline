@@ -1,0 +1,688 @@
+name: Protected ClassyLine size ordering recovery
+run-name: Size ordering recovery 7d978f3 by @${{ github.actor }}
+
+# Release execution requires separate Owner approval and an explicitly armed window.
+# One create transport dispatch maximum. Exclusive durable journal precedes HTTP.
+# Lost response/timeout/UNKNOWN_ERROR/cancellation consume the attempt; never replay.
+# Installation is NOT deployment authorization. See docs/production-deployment.md.
+# Before installation, separately disable automatic Production builds, drain
+# pending builds and verify the baseline. Configure the environment:
+# owner-only required reviewer, main-only deployment branch, no admin bypass,
+# CLOUDFLARE_API_TOKEN as an ENVIRONMENT secret (never a repository secret).
+# Offline candidate only: installation and release require separate reviews and authorizations.
+# This distinct recovery workflow preserves all five consumed dispatches and permits only run 1 / attempt 1.
+# Keep environment variable CLASSYLINE_RELEASE_ARMED absent/false until the
+# Owner approves the exact installed workflow and release window.
+# Freeze main pushes/merges and all other deployment operators for the run.
+# Concurrency below cannot lock Cloudflare Git builds or other repositories.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: classyline2-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'Skyeagle123/Classyline' &&
+      github.repository_id == '1096008352' &&
+      github.repository_owner_id == '125151458' &&
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'Skyeagle123' &&
+      github.actor_id == '125151458' &&
+      github.triggering_actor == 'Skyeagle123' &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: classyline-production
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      REVIEWED_CONTROLLER_SHA: ${{ vars.CLASSYLINE_RECOVERY_CONTROLLER_SHA }}
+      REVIEWED_CONTROLLER_TREE: ${{ vars.CLASSYLINE_RECOVERY_CONTROLLER_TREE }}
+      BROWSER_RUN_ID: ${{ vars.CLASSYLINE_RECOVERY_BROWSER_RUN_ID }}
+      BROWSER_HARNESS_SHA: ${{ vars.CLASSYLINE_RECOVERY_BROWSER_HARNESS_SHA }}
+      BROWSER_HARNESS_TREE: ${{ vars.CLASSYLINE_RECOVERY_BROWSER_HARNESS_TREE }}
+      BROWSER_ARTIFACT_ID: ${{ vars.CLASSYLINE_RECOVERY_BROWSER_ARTIFACT_ID }}
+      BROWSER_ARTIFACT_DIGEST: ${{ vars.CLASSYLINE_RECOVERY_BROWSER_ARTIFACT_DIGEST }}
+      INSTALL_SKIPPED_ID: ${{ vars.CLASSYLINE_RECOVERY_INSTALL_SKIPPED_ID }}
+      SKIPS_MANIFEST: ${{ vars.CLASSYLINE_RECOVERY_SKIPS_MANIFEST }}
+      SKIPS_SHA256: ${{ vars.CLASSYLINE_RECOVERY_SKIPS_SHA256 }}
+      CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+
+    steps:
+      - name: Require separately armed release window
+        env:
+          RELEASE_ARMED: ${{ vars.CLASSYLINE_RELEASE_ARMED }}
+        run: |
+          test "$RELEASE_ARMED" = true
+
+      - name: Check out reviewed release controller
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: Skyeagle123/Classyline
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+
+      - name: Check out approved application only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, reviewed official commit
+        with:
+          repository: Skyeagle123/Classyline
+          ref: 7d978f3ab539efb89a4cd5a2c44abe87775c4451
+          path: app
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+
+      - name: Verify reviewed controller checkout
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C control status --porcelain=v1 --untracked-files=all)"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.22.1'
+
+      - name: Verify approved CI and dispatch identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ARMED: ${{ vars.CLASSYLINE_RELEASE_ARMED }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const e = process.env;
+          const {default:runtime}=await import(new URL('file://' + e.GITHUB_WORKSPACE + '/control/ops/size-toolchain/runtime.cjs'));
+          runtime.requireRuntime();
+          assert.equal(e.GITHUB_REPOSITORY, 'Skyeagle123/Classyline');
+          assert.equal(e.GITHUB_REPOSITORY_ID, '1096008352');
+          assert.equal(e.GITHUB_REPOSITORY_OWNER_ID, '125151458');
+          assert.equal(e.GITHUB_REF, 'refs/heads/main');
+          assert.equal(e.GITHUB_EVENT_NAME, 'workflow_dispatch');
+          assert.equal(e.GITHUB_ACTOR, 'Skyeagle123');
+          assert.equal(e.GITHUB_ACTOR_ID, '125151458');
+          assert.equal(e.GITHUB_TRIGGERING_ACTOR, 'Skyeagle123');
+          assert.equal(e.GITHUB_RUN_ATTEMPT, '1');
+          const base = 'https://api.github.com/repos/Skyeagle123/Classyline';
+          async function get(path) {
+            const r = await fetch(base + path, {redirect: 'error',
+              headers: {Authorization: `Bearer ${e.GH_TOKEN}`, Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28'}, signal: AbortSignal.timeout(20000)});
+            if (!r.ok) throw new Error(`GitHub read failed: HTTP ${r.status}`);
+            return r.json();
+          }
+          async function readJobLog(id) {
+            assert(Number.isSafeInteger(id)&&id>0);
+            const url=`https://api.github.com/repos/Skyeagle123/Classyline/actions/jobs/${id}/logs`;
+            const response=await fetch(url,{redirect:'manual',headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`},signal:AbortSignal.timeout(20000)});
+            let r=response;
+            if(response.status===302){
+              const location=new URL(response.headers.get('location'));
+              assert.equal(location.protocol,'https:');assert(!location.username&&!location.password);
+              assert(location.hostname.endsWith('.blob.core.windows.net')||location.hostname.endsWith('.actions.githubusercontent.com'),'Unapproved log host');
+              r=await fetch(location,{redirect:'error',signal:AbortSignal.timeout(20000)});
+            }
+            assert.equal(r.status,200,'Historical job log unavailable');
+            const text=await r.text();assert(Buffer.byteLength(text)<=1048576);return text;
+          }
+          const {verifySizeRelease:verifyV21}=await import(new URL('file://' + process.env.GITHUB_WORKSPACE + '/control/ops/size-release-recovery/github-guard.mjs'));
+          await verifyV21(get, readJobLog);
+          console.log('Approved candidate CI and Owner dispatch verified.');
+          NODE
+
+      - name: Verify source and locked tooling
+        working-directory: app
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 7d978f3ab539efb89a4cd5a2c44abe87775c4451
+          test "$(git rev-parse 'HEAD^{tree}')" = 75ca0d92b7cc9dec2dd2cb669c08be84c5c2c4c8
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+          test -f package-lock.json
+          for config in wrangler.toml wrangler.json wrangler.jsonc .env .env.local .dev.vars .npmrc; do
+            test ! -e "$config"
+          done
+          npm ci --ignore-scripts
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          assert.equal(process.versions.node, '24.22.1');
+          const p = JSON.parse(readFileSync('package.json'));
+          const w = JSON.parse(readFileSync('node_modules/wrangler/package.json'));
+          assert.equal(p.devDependencies.wrangler, '4.150.0');
+          assert.equal(w.version, '4.150.0');
+          NODE
+
+      - name: Validate and build complete application
+        working-directory: app
+        run: |
+          set -euo pipefail
+          npm test
+          npm run security:check
+          npm audit --audit-level=high
+          npm run build
+          npm run build:functions
+
+      - name: Prepare and verify pinned deployment transport
+        working-directory: app
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/classyline-evidence"
+          node ops/size-toolchain/prepare.mjs > "$RUNNER_TEMP/classyline-evidence/transport.json"
+          node -e "const r=require('./ops/size-toolchain/runtime.cjs');r.verifyExecution(require('node:path').resolve('node_modules/wrangler/wrangler-dist/cli.js'))"
+
+      - name: Record source and artifact provenance
+        working-directory: app
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {execFileSync} from 'node:child_process';
+          import {createHash} from 'node:crypto';
+          import {lstatSync, readdirSync, readFileSync, mkdirSync, writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          const evidence = join(process.env.RUNNER_TEMP, 'classyline-evidence');
+          mkdirSync(evidence, {recursive: true});
+          assert.equal(execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'],
+            {encoding: 'utf8'}), '');
+          const files = [];
+          function collect(root, label) {
+            for (const name of readdirSync(root).sort()) {
+              const path = join(root, name), stat = lstatSync(path);
+              assert(!stat.isSymbolicLink(), 'Symlink in build output');
+              if (stat.isDirectory()) collect(path, `${label}/${name}`);
+              else {
+                assert(stat.isFile(), 'Unexpected build output type');
+                files.push({path: `${label}/${name}`, bytes: stat.size,
+                  sha256: createHash('sha256').update(readFileSync(path)).digest('hex')});
+              }
+            }
+          }
+          collect('dist', 'dist');
+          collect('/tmp/classyline-functions-build', 'functions-build-check');
+          const routes = JSON.parse(readFileSync('dist/_routes.json'));
+          assert(routes.include.includes('/api/*'), 'Missing Functions routing');
+          assert(lstatSync('functions/api/[[path]].js').isFile());
+          assert(files.some(f => f.path.startsWith('functions-build-check/')), 'Missing Functions build');
+          const tracked = execFileSync('git', ['ls-files', '-z'], {encoding: 'utf8'}).split('\0').filter(Boolean);
+          for (const path of tracked) files.push({path: `source/${path}`,
+            sha256: createHash('sha256').update(readFileSync(path)).digest('hex')});
+          const control = join(process.env.GITHUB_WORKSPACE, 'control');
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {cwd: control, encoding: 'utf8'}).trim(), process.env.GITHUB_SHA);
+          const controlFiles = execFileSync('git', ['ls-files', '-z'], {cwd: control, encoding: 'utf8'}).split('\0').filter(Boolean);
+          for (const path of controlFiles) files.push({path: `control-source/${path}`,
+            sha256: createHash('sha256').update(readFileSync(join(control, path))).digest('hex')});
+          const provenance = {
+            accepted_business_sha: '00b25b282d66818632a2d214e7a52ffbd0f8a1cb',
+            accepted_business_tree: '823de98f6faa7fcb65ea980f771f1c7318561694',
+            application_sha: '7d978f3ab539efb89a4cd5a2c44abe87775c4451',
+            application_tree: '75ca0d92b7cc9dec2dd2cb669c08be84c5c2c4c8',
+            accepted_squash_main: '7d978f3ab539efb89a4cd5a2c44abe87775c4451',
+            ci_tested_checkout: '2931996591ffe9979953fe5d54411d3a8560a04f',
+            workflow_sha: process.env.GITHUB_SHA, run_id: process.env.GITHUB_RUN_ID,
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT, node: process.version,
+            wrangler: '4.150.0', approved_ci: 40088725220, files
+          };
+          writeFileSync(join(evidence, 'provenance.json'), JSON.stringify(provenance, null, 2));
+          console.log(`Recorded ${files.length} source and build hashes. No credentials included.`);
+          NODE
+
+      - name: Preflight, one Wrangler deployment invocation, and read-only verification
+        working-directory: app
+        timeout-minutes: 8
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RELEASE_ARMED: ${{ vars.CLASSYLINE_RELEASE_ARMED }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {execFileSync, spawn} from 'node:child_process';
+          import {existsSync, lstatSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          const e = process.env;
+          const candidate = '7d978f3ab539efb89a4cd5a2c44abe87775c4451';
+          const baseline = '9974ad77-a81d-40dc-8281-789d0d0c1284';
+          const baselineSHA = '0ce95a706a88c63a914c25b142d4fc6878de66d8';
+          const projectID = '25d5c0d3-f248-4d69-b5a3-feacfcb66dec';
+          const root = '/accounts/4bfa1a9c849c3da50520f7a4bcccccab/pages/projects/classyline2';
+          const evidence = join(e.RUNNER_TEMP, 'classyline-evidence');
+          function save(name, data) {
+            writeFileSync(join(evidence, name), JSON.stringify(data, null, 2));
+          }
+          function check(ok, message) { if (!ok) throw new Error(message); }
+          // Source-review gate; the independent runtime release arm must also pass.
+          const RELEASE_IMPLEMENTATION_REVIEWED = false;
+          check(RELEASE_IMPLEMENTATION_REVIEWED, 'BLOCKED: Wrangler release implementation awaits independent review');
+          check(e.RELEASE_ARMED === 'true', 'Release window is not armed');
+          check(Boolean(e.CLOUDFLARE_API_TOKEN), 'Missing protected environment token; stop');
+          assert.equal(e.CLOUDFLARE_ACCOUNT_ID, '4bfa1a9c849c3da50520f7a4bcccccab');
+          // Read-only calls have bounded timeouts and no automatic retry. Never log bodies.
+          async function cf(path) {
+            const r = await fetch('https://api.cloudflare.com/client/v4' + path, {
+              redirect: 'error', headers: {Authorization: `Bearer ${e.CLOUDFLARE_API_TOKEN}`},
+              signal: AbortSignal.timeout(20000)});
+            if (!r.ok) throw new Error(`Cloudflare read failed: HTTP ${r.status}`);
+            const body = await r.json();
+            check(body.success === true, 'Cloudflare read failed');
+            return body;
+          }
+          async function recoveryGet(path) {
+            const r = await fetch('https://api.github.com/repos/Skyeagle123/Classyline' + path, {
+              redirect: 'error', headers: {Authorization: `Bearer ${e.GH_TOKEN}`,
+                Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'},
+              signal: AbortSignal.timeout(20000)});
+            check(r.ok, `GitHub recovery read failed: HTTP ${r.status}`);
+            return r.json();
+          }
+          async function readJobLog(id) {
+            assert(Number.isSafeInteger(id)&&id>0);
+            const url=`https://api.github.com/repos/Skyeagle123/Classyline/actions/jobs/${id}/logs`;
+            const response=await fetch(url,{redirect:'manual',headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`},signal:AbortSignal.timeout(20000)});
+            let r=response;
+            if(response.status===302){
+              const location=new URL(response.headers.get('location'));
+              assert.equal(location.protocol,'https:');assert(!location.username&&!location.password);
+              assert(location.hostname.endsWith('.blob.core.windows.net')||location.hostname.endsWith('.actions.githubusercontent.com'),'Unapproved log host');
+              r=await fetch(location,{redirect:'error',signal:AbortSignal.timeout(20000)});
+            }
+            assert.equal(r.status,200,'Historical job log unavailable');
+            const text=await r.text();assert(Buffer.byteLength(text)<=1048576);return text;
+          }
+          const {verifySizeRelease:verifyV21}=await import(new URL('file://' + process.env.GITHUB_WORKSPACE + '/control/ops/size-release-recovery/github-guard.mjs'));
+          async function mainUnchanged() {
+            const r = await fetch('https://api.github.com/repos/Skyeagle123/Classyline/git/ref/heads/main', {
+              redirect: 'error', headers: {Authorization: `Bearer ${e.GH_TOKEN}`,
+                Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'},
+              signal: AbortSignal.timeout(20000)});
+            check(r.ok, 'Cannot verify main release freeze');
+            const ref = await r.json();
+            check(ref.object?.sha === e.GITHUB_SHA, 'main changed after dispatch; stop');
+          }
+          function config(c, database, bucket) {
+            check(c?.compatibility_date === '2025-11-13', 'Unexpected compatibility date');
+            check(Array.isArray(c.compatibility_flags) && c.compatibility_flags.length === 0,
+              'Unexpected compatibility flags');
+            check(c.usage_model === 'standard', 'Unexpected runtime usage model');
+            check(!c.placement?.mode || c.placement.mode === 'off', 'Unexpected placement');
+            check(Object.keys(c.d1_databases ?? {}).length === 1 && c.d1_databases.DB?.id === database,
+              'Unexpected D1 binding');
+            check(Object.keys(c.r2_buckets ?? {}).length === 1 && c.r2_buckets.PRODUCT_IMAGES?.name === bucket,
+              'Unexpected R2 binding');
+            for (const key of ['ADMIN_PASSWORD_HASH', 'ADMIN_PASSWORD_SALT'])
+              check(c.env_vars?.[key]?.type === 'secret_text', 'Missing encrypted Admin secret');
+            if (database === '10c800b1-ddf7-427b-8354-9cf8529782b6')
+              check(c.env_vars?.WHATSAPP_NUMBER?.type === 'plain_text' &&
+                c.env_vars.WHATSAPP_NUMBER.value === '96178719771', 'Unexpected WhatsApp Production binding');
+            return {d1_id: database, r2_bucket: bucket, compatibility_date: c.compatibility_date,
+              compatibility_flags: c.compatibility_flags, usage_model: c.usage_model,
+              placement: c.placement?.mode ?? 'default', encrypted_admin_secrets_present: true,
+              ...(database === '10c800b1-ddf7-427b-8354-9cf8529782b6' ? {whatsapp_number_matches: true} : {})};
+          }
+          function project(p) {
+            check(p.id === projectID && p.name === 'classyline2' && p.production_branch === 'main',
+              'Wrong Cloudflare project or Production branch');
+            check(p.source?.type === 'github' && p.source.config?.owner === 'Skyeagle123' &&
+              p.source.config.repo_name === 'Classyline' &&
+              p.source.config.production_deployments_enabled === false,
+              'Automatic Production builds must be disabled and independently verified before installation');
+            check(p.source.config.preview_deployment_setting==='custom' && !p.source.config.preview_branch_includes?.includes('phase/storefront-size-release-recovery'), 'Recovery branch must be excluded from Preview');
+            return {
+              production: config(p.deployment_configs?.production,
+                '10c800b1-ddf7-427b-8354-9cf8529782b6', 'classyline-storefront-production-images'),
+              preview: config(p.deployment_configs?.preview,
+                'ce1d28f3-f20b-485d-9799-619a7fc52ade', 'classyline-storefront-preview-images')
+            };
+          }
+          function identity(d, id, sha) {
+            const m = d?.deployment_trigger?.metadata;
+            check(d?.id === id && d.project_id === projectID && d.project_name === 'classyline2' &&
+              d.environment === 'production' && d.uses_functions === true && m?.branch === 'main' && m.commit_hash === sha &&
+              d.is_skipped !== true && d.latest_stage?.name === 'deploy' &&
+              d.latest_stage.status === 'success', 'Deployment identity/status mismatch');
+          }
+          function deploymentBindings(d, requireWhatsApp = true) {
+            function exactBinding(map, name, field, expected) {
+              check(map !== null && typeof map === 'object' && !Array.isArray(map) &&
+                Object.keys(map).length === 1 && Object.hasOwn(map, name),
+                'Missing, additional or unverifiable deployed binding');
+              const binding = map[name];
+              check(binding !== null && typeof binding === 'object' && !Array.isArray(binding) &&
+                Object.hasOwn(binding, field) && binding[field] === expected,
+                'Deployed binding identity mismatch');
+            }
+            exactBinding(d.d1_databases, 'DB', 'id', '10c800b1-ddf7-427b-8354-9cf8529782b6');
+            exactBinding(d.r2_buckets, 'PRODUCT_IMAGES', 'name', 'classyline-storefront-production-images');
+            check(!requireWhatsApp || (d.env_vars?.WHATSAPP_NUMBER?.type === 'plain_text' &&
+              d.env_vars.WHATSAPP_NUMBER.value === '96178719771'), 'Missing or wrong deployed WhatsApp binding');
+            for(const key of ['ADMIN_PASSWORD_HASH','ADMIN_PASSWORD_SALT'])
+              check(d.env_vars?.[key]?.type==='secret_text','Missing deployed Admin secret');
+            // Use only this deployment's own binding snapshot, never project defaults.
+            return {DB: {id: d.d1_databases.DB.id},
+              PRODUCT_IMAGES: {name: d.r2_buckets.PRODUCT_IMAGES.name},
+              ...(requireWhatsApp ? {whatsapp_number_matches: true} : {})};
+          }
+          function rollbackIdentity(d) {
+            identity(d, baseline, baselineSHA);
+            deploymentBindings(d, true);
+            check(d.compatibility_date === '2025-11-13' && Array.isArray(d.compatibility_flags) &&
+              d.compatibility_flags.length === 0, 'Rollback runtime mismatch');
+          }
+          async function history(environment = 'production') {
+            const all = [], seen = new Set();
+            let totalCount, totalPages;
+            // Require the five fields observed on the Pages API, at its supported
+            // page size. A short page alone is never evidence of completeness.
+            for (let page = 1; page <= 10; page++) {
+              const b = await cf(root + `/deployments?env=${environment}&per_page=10&page=${page}`);
+              check(Array.isArray(b.result), 'Missing deployment history');
+              const info = b.result_info;
+              check(info !== null && typeof info === 'object' && !Array.isArray(info) &&
+                ['page', 'per_page', 'count', 'total_count', 'total_pages'].every(key =>
+                  Object.hasOwn(info, key) && Number.isSafeInteger(info[key])),
+                'Missing or invalid deployment pagination metadata');
+              check(info.page === page && info.per_page === 10, 'Deployment pagination page mismatch');
+              check(info.total_pages >= 1 && info.total_pages <= 10 &&
+                info.total_count >= 1 && info.total_count <= 100,
+                'Deployment history exceeds verification bound or has invalid totals');
+              check(info.total_pages === Math.ceil(info.total_count / 10) && page <= info.total_pages,
+                'Contradictory deployment pagination totals');
+              if (page === 1) { totalCount = info.total_count; totalPages = info.total_pages; }
+              check(info.total_count === totalCount && info.total_pages === totalPages,
+                'Deployment pagination totals changed during traversal');
+              const expectedCount = Math.min(10, totalCount - (page - 1) * 10);
+              check(info.count === b.result.length && info.count === expectedCount,
+                'Incomplete or contradictory deployment page');
+              for (const d of b.result) {
+                check(d?.environment === environment, 'Unexpected history environment');
+                check(typeof d.id === 'string' && /^[a-f0-9-]{36}$/.test(d.id) && !seen.has(d.id),
+                  'Missing or duplicate deployment pagination ID');
+                seen.add(d.id);
+              }
+              all.push(...b.result);
+              if (page === totalPages) {
+                check(all.length === totalCount && seen.size === totalCount,
+                  'Incomplete deployment history inventory');
+                // Every complete snapshot, including discovery after an uncertain CLI result.
+                if(environment==='production') pinnedSkippedHistory(all);
+                return all;
+              }
+            }
+            throw new Error('Deployment history exceeds verification bound');
+          }
+          function noActive(list) {
+            for (const d of list) {
+              const s = d.latest_stage;
+              check(d.is_skipped === true || ['failure', 'canceled', 'cancelled'].includes(s?.status) ||
+                (s?.name === 'deploy' && s.status === 'success'), 'Competing/unknown Production deployment');
+            }
+          }
+          const {recoveryHistoryVerifier}=await import(new URL('file://' + e.GITHUB_WORKSPACE + '/control/ops/size-release-recovery/history.mjs'));
+          const historyVerifier=recoveryHistoryVerifier(e);
+          const previewVerifier={verify:list=>historyVerifier.verify(list,'preview')};
+          function pinnedSkippedHistory(list) {historyVerifier.verifyKnown(list,'production');}
+          function candidateHistory(list, acceptedID = null) {
+            pinnedSkippedHistory(list);
+            for(const d of list) {
+              if(d.id===acceptedID||d.is_skipped===true)continue;
+              check(![candidate,'335c31f8a629593e462f144296b5c4a29653206f'].includes(d.deployment_trigger?.metadata?.commit_hash),'Candidate already attempted; no retry');
+            }
+          }
+          function historyIDs(list) {
+            const ids = list.map(d => d.id);
+            check(ids.every(id => typeof id === 'string' && /^[a-f0-9-]{36}$/.test(id)) &&
+              new Set(ids).size === ids.length, 'Unverifiable deployment history IDs');
+            return new Set(ids);
+          }
+          await mainUnchanged();
+          const p = (await cf(root)).result;
+          const bindings = project(p);
+          identity(p.canonical_deployment, baseline, baselineSHA);
+          rollbackIdentity((await cf(root + '/deployments/' + baseline)).result);
+          const before = await history();
+          historyVerifier.verify(before,'production');
+          const previewBefore=await history('preview');noActive(previewBefore);
+          const previewEvidence=previewVerifier.verify(previewBefore);
+          noActive(before);
+          const initialIDs = historyIDs(before);
+          candidateHistory(before);
+          // Rehash source/build/controller inputs again immediately before the CLI.
+          const {createHash} = await import('node:crypto');
+          const provenance = JSON.parse(readFileSync(join(evidence, 'provenance.json')));
+          function verifyInputs() {
+            assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(), candidate);
+            assert.equal(execFileSync('git', ['rev-parse', 'HEAD^{tree}'], {encoding: 'utf8'}).trim(),
+              '75ca0d92b7cc9dec2dd2cb669c08be84c5c2c4c8');
+            assert.equal(execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'],
+              {encoding: 'utf8'}), '');
+            for (const name of ['wrangler.toml', 'wrangler.json', 'wrangler.jsonc', '.env', '.env.local', '.dev.vars', '.npmrc'])
+              check(!existsSync(name), 'Unexpected local deployment override');
+            // Git excludes build output: exact inventory equality also rejects
+            // added/omitted ignored files, not just changes to recorded bytes.
+            function verifyBuild(root, label) {
+              const actual = [];
+              function walk(directory, prefix) {
+                check(lstatSync(directory).isDirectory() && !lstatSync(directory).isSymbolicLink(),
+                  'Unexpected build directory type');
+                for (const name of readdirSync(directory).sort()) {
+                  const path = join(directory, name), recordPath = `${prefix}/${name}`, stat = lstatSync(path);
+                  check(!stat.isSymbolicLink(), 'Symlink in build output');
+                  if (stat.isDirectory()) walk(path, recordPath);
+                  else {
+                    check(stat.isFile(), 'Unexpected build output type');
+                    actual.push({path: recordPath, bytes: stat.size,
+                      sha256: createHash('sha256').update(readFileSync(path)).digest('hex')});
+                  }
+                }
+              }
+              walk(root, label);
+              const recorded = provenance.files.filter(f => f.path.startsWith(label + '/'));
+              check(actual.length > 0 && actual.length === recorded.length &&
+                new Set(recorded.map(f => f.path)).size === recorded.length,
+                'Build inventory differs from provenance');
+              for (const f of actual) {
+                const match = recorded.find(record => record.path === f.path);
+                check(match?.bytes === f.bytes && match?.sha256 === f.sha256,
+                  'Build inventory differs from provenance');
+              }
+            }
+            verifyBuild('dist', 'dist');
+            verifyBuild('/tmp/classyline-functions-build', 'functions-build-check');
+            for (const f of provenance.files) {
+              const path = f.path.startsWith('control-source/') ? join(e.GITHUB_WORKSPACE, 'control', f.path.slice(15)) :
+                f.path.startsWith('source/') ? f.path.slice(7) :
+                f.path.startsWith('functions-build-check/') ?
+                  '/tmp/classyline-functions-build/' + f.path.slice('functions-build-check/'.length) : f.path;
+              check(createHash('sha256').update(readFileSync(path)).digest('hex') === f.sha256,
+                'Build/source changed after provenance recording');
+            }
+          }
+          verifyInputs();
+          await mainUnchanged();
+          // Final canonical/history check narrows the race; external operator freeze is still mandatory.
+          const finalProject = (await cf(root)).result;
+          project(finalProject);
+          identity(finalProject.canonical_deployment, baseline, baselineSHA);
+          const finalHistory = await history();
+          historyVerifier.verify(finalHistory,'production');
+          noActive(finalHistory);
+          candidateHistory(finalHistory);
+          const knownIDs = historyIDs(finalHistory);
+          check(knownIDs.size === initialIDs.size && [...knownIDs].every(id => initialIDs.has(id)),
+            'Production history changed during preflight');
+          async function verifyPreview() {
+            const list=await history('preview');noActive(list);
+            previewVerifier.verify(list);
+          }
+          function reconcile(list, acceptedID) {
+            noActive(list);
+            historyVerifier.verify(list,'production',acceptedID);
+            candidateHistory(list, acceptedID);
+            const ids = list.map(d => d.id);
+            check(ids.every(id => typeof id === 'string' && id.length > 0) &&
+              new Set(ids).size === ids.length, 'Unverifiable deployment history IDs');
+            check([...knownIDs].every(id => ids.includes(id)), 'Baseline history changed during release');
+            const fresh = list.filter(d => !knownIDs.has(d.id));
+            check(fresh.length === 1 && fresh[0].id === acceptedID,
+              'Final new deployment set differs from the accepted deployment');
+            identity(fresh[0], acceptedID, candidate);
+          }
+          save('preflight.json', {baseline, baseline_sha: baselineSHA, bindings,
+            known_production_deployments: [...knownIDs], workflow_sha: e.GITHUB_SHA,
+            preview_history: previewEvidence});
+          const recoveryEvidence = await verifyV21(recoveryGet, readJobLog);
+          await mainUnchanged();
+          verifyInputs();
+          // Immediate read-only pre-upload drift check. No async preparation follows it.
+          const current = (await cf(root)).result;
+          check(JSON.stringify(project(current)) === JSON.stringify(bindings), 'Pre-upload configuration drift');
+          identity(current.canonical_deployment, baseline, baselineSHA);
+          rollbackIdentity((await cf(root + '/deployments/' + baseline)).result);
+          const preUpload = await history(); noActive(preUpload); candidateHistory(preUpload);
+          historyVerifier.verify(preUpload,'production');
+          const preUploadIDs = historyIDs(preUpload);
+          check(preUploadIDs.size === knownIDs.size && [...preUploadIDs].every(id => knownIDs.has(id)),
+            'Production history changed before creation');
+          await mainUnchanged();
+          await verifyPreview();
+          verifyInputs();
+          save('size-dispatch-verification.json', recoveryEvidence);
+          save('attempt.json', {candidate, run_id: e.GITHUB_RUN_ID, run_attempt: 1,
+            started_at: new Date().toISOString(), max_cli_invocations: 1,
+            wrapper_retry_permitted: false, workflow_rerun_permitted: false,
+            wrangler_internal_retries_accepted: false, max_create_transport_dispatches: 1});
+
+          // BEGIN WRANGLER INVOCATION
+          // Exclusive transport journal bounds creation as well as CLI invocation. Do not retry
+          // this function after any result. Only the fixed pinned CLI receives the token.
+          let invoked = false;
+          async function invokeWranglerOnce() {
+            check(!invoked, 'Wrangler invocation already consumed'); invoked = true;
+            const {default:runtime}=await import(new URL('file://' + process.cwd() + '/ops/size-toolchain/runtime.cjs'));
+            runtime.verifyExecution(join(process.cwd(),'node_modules/wrangler/wrangler-dist/cli.js'));
+            const args = [join(process.cwd(),'node_modules/wrangler/wrangler-dist/cli.js'), 'pages', 'deploy', 'dist',
+              '--project-name', 'classyline2', '--branch', 'main', '--commit-hash', candidate,
+              '--commit-dirty=false'];
+            const childEnv = {PATH: e.PATH, HOME: e.HOME, CI: 'true',
+              CLOUDFLARE_ACCOUNT_ID: '4bfa1a9c849c3da50520f7a4bcccccab',
+              CLOUDFLARE_API_TOKEN: e.CLOUDFLARE_API_TOKEN,
+              CLASSYLINE_CREATE_JOURNAL: join(evidence,'create-claimed.json'),
+              WRANGLER_SEND_METRICS: 'false', WRANGLER_WRITE_LOGS: 'false',
+              WRANGLER_LOG_SANITIZE: 'true', npm_config_logs_max: '0', npm_config_offline: 'true'};
+            return new Promise(resolve => {
+              let child, timer, settled = false;
+              const finish = (status, signal, error = false) => {
+                if (settled) return; settled = true; clearTimeout(timer);
+                process.off('SIGTERM', terminate); process.off('SIGINT', interrupt);
+                // Kill the entire detached process group, including npm/Wrangler
+                // descendants. Client termination cannot undo an accepted server request.
+                if (child?.pid) try { process.kill(-child.pid, 'SIGKILL'); }
+                catch (failure) { if (failure.code !== 'ESRCH') error = true; }
+                resolve({status: Number.isInteger(status) ? status : null,
+                  signal: signal ?? null, error: Boolean(error)});
+              };
+              const terminate = () => finish(null, 'SIGTERM', true);
+              const interrupt = () => finish(null, 'SIGINT', true);
+              process.once('SIGTERM', terminate); process.once('SIGINT', interrupt);
+              try {
+                child = spawn(process.execPath, args, {cwd: process.cwd(), shell: false, detached: true,
+                  stdio: 'ignore', env: childEnv});
+                child.once('error', () => finish(null, null, true));
+                child.once('close', (status, signal) => finish(status, signal));
+                timer = setTimeout(() => finish(null, 'SIGKILL', true), 180000);
+              } catch { finish(null, null, true); }
+            });
+          }
+          // END WRANGLER INVOCATION
+          const result = await invokeWranglerOnce();
+          save('command-result.json', {exit_code: result.status, signal: result.signal,
+            uncertain: Boolean(result.error || result.signal || result.status !== 0)});
+          // Read-only reconciliation after every outcome. NEVER invoke the CLI again.
+          let deployed;
+          for (let attempt = 0; attempt < 6; attempt++) {
+            const list = await history();
+            const fresh = list.filter(d => !knownIDs.has(d.id));
+            check(fresh.length <= 1, 'Multiple Production deployments appeared; stop and investigate');
+            if (fresh.length === 1) {
+              deployed = fresh[0];
+              save('observed-deployment.json', {id: deployed.id, environment: deployed.environment,
+                sha: deployed.deployment_trigger?.metadata?.commit_hash,
+                status: deployed.latest_stage?.status});
+              check(deployed.deployment_trigger?.metadata?.commit_hash === candidate,
+                'Unexpected new Production source; stop');
+              if (deployed.latest_stage?.name === 'deploy' && deployed.latest_stage.status === 'success') break;
+              check(!['failure', 'canceled', 'cancelled'].includes(deployed.latest_stage?.status),
+                'Production deployment failed; inspect before emergency rollback');
+            }
+            if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+          check(deployed, 'No deployment identified; outcome uncertain, no retry');
+          const d = (await cf(root + '/deployments/' + deployed.id)).result;
+          identity(d, deployed.id, candidate);
+          const deployedBindings = deploymentBindings(d);
+          check(d.uses_functions === true, 'Pages Functions missing');
+          check(d.deployment_trigger.metadata.commit_dirty === false, 'Dirty deployment metadata');
+          check(d.compatibility_date === '2025-11-13' && Array.isArray(d.compatibility_flags) &&
+            d.compatibility_flags.length === 0, 'Deployed runtime differs');
+          check(d.url === `https://${d.id.slice(0, 8)}.classyline2.pages.dev`, 'Unexpected deployment URL');
+          const after = (await cf(root)).result;
+          const afterBindings = project(after);
+          identity(after.canonical_deployment, d.id, candidate);
+          check(JSON.stringify(afterBindings) === JSON.stringify(bindings), 'Bindings changed');
+          rollbackIdentity((await cf(root + '/deployments/' + baseline)).result);
+          // Completed competing deployments are forbidden too, not only active ones.
+          reconcile(await history(), d.id);
+          await verifyPreview();
+          // Read canonical state again AFTER final history reconciliation.
+          const finalState = (await cf(root)).result;
+          check(JSON.stringify(project(finalState)) === JSON.stringify(bindings), 'Final configuration drift');
+          identity(finalState.canonical_deployment, d.id, candidate);
+          deploymentBindings(finalState.canonical_deployment);
+          await mainUnchanged();
+          save('observed-verification.json', {id: d.id, url: d.url, sha: candidate,
+            environment: 'production', uses_functions: true, deployment_bindings: deployedBindings,
+            project_bindings: afterBindings, rollback_deployment: baseline,
+            cli_exit_success: result.status === 0 && !result.error && !result.signal, accepted: false});
+          check(result.status === 0 && !result.error && !result.signal,
+            'Deployment observed but creation outcome uncertain; manual review required, no retry');
+          const createClaim=JSON.parse(readFileSync(join(evidence,'create-claimed.json'),'utf8'));
+          check(createClaim.consumed===true&&createClaim.max_create_dispatches===1,'Missing or invalid create transport evidence');
+          // Canonical evidence is retained; acceptance requires independent disarming outside this workflow.
+          save('accepted-deployment.json', {id: d.id, url: d.url, sha: candidate,
+            environment: 'production', uses_functions: true, deployment_bindings: deployedBindings,
+            project_bindings: afterBindings, rollback_deployment: baseline,
+            preview_history: previewEvidence,
+            cli_exit_success: true, max_create_transport_dispatches: 1, canonical_verified: true, disarming_verified: false, accepted: false});
+          console.log(`Canonical deployment verified: ${d.id}; RELEASED remains pending independent disarming verification.`);
+          NODE
+
+      - name: Retain credential-free release evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: classyline-size-recovery-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/classyline-evidence/*.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Require independent disarming readback
+        if: ${{ always() }}
+        run: |
+          echo 'Owner must return CLASSYLINE_RELEASE_ARMED=false and verify it independently. Workflow cannot change or attest the effective arm after a failed/cancelled runner.'
+
+      # No automatic rollback, rerun, migration, data restore, application login,
+      # catalog/checkout request, or D1/R2 write. Failure requires history review.

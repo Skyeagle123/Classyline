@@ -143,7 +143,7 @@ test('application checkout, clean tree and toolchain are fixed independently fro
   assert(workflowText.includes('npm ci --prefix application --ignore-scripts'));
   assert(workflowText.includes('npm ci --prefix harness/ops/size-browser --ignore-scripts'));
   assert(workflowText.includes('install --with-deps chromium --only-shell'));
-  assert.equal(job.steps.find(s=>s.uses?.startsWith('actions/setup-node')).with['node-version'],'24.19.0');
+  assert.equal(job.steps.find(s=>s.uses?.startsWith('actions/setup-node')).with['node-version'],'24.22.1');
 });
 test('workflow cannot dispatch, upload a site or invoke a release on success or failure',()=>{
   const commands=job.steps.map(s=>s.run||'').join('\n');
@@ -169,7 +169,7 @@ test('all YAML and shell bodies parse; JavaScript passes node syntax checks',()=
 test('isolated tool lock pins Playwright and registry integrity without application dependency changes',()=>{
   const pkg=JSON.parse(readFileSync(new URL('./package.json',import.meta.url)));
   const lock=JSON.parse(readFileSync(new URL('./package-lock.json',import.meta.url)));
-  assert.equal(pkg.dependencies.playwright,'1.62.1');assert.equal(pkg.dependencies.yaml,'2.8.2');
+  assert.equal(pkg.dependencies.playwright,'1.62.1');assert.equal(pkg.dependencies.yaml,'2.8.3');
   for(const [path,value] of Object.entries(lock.packages).filter(([p])=>p)){
     assert(value.resolved.startsWith('https://registry.npmjs.org/'),path);assert.match(value.integrity,/^sha512-/);
     // Playwright's locked optional macOS watcher is never installed on this

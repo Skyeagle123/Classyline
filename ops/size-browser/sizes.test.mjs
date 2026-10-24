@@ -29,8 +29,8 @@ test('fixture size identities, product links, price, stock and colors remain dis
  const special=products.find(p=>p.id==='SIZE-SPECIAL');assert.equal(new Set(special.variants.map(v=>v.size)).size,3);
 });
 test('application identity is exact merged source and tree',()=>{
- assert.equal(SOURCE_SHA,'00b25b282d66818632a2d214e7a52ffbd0f8a1cb');
- assert.equal(SOURCE_TREE,'823de98f6faa7fcb65ea980f771f1c7318561694');
+ assert.equal(SOURCE_SHA,'7d978f3ab539efb89a4cd5a2c44abe87775c4451');
+ assert.equal(SOURCE_TREE,'75ca0d92b7cc9dec2dd2cb669c08be84c5c2c4c8');
 });
 
 const identity=SIZE_CASES.find(c=>c.id==='SIZE-IDENTITIES');
