@@ -17,18 +17,19 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <p className="eyebrow">THE CLASSYLINE COLLECTION</p>
+        <img className="hero-logo" src="/classyline-logo.jpg" alt="" width="180" height="180" />
+        <p className="eyebrow">CLASSYLINE · WOMEN’S FASHION</p>
         <h1>
-          Everyday pieces.
+          Find your next favourite.
           <br />
-          Your own expression.
+          Wear it your way.
         </h1>
         <p>
-          Considered style, effortless comfort. Women’s fashion delivered
-          throughout Lebanon.
+          Sets, pyjamas, robes and everyday looks chosen for comfort and style.
+          Delivered throughout Lebanon with cash on delivery.
         </p>
         <a className="btn mt-6" href="#collection">
-          Explore the collection ↓
+          Shop the collection ↗
         </a>
         <div className="collection-links primary-collection-links">
           <a href="/category/new-in">New In ↗</a>
