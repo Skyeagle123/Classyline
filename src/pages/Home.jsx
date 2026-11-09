@@ -17,24 +17,29 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <img className="hero-logo" src="/classyline-logo.jpg" alt="" width="180" height="180" />
-        <p className="eyebrow">CLASSYLINE · WOMEN’S FASHION</p>
-        <h1>
-          Find your next favourite.
-          <br />
-          Wear it your way.
-        </h1>
-        <p>
-          Sets, pyjamas, robes and everyday looks chosen for comfort and style.
-          Delivered throughout Lebanon with cash on delivery.
-        </p>
-        <a className="btn mt-6" href="#collection">
-          Shop the collection ↗
-        </a>
-        <div className="collection-links primary-collection-links">
-          <a href="/category/new-in">New In ↗</a>
-          <a href="/shop">Shop ↗</a>
-          <a href="/category/sale">Sale ↗</a>
+        <img
+          className="hero-cover"
+          src="/classyline-facebook-cover.webp"
+          alt="ClassyLine Women's Fashion — Everyday Elegance. A woman in a cream outfit beside a rack of clothing. Delivery throughout Lebanon and cash on delivery."
+          width="2056"
+          height="765"
+          fetchPriority="high"
+        />
+        <div className="hero-content">
+          <h1>
+            Find your next favourite.
+            <br />
+            Wear it your way.
+          </h1>
+          <p>Sets, pyjamas, robes and everyday looks chosen for comfort and style.</p>
+          <a className="btn mt-6" href="#collection">
+            Shop the collection ↗
+          </a>
+          <div className="collection-links primary-collection-links">
+            <a href="/category/new-in">New In ↗</a>
+            <a href="/shop">Shop ↗</a>
+            <a href="/category/sale">Sale ↗</a>
+          </div>
         </div>
       </section>
       <div className="page">
