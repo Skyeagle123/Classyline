@@ -15,11 +15,11 @@ export default function Header() {
         Skip to content
       </a>
       <header className="sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center gap-4">
+        <div className="header-inner max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center gap-4">
           <a href="/" className="brand">
             <img src="/classyline-logo.jpg" alt="ClassyLine Women’s Fashion" width="76" height="76" />
           </a>
-          <nav aria-label="Shopping" className="ml-auto flex gap-2">
+          <nav aria-label="Shopping" className="header-bag ml-auto flex gap-2">
             <button className="navchip" onClick={() => setOpen(true)}>
               Bag ({count})
             </button>
