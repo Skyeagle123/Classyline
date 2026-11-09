@@ -11,7 +11,7 @@ export default function ProductCard({ p }) {
           height="800"
           src={p.image}
           alt={p.title}
-          className="w-full aspect-[4/5] object-cover"
+          className="w-full aspect-[4/5] object-contain bg-[#f6f1e8]"
         />
         <div className="p-4">
           <p className="eyebrow">{p.category}</p>

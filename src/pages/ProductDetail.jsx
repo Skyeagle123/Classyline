@@ -90,7 +90,7 @@ export function ProductView({
         alt={p.title}
         width="640"
         height="800"
-        className="w-full aspect-[4/5] object-cover rounded-xl"
+        className="w-full aspect-[4/5] object-contain bg-[#f6f1e8] rounded-xl"
       />
       <section className="space-y-5">
         <a href="/">← Collection</a>
