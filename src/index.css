@@ -54,7 +54,7 @@ header {
   line-height: 1.1;
 }
 .brand img { width: 76px; height: 76px; object-fit: contain; border-radius: 50%; }
-.hero-logo { width: clamp(110px, 20vw, 180px); height: auto; border-radius: 50%; }
+.hero-logo { width: clamp(110px, 20vw, 180px); height: auto; border-radius: 50%; margin-inline: auto; }
 .hero { text-align: center; }
 .hero h1, .hero > p:not(.eyebrow) { margin-left: auto; margin-right: auto; }
 .hero .btn { margin-inline: auto; }
