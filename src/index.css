@@ -54,10 +54,17 @@ header {
   line-height: 1.1;
 }
 .brand img { width: 76px; height: 76px; object-fit: contain; border-radius: 50%; }
-.hero-logo { width: clamp(110px, 20vw, 180px); height: auto; border-radius: 50%; margin-inline: auto; }
 .hero { text-align: center; }
-.hero h1, .hero > p:not(.eyebrow) { margin-left: auto; margin-right: auto; }
+.hero h1, .hero-content > p { margin-left: auto; margin-right: auto; }
 .hero .btn { margin-inline: auto; }
+.hero-cover {
+  display: block;
+  width: 100%;
+  height: clamp(220px, 37vw, 440px);
+  object-fit: cover;
+  object-position: center;
+}
+.hero-content { padding: 2rem 1rem 0; }
 .brand span {
   display: block;
   font-family: "Manrope", Arial, sans-serif;
@@ -72,7 +79,7 @@ header {
   color: #766457;
 }
 .hero {
-  padding: 3rem 1rem;
+  padding: 0;
   max-width: 80rem;
   margin: auto;
   border-bottom: 1px solid #b8a79a;
@@ -345,11 +352,14 @@ body:has(dialog[open]) .floating-contact {
 }
 .hero {
   background: linear-gradient(120deg, #f6f1e8 60%, #c9a39b33);
-  padding-top: clamp(2.5rem, 7vw, 6rem);
 }
-.hero > p:not(.eyebrow) {
+.hero-content > p {
   max-width: 34rem;
   line-height: 1.8;
+}
+@media (max-width: 639px) {
+  .hero-cover { height: 220px; object-position: 38% center; }
+  .hero-content { padding-top: 1.5rem; }
 }
 .collection-links {
   display: grid;
