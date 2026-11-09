@@ -219,6 +219,30 @@ body:has(dialog[open]) .floating-contact {
   display: none;
 }
 @media (max-width: 639px) {
+  .header-inner {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  .brand img {
+    width: 64px;
+    height: 64px;
+  }
+  .header-contact {
+    order: 1;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    margin-left: auto;
+    gap: 0.4rem;
+  }
+  .header-contact .contact-link {
+    width: 44px;
+    height: 44px;
+  }
+  .header-bag {
+    order: 2;
+    margin-left: 0;
+  }
   footer {
     padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
   }
