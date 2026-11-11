@@ -6,6 +6,6 @@
   "description": "Credential-free browser qualification tooling; separate from application dependencies.",
   "dependencies": {
     "playwright": "1.62.1",
-    "yaml": "2.8.2"
+    "yaml": "2.8.3"
   }
 }
