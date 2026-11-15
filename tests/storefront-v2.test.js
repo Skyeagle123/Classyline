@@ -138,7 +138,7 @@ test("Shop All, groups and explicit New In/Sale tags preserve existing metadata"
   assert.equal(pieceCount(1), "1 piece");
   assert.equal(pieceCount(2), "2 pieces");
 });
-test("tiles use eligible public images and neutral fallbacks; draft image is never selected", () => {
+test("tiles omit empty categories and never show draft images", () => {
   const html = render(
     React.createElement(Tiles, {
       group: "accessories",
@@ -160,8 +160,13 @@ test("tiles use eligible public images and neutral fallbacks; draft image is nev
   );
   assert(!html.includes("private-draft"));
   assert(html.includes("/products/authorized.jpg"));
-  assert(html.includes('class="category-placeholder"'));
-  assert(html.includes("Hair Accessories"));
+  assert(!html.includes('class="category-placeholder"'));
+  assert(!html.includes("Hair Accessories"));
+  assert(!html.includes("Scarves"));
+  assert(html.includes("Socks"));
+  assert(
+    !render(React.createElement(Tiles, { products: [] })).includes("<section"),
+  );
 });
 test("navigation disclosure has independent New In/Shop/Sale and keyboard/mobile close behavior", () => {
   const handlers = new Map(),
