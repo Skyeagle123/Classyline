@@ -163,6 +163,27 @@ test("tiles use eligible public images and neutral fallbacks; draft image is nev
   assert(html.includes('class="category-placeholder"'));
   assert(html.includes("Hair Accessories"));
 });
+test("homepage tiles omit empty categories and groups while retaining populated order", () => {
+  const props = {
+    hideEmpty: true,
+    className: "page",
+    products: [
+      { ...product, category: "Cardigans" },
+      { ...product, category: "Scarves", active: 0 },
+      { ...product, category: "Tops", active: false },
+      { ...product, category: "Pajamas", image: null },
+      { ...product, category: "Sets" },
+    ],
+  };
+  const html = render(React.createElement(Tiles, props));
+  assert.deepEqual(
+    [...html.matchAll(/class="category-tile" href="([^"]+)"/g)].map((match) => match[1]),
+    ["/category/sets", "/category/pajamas-sleepwear", "/category/cardigans"],
+  );
+  assert.doesNotMatch(html, /Accessories/);
+  assert.equal((html.match(/class="category-placeholder"/g) || []).length, 1);
+  assert.equal(render(React.createElement(Tiles, { ...props, products: [] })), "");
+});
 test("navigation disclosure has independent New In/Shop/Sale and keyboard/mobile close behavior", () => {
   const handlers = new Map(),
     previousWindow = globalThis.window,

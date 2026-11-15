@@ -42,9 +42,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <div className="page">
-        <CategoryTiles products={products} />
-      </div>
+      <CategoryTiles products={products} hideEmpty className="page" />
       <main id="collection" className="max-w-7xl mx-auto px-4 py-6">
         <section className="w-full">
           <div className="collection-heading">
