@@ -124,7 +124,11 @@ export function ProductView({
               >
                 <span
                   className="color-swatch"
-                  style={{ backgroundColor: swatchColor(name) || "#b8a79a" }}
+                  style={{
+                    background:
+                      swatchColor(name) ||
+                      "repeating-linear-gradient(135deg, #d3d3d3 0 4px, #f6f1e8 4px 8px)",
+                  }}
                   aria-hidden="true"
                 />
                 {name}

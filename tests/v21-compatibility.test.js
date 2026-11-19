@@ -200,7 +200,7 @@ const colors = {
   "Washed Blue": "#809bb4",
   White: "#fff",
 };
-test("all 22 recognized current catalog labels map to fixed CSS colors without modifying variant identities", () => {
+test("recognized base catalog labels map to fixed CSS colors without modifying variant identities", () => {
   for (const [color, hex] of Object.entries(colors)) {
     assert.equal(swatchColor(color), hex);
     assert.equal(swatchColor(color.toUpperCase()), hex);
@@ -226,6 +226,36 @@ test("all 22 recognized current catalog labels map to fixed CSS colors without m
     "<script>bad</script>",
   ])
     assert.equal(swatchColor(unknown), null);
+});
+
+const currentCatalogColors = [
+  "Baby Blue", "Beige", "Berry Purple", "Black", "Black & White",
+  "Black & White Abstract", "Black & White Houndstooth", "Black Argyle",
+  "Black Peplum", "Black White Floral", "Blue", "Blue Beige Plaid",
+  "Blue Grey", "Blue Mountain", "Blush Pink", "Bordeaux", "Bronze Brown",
+  "Brown", "Burgundy", "Burgundy Teddy", "Butter Yellow", "Camel",
+  "Camel Beige", "Camel Teddy", "Charcoal Grey", "Chocolate Brown", "Cream",
+  "Cream / Burgundy Hearts", "Cream Beige", "Cream Black Polka Dots",
+  "Cream Brown Stripes", "Cream Navy Camel Stripes", "Dark Beige", "Dark Green",
+  "Dark Grey", "Dark Olive Green", "Deep Teal", "Default", "Denim Blue",
+  "Dusty Pink", "Dusty Rose", "Emerald Green", "Forest Deer", "Green", "Grey",
+  "Ivory", "Ivory Print", "Ivory Reindeer", "Ivory Teddy", "Leopard Print",
+  "Light Blue", "Light Blue Floral", "Light Gray", "Light Grey", "Light Pink",
+  "Magenta", "Multicolor Plaid", "Navy", "Navy Blue", "Navy Blue Stripes",
+  "Nordic Deer", "Off White", "Olive", "Olive Green", "Orange Plaid",
+  "Pale Blue", "Pastel Plaid", "Petrol Blue", "Pink", "Pink Grey",
+  "Powder Blue", "Purple", "Red", "Red / Blue", "Red & Black",
+  "Red Polka Dot", "Rose Pink", "Royal Blue", "Sage Green", "Sky Blue",
+  "Taupe", "Taupe Brown", "Teal", "Washed Blue", "White", "Yellow",
+];
+
+test("all 86 color labels currently used by live products have an explicit swatch", () => {
+  assert.equal(currentCatalogColors.length, 86);
+  for (const color of currentCatalogColors)
+    assert.ok(swatchColor(color), `missing visual swatch for ${color}`);
+  assert.equal(swatchColor("Dark Olive Green"), "#4b5320");
+  assert.match(swatchColor("Black & White"), /^linear-gradient/);
+  assert.match(swatchColor("Leopard Print"), /^radial-gradient/);
 });
 const bundled = await build({
   stdin: {
@@ -274,8 +304,8 @@ const props = {
 };
 test("rendered color buttons always show a safe circle, including unknown labels and light colors", () => {
   const html = render(React.createElement(ProductView, props));
-  assert.match(html, /background-color:#fff2d5/);
-  assert.match(html, /background-color:#b8a79a/);
+  assert.match(html, /background:#fff2d5/);
+  assert.match(html, /background:repeating-linear-gradient/);
   assert.equal((html.match(/class="color-swatch"/g) || []).length, 3);
   assert.match(html, /aria-label="Color: Eashed Blue" aria-pressed="false"/);
   assert.match(
