@@ -84,6 +84,7 @@ test("swatches accept only own allowlisted colors, never inherited properties", 
     assert.equal(swatchColor(name), null, name);
   assert.equal(swatchColor("Blue"), "#52719a");
   assert.equal(swatchColor("IVORY"), "#f6f1e8");
+  assert.equal(swatchColor("Powder Blue"), "#b0e0e6");
   assert.equal(swatchColor("Light Blue / White Stripes"), null);
   assert.equal(swatchColor("not-a-color"), null);
 });

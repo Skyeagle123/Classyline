@@ -179,6 +179,7 @@ test("valid WhatsApp configuration does not remove COD and cross-origin order re
 const colors = {
   Red: "#a23c43",
   "Light Blue": "#a8c7df",
+  "Powder Blue": "#b0e0e6",
   Cream: "#fff2d5",
   Teal: "#287e80",
   "Olive Green": "#6b7040",
@@ -199,7 +200,7 @@ const colors = {
   "Washed Blue": "#809bb4",
   White: "#fff",
 };
-test("all 21 recognized current catalog labels map to fixed CSS colors without modifying variant identities", () => {
+test("all 22 recognized current catalog labels map to fixed CSS colors without modifying variant identities", () => {
   for (const [color, hex] of Object.entries(colors)) {
     assert.equal(swatchColor(color), hex);
     assert.equal(swatchColor(color.toUpperCase()), hex);

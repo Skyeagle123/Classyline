@@ -2,6 +2,7 @@ import React from "react";
 import { api, money } from "../api.js";
 import ProductEditor from "../components/ProductEditor.jsx";
 import ExcelCatalog from "../components/ExcelCatalog.jsx";
+import WhatsAppSales from "../components/WhatsAppSales.jsx";
 export default function Admin() {
   const [auth, setAuth] = React.useState(false),
     [password, setPassword] = React.useState(""),
@@ -35,6 +36,14 @@ export default function Admin() {
     } catch (e) {
       setMsg(e.message);
     }
+  }
+  function signOut() {
+    return run(async () => {
+      await api("/admin/logout", { method: "POST", body: "{}" });
+      setAuth(false);
+      setOrders([]);
+      setCatalog(null);
+    });
   }
   if (!auth)
     return (
@@ -70,25 +79,33 @@ export default function Admin() {
         <p role="alert">{msg}</p>
       </main>
     );
+  if (window.location.pathname === "/admin/sales")
+    return (
+      <main className="page space-y-6">
+        <div className="flex justify-between gap-2">
+          <a className="navchip" href="/admin">
+            إدارة المنتجات
+          </a>
+          <button className="navchip" onClick={signOut}>
+            Sign out
+          </button>
+        </div>
+        <p role="status">{msg}</p>
+        <WhatsAppSales catalog={catalog} refresh={refresh} />
+      </main>
+    );
   return (
     <main className="page space-y-6">
       <div className="flex justify-between">
         <h1 className="text-3xl">Store administration</h1>
-        <button
-          className="navchip"
-          onClick={() =>
-            run(async () => {
-              await api("/admin/logout", { method: "POST", body: "{}" });
-              setAuth(false);
-              setOrders([]);
-              setCatalog(null);
-            })
-          }
-        >
+        <button className="navchip" onClick={signOut}>
           Sign out
         </button>
       </div>
       <p role="status">{msg}</p>
+      <a className="btn" href="/admin/sales">
+        مبيعات واتساب
+      </a>
       <ProductEditor {...{ catalog, refresh, run }} />
       <ExcelCatalog refresh={refresh} />
       <details>

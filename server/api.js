@@ -1,3 +1,4 @@
+import { whatsappSales, whatsappCosts } from "./whatsapp-sales.js";
 import { digest, passwordHash, equal, cookie } from "./security.js";
 import {
   normalizePhone,
@@ -266,6 +267,26 @@ export async function handle(request, env) {
     }
     if (path.startsWith("/api/admin/")) {
       await admin(db, request, now);
+      if (path === "/api/admin/whatsapp-costs" && method === "GET")
+        return json(await whatsappCosts(db));
+      if (
+        path === "/api/admin/whatsapp-sales" &&
+        ["GET", "POST", "PUT", "PATCH"].includes(method)
+      )
+        return json(
+          await whatsappSales({
+            db,
+            method,
+            request,
+            now,
+            url: new URL(request.url),
+            body,
+            text,
+            integer,
+            fail,
+          }),
+          method === "POST" ? 201 : 200,
+        );
       if (path === "/api/admin/product-images" && method === "POST") {
         if (!env.PRODUCT_IMAGES)
           fail(503, "Image storage is awaiting configuration");

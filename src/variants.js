@@ -27,6 +27,7 @@ const swatches = {
   gray: "#999",
   navy: "#27394e",
   "light blue": "#a8c7df",
+  "powder blue": "#b0e0e6",
   cream: "#fff2d5",
   teal: "#287e80",
   "olive green": "#6b7040",
