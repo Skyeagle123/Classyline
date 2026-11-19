@@ -41,12 +41,13 @@ const anchors = (html) => [...html.matchAll(/<a\b([^>]*)>/g)].map((m) => m[1]);
 test("Header and Contact Us Footer expose exactly the approved safe contact links", () => {
   assert.deepEqual(CONTACTS, {
     instagram: "https://www.instagram.com/_classy_line_/",
+    facebook: "https://www.facebook.com/1473141565872907",
     whatsapp: "https://wa.me/96178719771",
   });
   for (const component of [Header, Footer]) {
     const html = render(React.createElement(component));
     const links = anchors(html).filter((a) => a.includes('href="https://'));
-    assert.equal(links.length, 2);
+    assert.equal(links.length, 3);
     for (const [type, url] of Object.entries(CONTACTS)) {
       const a = links.find((a) => a.includes(`href="${url}"`));
       assert.ok(a);

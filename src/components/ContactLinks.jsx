@@ -2,6 +2,7 @@ import React from "react";
 
 export const CONTACTS = Object.freeze({
   instagram: "https://www.instagram.com/_classy_line_/",
+  facebook: "https://www.facebook.com/1473141565872907",
   whatsapp: "https://wa.me/96178719771",
 });
 
@@ -31,6 +32,12 @@ function ContactIcon({ type }) {
             stroke="none"
           />
         </>
+      ) : type === "facebook" ? (
+        <path
+          d="M14 8h3V4h-3c-3.3 0-5 2-5 5v2h-3v4h3v6h4v-6h3l1-4h-4V9c0-.7.3-1 1-1Z"
+          fill="currentColor"
+          stroke="none"
+        />
       ) : (
         <>
           <path d="M20.5 11.6a8.5 8.5 0 0 1-12.8 7.3L3 20.5l1.5-4.6A8.5 8.5 0 1 1 20.5 11.6Z" />
@@ -68,6 +75,13 @@ export default function ContactLinks({ text = false, className = "" }) {
         className="contact-link"
       >
         {text && <span>Instagram</span>}
+      </ContactLink>
+      <ContactLink
+        type="facebook"
+        label="Visit ClassyLine on Facebook"
+        className="contact-link"
+      >
+        {text && <span>Facebook</span>}
       </ContactLink>
       <ContactLink
         type="whatsapp"
