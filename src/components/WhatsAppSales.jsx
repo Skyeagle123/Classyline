@@ -296,6 +296,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
   const [tab, setTab] = useState("order");
   const [costs, setCosts] = useState({});
   const [costEdits, setCostEdits] = useState({});
+  const [stockEdits, setStockEdits] = useState({});
   const [query, setQuery] = useState("");
   const [day, setDay] = useState("");
   const [orderPage, setOrderPage] = useState({ orders: [], more: false });
@@ -629,47 +630,134 @@ export default function WhatsAppSales({ catalog, refresh }) {
               />
               <p>{p.description}</p>
               {p.variants.map((v) => (
-                <form
-                  key={v.id}
-                  className="border-t py-3"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    run(async () => {
-                      await api(
-                        endpoint,
-                        json("PUT", {
-                          variant_id: v.id,
-                          cost_cents: cents(
-                            costEdits[v.id] ?? String((costs[v.id] ?? 0) / 100),
-                          ),
-                        }),
-                      );
-                      setCostEdits((current) => {
-                        const next = { ...current };
-                        delete next[v.id];
-                        return next;
-                      });
-                      await loadCosts();
-                    });
-                  }}
-                >
+                <section key={v.id} className="border-t py-3 space-y-3">
                   <p>
                     {v.color} · {v.size} · المتاح {v.stock}
                   </p>
-                  <Amount
-                    label="كلفة شراء القطعة بالدولار"
-                    value={
-                      costEdits[v.id] ??
-                      (costs[v.id] == null ? "" : String(costs[v.id] / 100))
-                    }
-                    onChange={(value) =>
-                      setCostEdits({ ...costEdits, [v.id]: value })
-                    }
-                  />
-                  <button className="navchip mt-2" disabled={busy}>
-                    احفظ الكلفة
-                  </button>
-                </form>
+                  <form
+                    className="space-y-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      run(async () => {
+                        const stock = Number(stockEdits[v.id] ?? v.stock);
+                        await api(
+                          endpoint,
+                          json("PUT", {
+                            action: "stock",
+                            variant_id: v.id,
+                            stock,
+                            expected_stock: v.stock,
+                          }),
+                        );
+                        setStockEdits((current) => {
+                          const next = { ...current };
+                          delete next[v.id];
+                          return next;
+                        });
+                        await refresh();
+                      });
+                    }}
+                  >
+                    <label className="block">
+                      عدد القطع المتوفّرة
+                      <span className="mt-1 flex items-stretch gap-2" dir="ltr">
+                        <button
+                          type="button"
+                          className="navchip min-w-12 text-xl"
+                          aria-label={`نقّص مخزون ${p.title} ${v.color} ${v.size}`}
+                          disabled={
+                            busy || Number(stockEdits[v.id] ?? v.stock) <= 0
+                          }
+                          onClick={() =>
+                            setStockEdits({
+                              ...stockEdits,
+                              [v.id]: Math.max(
+                                0,
+                                Number(stockEdits[v.id] ?? v.stock) - 1,
+                              ),
+                            })
+                          }
+                        >
+                          −
+                        </button>
+                        <input
+                          className="input text-center"
+                          aria-label={`مخزون ${p.title} ${v.color} ${v.size}`}
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          max="1000000"
+                          step="1"
+                          required
+                          value={stockEdits[v.id] ?? v.stock}
+                          onChange={(e) =>
+                            setStockEdits({
+                              ...stockEdits,
+                              [v.id]: e.target.value,
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="navchip min-w-12 text-xl"
+                          aria-label={`زيد مخزون ${p.title} ${v.color} ${v.size}`}
+                          disabled={
+                            busy ||
+                            Number(stockEdits[v.id] ?? v.stock) >= 1000000
+                          }
+                          onClick={() =>
+                            setStockEdits({
+                              ...stockEdits,
+                              [v.id]: Number(stockEdits[v.id] ?? v.stock) + 1,
+                            })
+                          }
+                        >
+                          +
+                        </button>
+                      </span>
+                    </label>
+                    <button className="btn" disabled={busy}>
+                      احفظ المخزون
+                    </button>
+                  </form>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      run(async () => {
+                        await api(
+                          endpoint,
+                          json("PUT", {
+                            variant_id: v.id,
+                            cost_cents: cents(
+                              costEdits[v.id] ??
+                                String((costs[v.id] ?? 0) / 100),
+                            ),
+                          }),
+                        );
+                        setCostEdits((current) => {
+                          const next = { ...current };
+                          delete next[v.id];
+                          return next;
+                        });
+                        await loadCosts();
+                      });
+                    }}
+                  >
+                    <Amount
+                      label="كلفة شراء القطعة بالدولار"
+                      value={
+                        costEdits[v.id] ??
+                        (costs[v.id] == null ? "" : String(costs[v.id] / 100))
+                      }
+                      onChange={(value) =>
+                        setCostEdits({ ...costEdits, [v.id]: value })
+                      }
+                    />
+                    <button className="navchip mt-2" disabled={busy}>
+                      احفظ الكلفة
+                    </button>
+                  </form>
+                </section>
               ))}
             </details>
           ))}

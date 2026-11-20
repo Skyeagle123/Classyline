@@ -48,13 +48,45 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     (await call(path, "PUT", { variant_id: "s", cost_cents: 1100 })).status,
     200,
   );
+  assert.equal(
+    (
+      await call(path, "PUT", {
+        action: "stock",
+        variant_id: "s",
+        stock: 4,
+        expected_stock: 3,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(stock(), 4);
+  assert.equal(
+    (
+      await call(path, "PUT", {
+        action: "stock",
+        variant_id: "s",
+        stock: 5,
+        expected_stock: 3,
+      })
+    ).status,
+    409,
+  );
+  assert.equal(stock(), 4);
+  assert.equal(
+    DB.sqlite
+      .prepare(
+        "SELECT count(*) n FROM audit WHERE action='inventory.stock_edit'",
+      )
+      .get().n,
+    1,
+  );
   assert.equal((await call(path, "POST", order)).status, 201);
   assert.equal((await call(path, "POST", order)).status, 201);
-  assert.equal(stock(), 1);
+  assert.equal(stock(), 2);
   const catalog = await (
     await call("/catalog", "GET", undefined, false)
   ).json();
-  assert.equal(catalog.products[0].variants.find((v) => v.id === "s").stock, 1);
+  assert.equal(catalog.products[0].variants.find((v) => v.id === "s").stock, 2);
   assert.doesNotMatch(JSON.stringify(catalog), /cost_cents|Test Customer/);
   assert.equal(
     (await call(path, "POST", { ...order, customer_name: "Changed" })).status,
@@ -69,7 +101,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     ],
   };
   assert.equal((await call(path, "POST", conflict)).status, 409);
-  assert.equal(stock(), 1);
+  assert.equal(stock(), 2);
   assert.equal(
     (await call(path, "PUT", { variant_id: "s", cost_cents: 1500 })).status,
     200,
@@ -90,7 +122,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     items: [{ variant_id: "m", qty: 1, unit_cents: 2500 }],
   };
   assert.equal((await call(path, "PATCH", edit)).status, 200);
-  assert.equal(stock(), 3);
+  assert.equal(stock(), 4);
   assert.equal(
     DB.sqlite.prepare("SELECT stock FROM variants WHERE id='m'").get().stock,
     0,
@@ -114,12 +146,12 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     (
       await call(path, "PATCH", {
         ...edit,
-        items: [{ variant_id: "s", qty: 4, unit_cents: 1 }],
+        items: [{ variant_id: "s", qty: 5, unit_cents: 1 }],
       })
     ).status,
     409,
   );
-  assert.equal(stock(), 3);
+  assert.equal(stock(), 4);
   assert.equal(
     DB.sqlite.prepare("SELECT stock FROM variants WHERE id='m'").get().stock,
     0,
@@ -164,7 +196,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     (await advance(delivered.id, "delivered", "collected")).status,
     409,
   );
-  assert.equal(stock(), 1);
+  assert.equal(stock(), 2);
   const saved = await (await call(path)).json();
   assert.ok(saved.orders.find((o) => o.id === delivered.id).collected_at);
   const day = DB.sqlite
