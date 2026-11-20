@@ -98,6 +98,21 @@ export async function whatsappSales({
   const input = await body(request);
   if (method === "PUT") {
     const variant = text(input.variant_id, 100);
+    if (input.action === "stock") {
+      const stock = integer(input.stock, 0, 1000000);
+      const expected = integer(input.expected_stock, 0, 1000000);
+      const result = await db
+        .prepare("UPDATE variants SET stock = ? WHERE id = ? AND stock = ?")
+        .bind(stock, variant, expected)
+        .run();
+      if (!result.meta.changes)
+        fail(409, "Stock changed. Refresh and try again.");
+      await db
+        .prepare("INSERT INTO audit VALUES (?,?,?,?)")
+        .bind(crypto.randomUUID(), "inventory.stock_edit", variant, now)
+        .run();
+      return { ok: true };
+    }
     if (input.cost_cents === null) {
       await db
         .prepare("DELETE FROM variant_purchase_costs WHERE variant_id = ?")
