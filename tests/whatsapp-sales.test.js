@@ -3,6 +3,24 @@ import assert from "node:assert/strict";
 import { database } from "./adapter.js";
 import { handle } from "../server/api.js";
 import { digest } from "../server/security.js";
+import { DatabaseSync } from "node:sqlite";
+import { readFileSync } from "node:fs";
+
+test("product cost migration carries matching variant costs and leaves conflicting costs unset", () => {
+  const sqlite = new DatabaseSync(":memory:");
+  for (const file of ["0001_storefront.sql", "0002_checkout_recovery.sql", "0003_catalog_import.sql", "0004_whatsapp_sales.sql"])
+    sqlite.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
+  sqlite.exec(`
+    INSERT INTO products VALUES ('p','Pajama','Pajamas','','/p.jpg',2200,1),
+      ('q','Dress','Dresses','','/q.jpg',2200,1);
+    INSERT INTO variants VALUES ('a','p','S','Pink',1),('b','p','M','Blue',1),
+      ('c','q','S','Pink',1),('d','q','M','Blue',1);
+    INSERT INTO variant_purchase_costs VALUES ('a',1000),('b',1000),('c',1000),('d',1200);
+  `);
+  sqlite.exec(readFileSync(new URL("../migrations/0005_product_purchase_costs.sql", import.meta.url), "utf8"));
+  assert.deepEqual(sqlite.prepare("SELECT * FROM product_purchase_costs").all().map((row) => ({ ...row })),
+    [{ product_id: "p", cost_cents: 1000 }]);
+});
 
 test("WhatsApp orders share catalog stock, preserve transaction prices, and restore sellable returns", async () => {
   const DB = database();
@@ -45,9 +63,11 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
   assert.equal((await call(path, "GET", undefined, false)).status, 401);
   assert.equal((await call(path, "POST", order, false)).status, 401);
   assert.equal(
-    (await call(path, "PUT", { variant_id: "s", cost_cents: 1100 })).status,
+    (await call(path, "PUT", { product_id: "p", cost_cents: 1100 })).status,
     200,
   );
+  assert.deepEqual((await (await call("/admin/whatsapp-costs")).json()).costs,
+    [{ product_id: "p", cost_cents: 1100 }]);
   assert.equal(
     (
       await call(path, "PUT", {
@@ -103,7 +123,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
   assert.equal((await call(path, "POST", conflict)).status, 409);
   assert.equal(stock(), 2);
   assert.equal(
-    (await call(path, "PUT", { variant_id: "s", cost_cents: 1500 })).status,
+    (await call(path, "PUT", { product_id: "p", cost_cents: 1500 })).status,
     200,
   );
   const { orders } = await (await call(path)).json();
@@ -136,6 +156,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
   assert.equal(edited.subtotal_cents, 2500);
   assert.equal(edited.items[0].variant_id, "m");
   assert.equal(edited.items[0].qty, 1);
+  assert.equal(edited.purchase_cents, 1500);
   assert.equal(
     DB.sqlite
       .prepare("SELECT count(*) n FROM audit WHERE action='whatsapp_sale.edit'")
