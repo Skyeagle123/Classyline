@@ -97,8 +97,8 @@ export async function whatsappSales({
 
   const input = await body(request);
   if (method === "PUT") {
-    const variant = text(input.variant_id, 100);
     if (input.action === "stock") {
+      const variant = text(input.variant_id, 100);
       const stock = integer(input.stock, 0, 1000000);
       const expected = integer(input.expected_stock, 0, 1000000);
       const result = await db
@@ -113,18 +113,19 @@ export async function whatsappSales({
         .run();
       return { ok: true };
     }
+    const product = text(input.product_id, 100);
+    const exists = await db.prepare("SELECT id FROM products WHERE id = ?").bind(product).first();
+    if (!exists) fail(404, "Product not found");
     if (input.cost_cents === null) {
-      await db
-        .prepare("DELETE FROM variant_purchase_costs WHERE variant_id = ?")
-        .bind(variant)
-        .run();
+      await db.prepare("DELETE FROM product_purchase_costs WHERE product_id = ?")
+        .bind(product).run();
     } else {
       await db
         .prepare(
-          `INSERT INTO variant_purchase_costs(variant_id, cost_cents) VALUES (?,?)
-         ON CONFLICT(variant_id) DO UPDATE SET cost_cents = excluded.cost_cents`,
+          `INSERT INTO product_purchase_costs(product_id, cost_cents) VALUES (?,?)
+         ON CONFLICT(product_id) DO UPDATE SET cost_cents = excluded.cost_cents`,
         )
-        .bind(variant, integer(input.cost_cents, 0, 100000000))
+        .bind(product, integer(input.cost_cents, 0, 100000000))
         .run();
     }
     return { ok: true };
@@ -213,7 +214,7 @@ export async function whatsappSales({
               `INSERT INTO whatsapp_sale_items(sale_id, variant_id, title, size, color, unit_cents, cost_cents, qty)
                VALUES (?, ?, (SELECT p.title FROM variants v JOIN products p ON p.id = v.product_id WHERE v.id = ?),
                 (SELECT size FROM variants WHERE id = ?), (SELECT color FROM variants WHERE id = ?), ?,
-                (SELECT cost_cents FROM variant_purchase_costs WHERE variant_id = ?), ?)`,
+                (SELECT c.cost_cents FROM variants v JOIN product_purchase_costs c ON c.product_id = v.product_id WHERE v.id = ?), ?)`,
             )
             .bind(id, variant, variant, variant, variant, price, variant, qty),
         ),
@@ -300,7 +301,7 @@ export async function whatsappSales({
           `INSERT INTO whatsapp_sale_items(sale_id, variant_id, title, size, color, unit_cents, cost_cents, qty)
        VALUES (?, ?, (SELECT p.title FROM variants v JOIN products p ON p.id = v.product_id WHERE v.id = ?),
         (SELECT size FROM variants WHERE id = ?), (SELECT color FROM variants WHERE id = ?), ?,
-        (SELECT cost_cents FROM variant_purchase_costs WHERE variant_id = ?), ?)`,
+        (SELECT c.cost_cents FROM variants v JOIN product_purchase_costs c ON c.product_id = v.product_id WHERE v.id = ?), ?)`,
         )
         .bind(id, variant, variant, variant, variant, price, variant, qty),
     ),
@@ -321,7 +322,7 @@ export async function whatsappSales({
 
 export async function whatsappCosts(db) {
   const { results } = await db
-    .prepare("SELECT variant_id, cost_cents FROM variant_purchase_costs")
+    .prepare("SELECT product_id, cost_cents FROM product_purchase_costs")
     .all();
   return { costs: results };
 }

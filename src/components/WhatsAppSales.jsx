@@ -331,7 +331,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
   async function loadCosts() {
     const data = await api("/admin/whatsapp-costs");
     setCosts(
-      Object.fromEntries(data.costs.map((c) => [c.variant_id, c.cost_cents])),
+      Object.fromEntries(data.costs.map((c) => [c.product_id, c.cost_cents])),
     );
   }
   async function loadOrders(start = offset, selectedDay = day) {
@@ -629,6 +629,33 @@ export default function WhatsAppSales({ catalog, refresh }) {
                 loading="lazy"
               />
               <p>{p.description}</p>
+              <form
+                className="py-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  run(async () => {
+                    await api(endpoint, json("PUT", {
+                      product_id: p.id,
+                      cost_cents: costEdits[p.id] === "" ? null : cents(
+                        costEdits[p.id] ?? String((costs[p.id] ?? 0) / 100),
+                      ),
+                    }));
+                    setCostEdits((current) => {
+                      const next = { ...current };
+                      delete next[p.id];
+                      return next;
+                    });
+                    await loadCosts();
+                  });
+                }}
+              >
+                <Amount
+                  label="كلفة شراء القطعة بالدولار (لكل الألوان والقياسات)"
+                  value={costEdits[p.id] ?? (costs[p.id] == null ? "" : String(costs[p.id] / 100))}
+                  onChange={(value) => setCostEdits({ ...costEdits, [p.id]: value })}
+                />
+                <button className="navchip mt-2" disabled={busy}>احفظ الكلفة</button>
+              </form>
               {p.variants.map((v) => (
                 <section key={v.id} className="border-t py-3 space-y-3">
                   <p>
@@ -718,43 +745,6 @@ export default function WhatsAppSales({ catalog, refresh }) {
                     </label>
                     <button className="btn" disabled={busy}>
                       احفظ المخزون
-                    </button>
-                  </form>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      run(async () => {
-                        await api(
-                          endpoint,
-                          json("PUT", {
-                            variant_id: v.id,
-                            cost_cents: cents(
-                              costEdits[v.id] ??
-                                String((costs[v.id] ?? 0) / 100),
-                            ),
-                          }),
-                        );
-                        setCostEdits((current) => {
-                          const next = { ...current };
-                          delete next[v.id];
-                          return next;
-                        });
-                        await loadCosts();
-                      });
-                    }}
-                  >
-                    <Amount
-                      label="كلفة شراء القطعة بالدولار"
-                      value={
-                        costEdits[v.id] ??
-                        (costs[v.id] == null ? "" : String(costs[v.id] / 100))
-                      }
-                      onChange={(value) =>
-                        setCostEdits({ ...costEdits, [v.id]: value })
-                      }
-                    />
-                    <button className="navchip mt-2" disabled={busy}>
-                      احفظ الكلفة
                     </button>
                   </form>
                 </section>
