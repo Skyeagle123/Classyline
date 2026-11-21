@@ -6,6 +6,8 @@ on:
 permissions:
   contents: read
 
+# Run 44958137685 stopped at the first Cloudflare GET (401), before upload.
+# Run 44958169758 was skipped. Allow one fresh dispatch after token replacement.
 concurrency:
   group: classyline2-production
   cancel-in-progress: false
@@ -17,7 +19,7 @@ jobs:
       github.repository_id == '1096008352' &&
       github.ref == 'refs/heads/main' &&
       github.actor_id == '125151458' &&
-      github.run_number == 1 &&
+      github.run_number == 3 &&
       github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 15
