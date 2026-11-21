@@ -1,0 +1,132 @@
+name: Publish ClassyLine purchase cost update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: classyline2-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.repository == 'Skyeagle123/Classyline' &&
+      github.repository_id == '1096008352' &&
+      github.ref == 'refs/heads/main' &&
+      github.actor_id == '125151458' &&
+      github.run_number == 1 &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: classyline-production
+    env:
+      RELEASE_SHA: e37259ee5c9749fe2cc4cf836adcd14732d90ff9
+      RELEASE_TREE: 9b7923777d67fc6b7d36c46d199da5eac2f64ea8
+      WRANGLER_SEND_METRICS: 'false'
+      WRANGLER_WRITE_LOGS: 'false'
+      WRANGLER_LOG_SANITIZE: 'true'
+
+    steps:
+      - name: Check out the tested release
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: e37259ee5c9749fe2cc4cf836adcd14732d90ff9
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+
+      - name: Verify and build
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$RELEASE_TREE"
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+          npm run security:check
+          npm audit --audit-level=high
+          npm run build
+          npm run build:functions
+          test -f dist/index.html
+          test -z "$(git status --porcelain)"
+
+      - name: Publish and verify the release
+        env:
+          CLOUDFLARE_ACCOUNT_ID: 4bfa1a9c849c3da50520f7a4bcccccab
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { spawnSync } from 'node:child_process';
+          import { mkdtempSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { setTimeout } from 'node:timers/promises';
+
+          const env = process.env;
+          const oldDeployment = '341c2643-6974-4c96-bfdf-eb38769b6fc7';
+          const oldSource = '25c31741c838287d5c78205193ef7cb7d7cbead1';
+          assert(env.CLOUDFLARE_API_TOKEN, 'Production environment token is required');
+          const api = 'https://api.cloudflare.com/client/v4/accounts/' +
+            env.CLOUDFLARE_ACCOUNT_ID + '/pages/projects/classyline2';
+
+          async function readProject(suffix = '') {
+            const response = await fetch(api + suffix, {
+              headers: { Authorization: 'Bearer ' + env.CLOUDFLARE_API_TOKEN },
+              redirect: 'error',
+              signal: AbortSignal.timeout(15000),
+            });
+            assert(response.ok, 'Cloudflare read failed: HTTP ' + response.status);
+            const data = await response.json();
+            assert(data.success, 'Cloudflare read was unsuccessful');
+            return data.result;
+          }
+
+          const project = await readProject();
+          const production = project.deployment_configs.production;
+          assert.equal(project.id, '25d5c0d3-f248-4d69-b5a3-feacfcb66dec');
+          assert.equal(project.production_branch, 'main');
+          assert.equal(project.source.config.production_deployments_enabled, false);
+          assert.equal(production.d1_databases.DB.id, '10c800b1-ddf7-427b-8354-9cf8529782b6');
+          assert.equal(production.r2_buckets.PRODUCT_IMAGES.name, 'classyline-storefront-production-images');
+          assert.equal(production.compatibility_date, '2025-11-13');
+          assert.equal(project.canonical_deployment.id, oldDeployment);
+          assert.equal(project.canonical_deployment.deployment_trigger.metadata.commit_hash, oldSource);
+
+          const deployments = await readProject('/deployments?env=production&per_page=25');
+          const terminal = new Set(['success', 'failure', 'canceled', 'cancelled']);
+          assert(deployments.every(d => d.is_skipped || terminal.has(d.latest_stage?.status)),
+            'Another production deployment is active');
+          assert(!deployments.some(d => !d.is_skipped &&
+            d.deployment_trigger?.metadata?.commit_hash === env.RELEASE_SHA),
+            'A deployment of this release is already recorded');
+
+          const journal = mkdtempSync(join(env.RUNNER_TEMP, 'classyline-purchase-cost-'));
+          const cli = 'node_modules/wrangler/wrangler-dist/cli.js';
+          const result = spawnSync(process.execPath, [
+            cli, 'pages', 'deploy', 'dist', '--project-name', 'classyline2',
+            '--branch', 'main', '--commit-hash', env.RELEASE_SHA, '--commit-dirty=false',
+          ], {
+            env: { ...env, CLASSYLINE_CREATE_JOURNAL: join(journal, 'create.json') },
+            stdio: 'inherit',
+            timeout: 180000,
+          });
+
+          for (let poll = 0; poll < 12; poll++) {
+            const current = (await readProject()).canonical_deployment;
+            if (current.id !== oldDeployment) {
+              assert.equal(current.environment, 'production');
+              assert.equal(current.deployment_trigger.metadata.commit_hash, env.RELEASE_SHA);
+              assert.equal(current.latest_stage.status, 'success');
+              console.log('Production deployment verified:', current.id);
+              process.exit(0);
+            }
+            await setTimeout(5000);
+          }
+          throw Error('Production release was not verified. Wrangler exit status: ' + result.status);
+          NODE
