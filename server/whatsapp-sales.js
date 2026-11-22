@@ -31,8 +31,10 @@ export async function whatsappSales({
       const [rows, totals] = await db.batch([
         db
           .prepare(
-            `SELECT * FROM (${grouped})
-          ORDER BY title, variant_id, color, size, cost_cents, unit_cents LIMIT 31 OFFSET ?`,
+            `SELECT sales.*, p.image FROM (${grouped}) AS sales
+          LEFT JOIN variants v ON v.id = sales.variant_id
+          LEFT JOIN products p ON p.id = v.product_id
+          ORDER BY sales.title, sales.variant_id, sales.color, sales.size, sales.cost_cents, sales.unit_cents LIMIT 31 OFFSET ?`,
           )
           .bind(day, day, offset),
         db
