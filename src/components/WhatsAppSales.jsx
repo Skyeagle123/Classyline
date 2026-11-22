@@ -2,6 +2,7 @@ import ProductSalesReport from "./ProductSalesReport.jsx";
 import MikExpressOrder from "./MikExpressOrder.jsx";
 import React, { useEffect, useState } from "react";
 import { api, money } from "../api.js";
+import { sortInventoryVariants } from "../variants.js";
 
 const endpoint = "/admin/whatsapp-sales";
 const blankItem = () => ({
@@ -694,7 +695,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
                   احفظ الكلفة
                 </button>
               </form>
-              {p.variants.map((v) => (
+              {sortInventoryVariants(p.variants).map((v) => (
                 <section key={v.id} className="border-t py-3 space-y-3">
                   <p>
                     {v.color} · {v.size} · المتاح {v.stock}
