@@ -235,6 +235,13 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     await call(path + "?report=products&day=" + day)
   ).json();
   assert.equal(products.products.length, 1);
+  const month = day.slice(0, 7);
+  const monthlyReport = await (
+    await call(path + "?report=products&month=" + month)
+  ).json();
+  assert.deepEqual(monthlyReport, products);
+  assert.equal((await call(path + "?report=products&month=2026-13")).status, 400);
+  assert.equal((await call(path + "?report=products&month=" + month + "&day=" + day)).status, 400);
   assert.equal(products.products[0].image, "/p.jpg");
   assert.equal(products.products[0].unit_cents, 2100);
   assert.equal(products.products[0].cost_cents, 1500);
