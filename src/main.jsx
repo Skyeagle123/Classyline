@@ -51,6 +51,9 @@ function Router() {
   const cat = path.match(/^\/category\/(.+)$/);
   const prod = path.match(/^\/product\/(.+)$/);
   if (path === "/" || path === "") return <Home />;
+  const quick = path.match(/^\/shop-by-category(?:\/([a-z-]+))?\/?$/);
+  if (quick)
+    return <Category slug={quick[1] || "pajamas-sleepwear"} quickShop />;
   if (path === "/shop") return <Shop />;
   if (path.startsWith("/shop/"))
     return <Shop group={decodeURIComponent(path.slice(6))} />;
