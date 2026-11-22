@@ -1,4 +1,4 @@
-import { sortSizes } from "./sizes.js";
+import { compareSizes, sortSizes } from "./sizes.js";
 
 // Exact stored values are identities: never split names or synthesize an ID.
 export function variantOptions(variants) {
@@ -7,6 +7,17 @@ export function variantOptions(variants) {
     sizes: sortSizes(new Set(variants.map((v) => v.size))),
   };
 }
+export function sortInventoryVariants(variants) {
+  const byColor = new Map();
+  for (const variant of variants) {
+    if (!byColor.has(variant.color)) byColor.set(variant.color, []);
+    byColor.get(variant.color).push(variant);
+  }
+  return [...byColor.values()].flatMap((group) =>
+    group.sort((a, b) => compareSizes(a.size, b.size)),
+  );
+}
+
 export function resolveVariant(variants, color, size) {
   if (!color || !size) return null;
   const matching = variants.filter((v) => v.color === color && v.size === size);

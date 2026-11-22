@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { build } from "esbuild";
 import { compareSizes, sortSizes } from "../src/sizes.js";
-import { variantOptions, resolveVariant } from "../src/variants.js";
+import { variantOptions, resolveVariant, sortInventoryVariants } from "../src/variants.js";
 
 // Reproduce the three reported products' visible first-occurrence size order.
 // Variant IDs below are synthetic; no live catalog or checkout is accessed.
@@ -470,4 +470,19 @@ test("retained size filter uses global sorting and preserves exact selection val
   } finally {
     view.unmount();
   }
+});
+
+test("inventory groups exact colors in catalog order and sorts sizes per color", () => {
+  const variants = [
+    { color: "Red", size: "12 Years", stock: 0 },
+    { color: "Blue", size: "XL", stock: 1 },
+    { color: "Red", size: "4 Years", stock: 2 },
+    { color: "Blue", size: "S", stock: 3 },
+    { color: "Red", size: "8Y", stock: 1 },
+  ];
+  const original = [...variants];
+  assert.deepEqual(sortInventoryVariants(variants), [
+    original[2], original[4], original[0], original[3], original[1],
+  ]);
+  assert.deepEqual(variants, original);
 });
