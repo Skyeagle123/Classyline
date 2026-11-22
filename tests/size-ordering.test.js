@@ -147,6 +147,11 @@ const cases = [
       "Free Size",
     ],
   ],
+  [
+    "ages written in years are sorted numerically",
+    ["10 Years", "12 Years", "14 Years", "16 Years", "18 Years", "4 Years", "6 Years", "8 Years"],
+    ["4 Years", "6 Years", "8 Years", "10 Years", "12 Years", "14 Years", "16 Years", "18 Years"],
+  ],
   ["Free Size alone", ["Free Size"], ["Free Size"]],
   ["empty list", [], []],
 ];
