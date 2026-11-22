@@ -43,7 +43,7 @@ function CopyField({ label, value, onChange, onStatus }) {
 
 export default function MikExpressOrder({ order }) {
   const [status, setStatus] = useState("");
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState(order.city ?? "");
   const [firstName, ...rest] = order.customer_name.trim().split(/\s+/);
   const [first, setFirst] = useState(firstName);
   const [last, setLast] = useState(rest.join(" "));
@@ -87,7 +87,7 @@ export default function MikExpressOrder({ order }) {
         </a>
         <p className="text-sm">
           افتح Bulk Create بـMikExpress. انسخ كل خانة والصقها بمطرحها، وراجع
-          الطلب قبل الحفظ. اكتب المدينة لحالها إذا كانت ضمن العنوان.
+          الطلب قبل الحفظ. إذا كانت المدينة فاضية، فيك تضيفها من تعديل الطلب.
         </p>
         {fields.map(([label, value, onChange]) => (
           <CopyField

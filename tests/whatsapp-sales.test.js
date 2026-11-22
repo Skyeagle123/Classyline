@@ -54,6 +54,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     customer_name: "Test Customer",
     phone: "70000000",
     address: "Test Address",
+    city: "Beirut",
     delivery_charge_cents: 200,
     delivery_cost_cents: 300,
     items: [{ variant_id: "s", qty: 2, unit_cents: 2100 }],
@@ -128,6 +129,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
   );
   const { orders } = await (await call(path)).json();
   assert.equal(orders.length, 1);
+  assert.equal(orders[0].city, "Beirut");
   assert.equal(orders[0].subtotal_cents, 4200);
   assert.equal(orders[0].purchase_cents, 2200);
   assert.equal(orders[0].items[0].variant_id, "s");
@@ -137,6 +139,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     customer_name: "Updated Customer",
     phone: "71111111",
     address: "Updated Address",
+    city: "Baabda",
     delivery_charge_cents: 500,
     delivery_cost_cents: 400,
     items: [{ variant_id: "m", qty: 1, unit_cents: 2500 }],
@@ -151,6 +154,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
   assert.equal(edited.customer_name, "Updated Customer");
   assert.equal(edited.phone, "+96171111111");
   assert.equal(edited.address, "Updated Address");
+  assert.equal(edited.city, "Baabda");
   assert.equal(edited.delivery_charge_cents, 500);
   assert.equal(edited.delivery_cost_cents, 400);
   assert.equal(edited.subtotal_cents, 2500);
