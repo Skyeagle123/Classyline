@@ -78,6 +78,7 @@ function OrderEditForm({ order, products, busy, onCancel, onSave }) {
   const [customer, setCustomer] = useState({
     customer_name: order.customer_name,
     phone: order.phone,
+    city: order.city ?? "",
     address: order.address,
   });
   const [delivery, setDelivery] = useState({
@@ -122,15 +123,18 @@ function OrderEditForm({ order, products, busy, onCancel, onSave }) {
       {Object.entries({
         customer_name: "اسم الزبونة",
         phone: "رقم الواتساب",
+        city: "المدينة",
         address: "المنطقة والعنوان",
       }).map(([id, label]) => (
         <label key={id} className="block">
           {label}
           <input
             className="input"
-            required
+            required={id !== "city"}
             type={id === "phone" ? "tel" : "text"}
-            maxLength={{ customer_name: 100, phone: 30, address: 320 }[id]}
+            maxLength={
+              { customer_name: 100, phone: 30, city: 100, address: 320 }[id]
+            }
             value={customer[id]}
             onChange={(event) =>
               setCustomer({ ...customer, [id]: event.target.value })
@@ -307,6 +311,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
   const [customer, setCustomer] = useState({
     customer_name: "",
     phone: "",
+    city: "",
     address: "",
   });
   const [delivery, setDelivery] = useState({
@@ -377,7 +382,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
         }),
       );
       setOrderId(crypto.randomUUID());
-      setCustomer({ customer_name: "", phone: "", address: "" });
+      setCustomer({ customer_name: "", phone: "", city: "", address: "" });
       setDelivery({ deliveryCharge: "0", deliveryCost: "0" });
       setItems([blankItem()]);
       setDay("");
@@ -422,16 +427,19 @@ export default function WhatsAppSales({ catalog, refresh }) {
             {Object.entries({
               customer_name: "اسم الزبونة",
               phone: "رقم الواتساب",
+              city: "المدينة",
               address: "المنطقة والعنوان",
             }).map(([id, label]) => (
               <label key={id} className="block">
                 {label}
                 <input
                   className="input"
-                  required
+                  required={id !== "city"}
                   type={id === "phone" ? "tel" : "text"}
                   maxLength={
-                    { customer_name: 100, phone: 30, address: 320 }[id]
+                    { customer_name: 100, phone: 30, city: 100, address: 320 }[
+                      id
+                    ]
                   }
                   value={customer[id]}
                   onChange={(e) =>
@@ -634,12 +642,19 @@ export default function WhatsAppSales({ catalog, refresh }) {
                 onSubmit={(e) => {
                   e.preventDefault();
                   run(async () => {
-                    await api(endpoint, json("PUT", {
-                      product_id: p.id,
-                      cost_cents: costEdits[p.id] === "" ? null : cents(
-                        costEdits[p.id] ?? String((costs[p.id] ?? 0) / 100),
-                      ),
-                    }));
+                    await api(
+                      endpoint,
+                      json("PUT", {
+                        product_id: p.id,
+                        cost_cents:
+                          costEdits[p.id] === ""
+                            ? null
+                            : cents(
+                                costEdits[p.id] ??
+                                  String((costs[p.id] ?? 0) / 100),
+                              ),
+                      }),
+                    );
                     setCostEdits((current) => {
                       const next = { ...current };
                       delete next[p.id];
@@ -651,10 +666,17 @@ export default function WhatsAppSales({ catalog, refresh }) {
               >
                 <Amount
                   label="كلفة شراء القطعة بالدولار (لكل الألوان والقياسات)"
-                  value={costEdits[p.id] ?? (costs[p.id] == null ? "" : String(costs[p.id] / 100))}
-                  onChange={(value) => setCostEdits({ ...costEdits, [p.id]: value })}
+                  value={
+                    costEdits[p.id] ??
+                    (costs[p.id] == null ? "" : String(costs[p.id] / 100))
+                  }
+                  onChange={(value) =>
+                    setCostEdits({ ...costEdits, [p.id]: value })
+                  }
                 />
-                <button className="navchip mt-2" disabled={busy}>احفظ الكلفة</button>
+                <button className="navchip mt-2" disabled={busy}>
+                  احفظ الكلفة
+                </button>
               </form>
               {p.variants.map((v) => (
                 <section key={v.id} className="border-t py-3 space-y-3">
@@ -814,7 +836,8 @@ export default function WhatsAppSales({ catalog, refresh }) {
                   {o.customer_name} · {statusLabel[o.status]}
                 </h3>
                 <p>
-                  <bdi>{o.phone}</bdi> · {o.address}
+                  <bdi>{o.phone}</bdi> ·{" "}
+                  {[o.city, o.address].filter(Boolean).join(" · ")}
                 </p>
                 <p>
                   تسجّل {dateFormat.format(o.created_at * 1000)}
@@ -850,7 +873,9 @@ export default function WhatsAppSales({ catalog, refresh }) {
                     {profit === null ? "غير محدّد" : money(profit)}
                   </p>
                 )}
-                {o.status === "confirmed" && <MikExpressOrder order={o} />}
+                {o.status === "confirmed" && (
+                  <MikExpressOrder key={o.city ?? ""} order={o} />
+                )}
                 {["confirmed", "dispatched"].includes(o.status) &&
                   !o.collected_at &&
                   (editingOrder === o.id ? (

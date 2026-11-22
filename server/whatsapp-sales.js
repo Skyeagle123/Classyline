@@ -54,7 +54,7 @@ export async function whatsappSales({
     }
     const rows = await db
       .prepare(
-        `SELECT s.id, customer_name, phone, address, status, created_at, dispatched_at,
+        `SELECT s.id, customer_name, phone, address, city, status, created_at, dispatched_at,
         delivered_at, collected_at, delivery_charge_cents, delivery_cost_cents,
         SUM(i.unit_cents * i.qty) AS subtotal_cents,
         CASE WHEN COUNT(i.cost_cents) = COUNT(*) THEN SUM(i.cost_cents * i.qty) END AS purchase_cents,
@@ -114,11 +114,16 @@ export async function whatsappSales({
       return { ok: true };
     }
     const product = text(input.product_id, 100);
-    const exists = await db.prepare("SELECT id FROM products WHERE id = ?").bind(product).first();
+    const exists = await db
+      .prepare("SELECT id FROM products WHERE id = ?")
+      .bind(product)
+      .first();
     if (!exists) fail(404, "Product not found");
     if (input.cost_cents === null) {
-      await db.prepare("DELETE FROM product_purchase_costs WHERE product_id = ?")
-        .bind(product).run();
+      await db
+        .prepare("DELETE FROM product_purchase_costs WHERE product_id = ?")
+        .bind(product)
+        .run();
     } else {
       await db
         .prepare(
@@ -136,6 +141,10 @@ export async function whatsappSales({
     const phone = normalizePhone(input.phone);
     if (!phone) fail(400, "Invalid phone number");
     const address = text(input.address, 320);
+    const city =
+      input.city === undefined || input.city === ""
+        ? null
+        : text(input.city, 100);
     const charge = integer(input.delivery_charge_cents, 0, 100000000);
     const delivery = integer(input.delivery_cost_cents, 0, 100000000);
     if (
@@ -154,14 +163,16 @@ export async function whatsappSales({
     });
     if (new Set(items.map(([variant]) => variant)).size !== items.length)
       fail(400, "Combine quantities for the same size and color");
-    return { name, phone, address, charge, delivery, items };
+    return { name, phone, address, city, charge, delivery, items };
   }
 
   const id = text(input.id, 80);
   if (method === "PATCH") {
     if (input.action === "edit") {
       const current = await db
-        .prepare("SELECT status, collected_at FROM whatsapp_sales WHERE id = ?")
+        .prepare(
+          "SELECT status, collected_at, city FROM whatsapp_sales WHERE id = ?",
+        )
         .bind(id)
         .first();
       if (!current) fail(404, "Order not found");
@@ -170,10 +181,19 @@ export async function whatsappSales({
         !["confirmed", "dispatched"].includes(current.status)
       )
         fail(409, "Only active orders can be edited before delivery");
-      const { name, phone, address, charge, delivery, items } =
+      const { name, phone, address, city, charge, delivery, items } =
         saleDetails(input);
+      const savedCity = input.city === undefined ? current.city : city;
       const hash = await digest(
-        JSON.stringify([name, phone, address, charge, delivery, items]),
+        JSON.stringify([
+          name,
+          phone,
+          address,
+          charge,
+          delivery,
+          items,
+          ...(savedCity ? [savedCity] : []),
+        ]),
       );
       const oldItems = (
         await db
@@ -186,7 +206,7 @@ export async function whatsappSales({
       const statements = [
         db
           .prepare(
-            `UPDATE whatsapp_sales SET request_hash = ?, customer_name = ?, phone = ?, address = ?,
+            `UPDATE whatsapp_sales SET request_hash = ?, customer_name = ?, phone = ?, address = ?, city = ?,
               delivery_charge_cents = ?, delivery_cost_cents = ?
              WHERE id = ? AND status = ? AND collected_at IS NULL`,
           )
@@ -195,6 +215,7 @@ export async function whatsappSales({
             name,
             phone,
             address,
+            savedCity,
             charge,
             delivery,
             id,
@@ -264,9 +285,18 @@ export async function whatsappSales({
     return { ok: true };
   }
 
-  const { name, phone, address, charge, delivery, items } = saleDetails(input);
+  const { name, phone, address, city, charge, delivery, items } =
+    saleDetails(input);
   const hash = await digest(
-    JSON.stringify([name, phone, address, charge, delivery, items]),
+    JSON.stringify([
+      name,
+      phone,
+      address,
+      charge,
+      delivery,
+      items,
+      ...(city ? [city] : []),
+    ]),
   );
   async function alreadySaved() {
     const existing = await db
@@ -281,8 +311,8 @@ export async function whatsappSales({
   const statements = [
     db
       .prepare(
-        `INSERT INTO whatsapp_sales(id, request_hash, customer_name, phone, address,
-        delivery_charge_cents, delivery_cost_cents, created_at, business_day) VALUES (?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO whatsapp_sales(id, request_hash, customer_name, phone, address, city,
+        delivery_charge_cents, delivery_cost_cents, created_at, business_day) VALUES (?,?,?,?,?,?,?,?,?,?)`,
       )
       .bind(
         id,
@@ -290,6 +320,7 @@ export async function whatsappSales({
         name,
         phone,
         address,
+        city,
         charge,
         delivery,
         now,
