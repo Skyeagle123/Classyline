@@ -20,7 +20,7 @@ function sizeKey(value) {
   if (standard !== -1) return { group: 0, rank: standard, label };
   const alias = /^(X{2,6})L$/.exec(label);
   if (alias) return { group: 0, rank: 4 + alias[1].length, label };
-  const numeric = /^(\d+(?:\.\d+)?)Y?$/.exec(label);
+  const numeric = /^(\d+(?:\.\d+)?)(?:\s*(?:YEARS?|Y))?$/.exec(label);
   if (numeric) return { group: 1, rank: 0, label, numeric: numeric[1] };
   if (label === "FREE SIZE") return { group: 3, rank: 0, label };
   return { group: 2, rank: 0, label };
