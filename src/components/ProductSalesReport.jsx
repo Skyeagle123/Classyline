@@ -90,10 +90,25 @@ export default function ProductSalesReport() {
                   return (
                     <tr key={JSON.stringify(item)} className="border-t">
                       <th scope="row" className="min-w-36 p-2 font-medium">
-                        {item.title}
-                        <span className="block font-normal">
-                          {item.color} · {item.size}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {item.image && (
+                            <img
+                              src={item.image}
+                              alt=""
+                              width={44}
+                              height={44}
+                              className="size-11 shrink-0 rounded border border-stone-200 bg-stone-100 object-contain"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          )}
+                          <div>
+                            <bdi>{item.title}</bdi>
+                            <span className="block font-normal">
+                              <bdi>{item.color} · {item.size}</bdi>
+                            </span>
+                          </div>
+                        </div>
                       </th>
                       {[
                         item.quantity,

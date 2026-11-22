@@ -235,6 +235,7 @@ test("WhatsApp orders share catalog stock, preserve transaction prices, and rest
     await call(path + "?report=products&day=" + day)
   ).json();
   assert.equal(products.products.length, 1);
+  assert.equal(products.products[0].image, "/p.jpg");
   assert.equal(products.products[0].unit_cents, 2100);
   assert.equal(products.products[0].cost_cents, 1500);
   assert.deepEqual(products.totals, {
