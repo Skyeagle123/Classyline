@@ -12,7 +12,7 @@ const columns = [
 ];
 
 export default function ProductSalesReport() {
-  const [filter, setFilter] = useState({ day: "", offset: 0 });
+  const [filter, setFilter] = useState({ day: "", month: "", offset: 0 });
   const [report, setReport] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -22,6 +22,7 @@ export default function ProductSalesReport() {
       offset: String(filter.offset),
     });
     if (filter.day) params.set("day", filter.day);
+    if (filter.month) params.set("month", filter.month);
     setReport(null);
     setError("");
     api("/admin/whatsapp-sales?" + params, { signal: controller.signal })
@@ -38,21 +39,32 @@ export default function ProductSalesReport() {
         الطلبات اللي تسلّمت. سعر البيع والربح بلا ديليفري.
       </p>
       <label className="block">
+        شهر تسجيل الطلب (اختياري)
+        <input
+          type="month"
+          className="input"
+          value={filter.month}
+          onChange={(event) =>
+            setFilter({ day: "", month: event.target.value, offset: 0 })
+          }
+        />
+      </label>
+      <label className="block">
         تاريخ تسجيل الطلب (اختياري)
         <input
           type="date"
           className="input"
           value={filter.day}
           onChange={(event) =>
-            setFilter({ day: event.target.value, offset: 0 })
+            setFilter({ day: event.target.value, month: "", offset: 0 })
           }
         />
       </label>
-      {filter.day && (
+      {(filter.day || filter.month) && (
         <button
           type="button"
           className="navchip"
-          onClick={() => setFilter({ day: "", offset: 0 })}
+          onClick={() => setFilter({ day: "", month: "", offset: 0 })}
         >
           كل التواريخ
         </button>

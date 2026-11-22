@@ -22,11 +22,16 @@ export async function whatsappSales({
       1000000,
     );
     if (url.searchParams.get("report") === "products") {
+      const month = url.searchParams.get("month");
+      if (month !== null && (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || day !== null))
+        fail(400, "Choose a valid month or day");
+      const start = month ? month + "-01" : day;
+      const end = month ? month + "-31" : day;
       const grouped = `
         SELECT i.variant_id, i.title, i.color, i.size, i.cost_cents, i.unit_cents,
           SUM(i.qty) AS quantity
         FROM whatsapp_sale_items i JOIN whatsapp_sales s ON s.id = i.sale_id
-        WHERE s.status = 'delivered' AND (? IS NULL OR s.business_day = ?)
+        WHERE s.status = 'delivered' AND (?1 IS NULL OR s.business_day BETWEEN ?1 AND ?2)
         GROUP BY i.variant_id, i.title, i.color, i.size, i.cost_cents, i.unit_cents`;
       const [rows, totals] = await db.batch([
         db
@@ -36,7 +41,7 @@ export async function whatsappSales({
           LEFT JOIN products p ON p.id = v.product_id
           ORDER BY sales.title, sales.variant_id, sales.color, sales.size, sales.cost_cents, sales.unit_cents LIMIT 31 OFFSET ?`,
           )
-          .bind(day, day, offset),
+          .bind(start, end, offset),
         db
           .prepare(
             `SELECT COALESCE(SUM(quantity), 0) AS quantity,
@@ -46,7 +51,7 @@ export async function whatsappSales({
           COALESCE(SUM(CASE WHEN cost_cents IS NULL THEN quantity ELSE 0 END), 0) AS missing_quantity
           FROM (${grouped})`,
           )
-          .bind(day, day),
+          .bind(start, end),
       ]);
       return {
         products: rows.results.slice(0, 30),
