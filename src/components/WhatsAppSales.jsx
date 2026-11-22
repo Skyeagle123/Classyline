@@ -627,8 +627,24 @@ export default function WhatsAppSales({ catalog, refresh }) {
           {visible.map((p) => (
             <details key={p.id} className="card p-3">
               <summary className="cursor-pointer">
-                {p.title} · {money(p.price_cents)} ·{" "}
-                {p.variants.reduce((sum, v) => sum + v.stock, 0)} قطعة متاحة
+                <span className="inline-flex max-w-[calc(100%_-_1.5rem)] flex-wrap items-center gap-x-2 gap-y-1 align-middle">
+                  <bdi>{p.title}</bdi>
+                  <bdi>{money(p.price_cents)}</bdi>
+                  <span className="inline-flex shrink-0 items-center gap-2">
+                    <span>
+                      {p.variants.reduce((sum, v) => sum + v.stock, 0)} قطعة متاحة
+                    </span>
+                    <img
+                      src={p.image}
+                      alt=""
+                      width={44}
+                      height={44}
+                      className="size-11 rounded border border-stone-200 bg-stone-100 object-contain"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </span>
+                </span>
               </summary>
               <img
                 src={p.image}
