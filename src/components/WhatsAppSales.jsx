@@ -904,18 +904,49 @@ export default function WhatsAppSales({ catalog, refresh }) {
             );
             return (
               <article key={o.id} className="card p-4 space-y-2">
-                <h3 className="text-xl">
-                  {o.customer_name} · {statusLabel[o.status]}
-                </h3>
-                <p>
-                  <bdi>{o.phone}</bdi> ·{" "}
-                  {[o.city, o.address].filter(Boolean).join(" · ")}
-                </p>
-                <p>
-                  تسجّل {dateFormat.format(o.created_at * 1000)}
-                  {o.dispatched_at &&
-                    ` · طلع ${dateFormat.format(o.dispatched_at * 1000)}`}
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-2 break-words">
+                    <h3 className="text-xl">
+                      {o.customer_name} · {statusLabel[o.status]}
+                    </h3>
+                    <p>
+                      <bdi>{o.phone}</bdi> ·{" "}
+                      {[o.city, o.address].filter(Boolean).join(" · ")}
+                    </p>
+                    <p>
+                      تسجّل {dateFormat.format(o.created_at * 1000)}
+                      {o.dispatched_at &&
+                        ` · طلع ${dateFormat.format(o.dispatched_at * 1000)}`}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {o.items.map((item, i) => {
+                      const image = byId.get(item.variant_id)?.product.image;
+                      if (!image) return null;
+                      return (
+                        <figure
+                          key={i}
+                          className="w-14 text-center text-xs sm:w-20"
+                        >
+                          <img
+                            src={image}
+                            alt={item.title}
+                            width={80}
+                            height={80}
+                            className="aspect-square w-full rounded border border-stone-200 bg-stone-100 object-contain"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <figcaption className="break-words">
+                            <bdi>
+                              {item.color} · ×{item.qty}
+                            </bdi>
+                          </figcaption>
+                        </figure>
+                      );
+                    })}
+                  </div>
+                </div>
                 <ul>
                   {o.items.map((item, i) => (
                     <li key={i}>
