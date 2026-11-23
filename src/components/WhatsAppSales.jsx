@@ -1,3 +1,4 @@
+import { collections, inCollection } from "../../shared/categories.js";
 import ProductSalesReport from "./ProductSalesReport.jsx";
 import MikExpressOrder from "./MikExpressOrder.jsx";
 import React, { useEffect, useState } from "react";
@@ -303,6 +304,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
   const [costEdits, setCostEdits] = useState({});
   const [stockEdits, setStockEdits] = useState({});
   const [query, setQuery] = useState("");
+  const [stockCategory, setStockCategory] = useState("shop-all");
   const [day, setDay] = useState("");
   const [orderPage, setOrderPage] = useState({ orders: [], more: false });
   const [offset, setOffset] = useState(0);
@@ -326,8 +328,17 @@ export default function WhatsAppSales({ catalog, refresh }) {
     p.variants.map((v) => ({ ...v, product: p })),
   );
   const byId = new Map(allVariants.map((v) => [v.id, v]));
-  const visible = products.filter((p) =>
-    p.title.toLowerCase().includes(query.trim().toLowerCase()),
+  const stockCategories = collections
+    .map((category) => ({
+      ...category,
+      image: products.find((product) => inCollection(product, category.slug))
+        ?.image,
+    }))
+    .filter(({ image, slug }) => image || slug === stockCategory);
+  const visible = products.filter(
+    (product) =>
+      inCollection(product, stockCategory) &&
+      product.title.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const stockedProducts = products.filter((product) =>
     product.variants.some((variant) => variant.stock > 0),
@@ -616,6 +627,48 @@ export default function WhatsAppSales({ catalog, refresh }) {
 
       {tab === "stock" && (
         <div className="space-y-3">
+          <details className="card p-3">
+            <summary className="cursor-pointer">
+              أقسام المخزون ·{" "}
+              <bdi>
+                {stockCategories.find(({ slug }) => slug === stockCategory)
+                  ?.label ?? "كل المنتجات"}
+              </bdi>
+            </summary>
+            <div
+              className="mt-3 flex flex-wrap gap-2"
+              role="group"
+              aria-label="أقسام المخزون"
+            >
+              {[
+                { slug: "shop-all", label: "كل المنتجات" },
+                ...stockCategories,
+              ].map(({ slug, label, image }) => (
+                <button
+                  key={slug}
+                  type="button"
+                  className="navchip inline-flex items-center gap-2"
+                  aria-pressed={stockCategory === slug}
+                  onClick={(event) => {
+                    setStockCategory(slug);
+                    const panel = event.currentTarget.closest("details");
+                    panel.open = false;
+                    panel.querySelector("summary").focus();
+                  }}
+                >
+                  {image && (
+                    <img
+                      src={image}
+                      alt=""
+                      className="size-8 rounded object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <bdi>{label}</bdi>
+                </button>
+              ))}
+            </div>
+          </details>
           <label className="block">
             دوّر على منتج
             <input
@@ -625,6 +678,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
+          {visible.length === 0 && <p role="status">ما في منتجات مطابقة.</p>}
           {visible.map((p) => (
             <details key={p.id} className="card p-3">
               <summary className="cursor-pointer">
@@ -633,7 +687,8 @@ export default function WhatsAppSales({ catalog, refresh }) {
                   <bdi>{money(p.price_cents)}</bdi>
                   <span className="inline-flex shrink-0 items-center gap-2">
                     <span>
-                      {p.variants.reduce((sum, v) => sum + v.stock, 0)} قطعة متاحة
+                      {p.variants.reduce((sum, v) => sum + v.stock, 0)} قطعة
+                      متاحة
                     </span>
                     <img
                       src={p.image}
