@@ -90,7 +90,9 @@ export function ProductView({
         alt={p.title}
         width="640"
         height="800"
-        className="w-full aspect-[4/5] object-cover rounded-xl"
+        className={p.id === "mens-plaid-shawl-collar-robe"
+          ? "w-full h-auto self-start object-contain rounded-xl"
+          : "w-full aspect-[4/5] object-cover rounded-xl"}
       />
       <section className="space-y-5">
         <a href="/">← Collection</a>
