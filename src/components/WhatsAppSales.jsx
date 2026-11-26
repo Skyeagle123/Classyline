@@ -335,7 +335,7 @@ export default function WhatsAppSales({ catalog, refresh }) {
         ?.image,
     }))
     .filter(({ image, slug }) =>
-      image || slug === stockCategory || slug === "cotton-underwear",
+      image || slug === stockCategory || slug.startsWith("cotton-underwear"),
     );
   const visible = products.filter(
     (product) =>
