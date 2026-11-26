@@ -2,7 +2,7 @@ import React from "react";
 import ProductCard from "../components/ProductCard.jsx";
 import { loadProducts } from "../utils.js";
 import { inCollection, collectionLabel } from "../catalog.js";
-import { pieceCount } from "../../shared/categories.js";
+import { pieceCount, cottonUnderwear } from "../../shared/categories.js";
 
 const quickCategories = [
   ["pajamas-sleepwear", "Pajamas"],
@@ -78,6 +78,19 @@ export default function Category({ slug, quickShop = false }) {
             (loading ? "Loading collection…" : pieceCount(products.length))}
         </p>
       </div>
+      {(slug === "cotton-underwear" ||
+        cottonUnderwear.some((category) => category.slug === slug)) && (
+        <nav aria-label="Cotton & Underwear sections" className="flex flex-wrap gap-2 mb-6">
+          <a href="/category/cotton-underwear" className="navchip"
+            aria-current={slug === "cotton-underwear" ? "page" : undefined}>All</a>
+          {cottonUnderwear.map((category) => (
+            <a key={category.slug} href={`/category/${category.slug}`} className="navchip"
+              aria-current={slug === category.slug ? "page" : undefined}>
+              {category.shortLabel}
+            </a>
+          ))}
+        </nav>
+      )}
       {!loading && !error && !products.length && (
         <div className="empty-state">
           <h2>More to discover soon</h2>

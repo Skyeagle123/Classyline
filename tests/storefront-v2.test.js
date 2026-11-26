@@ -6,6 +6,7 @@ import { build } from "esbuild";
 import { unzipSync, strFromU8 } from "fflate";
 import {
   clothing,
+  cottonUnderwear,
   accessories,
   collections,
   categoryGroups,
@@ -109,7 +110,7 @@ test("one taxonomy exposes all 17 clothing and five nested accessory categories"
     categoryGroups.map((g) => g.label),
     ["Clothing", "Accessories"],
   );
-  for (const c of [...clothing, ...accessories]) {
+  for (const c of [...clothing, ...accessories, ...cottonUnderwear]) {
     assert(CATEGORIES.includes(c.label));
     assert(inCollection({ category: c.label }, c.slug));
     assert.equal(collectionLabel(c.slug), c.label);
@@ -118,6 +119,18 @@ test("one taxonomy exposes all 17 clothing and five nested accessory categories"
     new Set(collections.map((c) => c.slug)).size,
     collections.length,
   );
+});
+test("cotton sections include their products in the parent without mixing audiences", () => {
+  assert.deepEqual(cottonUnderwear.map((c) => c.shortLabel), ["Men", "Women", "Boys", "Girls"]);
+  for (const category of cottonUnderwear) {
+    const item = { category: category.label };
+    assert(inCollection(item, "cotton-underwear"));
+    assert(inCollection(item, "clothing"));
+    for (const other of cottonUnderwear)
+      assert.equal(inCollection(item, other.slug), category.slug === other.slug);
+  }
+  assert(inCollection({ category: "Cotton & Underwear" }, "cotton-underwear"));
+  assert(!inCollection({ category: "Pajamas" }, "cotton-underwear"));
 });
 test("Shop All, groups and explicit New In/Sale tags preserve existing metadata", () => {
   assert(inCollection({ category: "Custom existing label" }, "shop-all"));
