@@ -100,8 +100,10 @@ test("category aliases ignore inherited properties and preserve literal legacy l
   assert.equal(categorySlug("Existing Custom Label"), "existing-custom-label");
 });
 
-test("one taxonomy exposes all 16 clothing and five nested accessory categories", () => {
-  assert.equal(clothing.length, 16);
+test("one taxonomy exposes all 17 clothing and five nested accessory categories", () => {
+  assert.equal(clothing.length, 17);
+  assert(CATEGORIES.includes("Cotton & Underwear"));
+  assert.equal(collectionLabel("cotton-underwear"), "Cotton & Underwear");
   assert.equal(accessories.length, 5);
   assert.deepEqual(
     categoryGroups.map((g) => g.label),
