@@ -26,6 +26,11 @@ export const accessories = [
   ["hats", "Hats"],
   ["hair-accessories", "Hair Accessories"],
 ].map(([slug, label]) => ({ slug, label }));
+export const cottonUnderwear = ["Men", "Women", "Boys", "Girls"].map((name) => ({
+  slug: `cotton-underwear-${name.toLowerCase()}`,
+  label: `Cotton & Underwear — ${name}`,
+  shortLabel: name,
+}));
 export const categoryGroups = [
   { slug: "clothing", label: "Clothing", categories: clothing },
   { slug: "accessories", label: "Accessories", categories: accessories },
@@ -33,6 +38,7 @@ export const categoryGroups = [
 export const collections = [
   { slug: "new-in", label: "New In" },
   ...clothing,
+  ...cottonUnderwear,
   ...accessories,
   { slug: "sale", label: "Sale" },
 ];
@@ -50,11 +56,16 @@ const aliases = {
 };
 export function categorySlug(value) {
   const key = slug(value);
-  return Object.hasOwn(aliases, key) ? aliases[key] : key;
+  return Object.hasOwn(aliases, key)
+    ? aliases[key]
+    : collections.find((category) => slug(category.label) === key)?.slug || key;
 }
 export function inCollection(product, value) {
   const key = categorySlug(value);
   if (key === "shop-all") return true;
+  if (key === "cotton-underwear" &&
+      cottonUnderwear.some((category) => inCollection(product, category.slug)))
+    return true;
   const group = categoryGroups.find((g) => g.slug === key);
   if (group) return group.categories.some((c) => inCollection(product, c.slug));
   return (
