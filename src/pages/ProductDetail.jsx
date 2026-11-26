@@ -90,7 +90,7 @@ export function ProductView({
         alt={p.title}
         width="640"
         height="800"
-        className={p.id === "mens-plaid-shawl-collar-robe"
+        className={["mens-plaid-shawl-collar-robe", "mens-white-cotton-tank-undershirt"].includes(p.id)
           ? "w-full h-auto self-start object-contain rounded-xl"
           : "w-full aspect-[4/5] object-cover rounded-xl"}
       />
