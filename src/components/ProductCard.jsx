@@ -11,7 +11,9 @@ export default function ProductCard({ p }) {
           height="800"
           src={p.image}
           alt={p.title}
-          className="w-full aspect-[4/5] object-cover"
+          className={p.id === "mens-plaid-shawl-collar-robe"
+            ? "w-full aspect-[4/5] object-contain"
+            : "w-full aspect-[4/5] object-cover"}
         />
         <div className="p-4">
           <p className="eyebrow">{p.category}</p>
