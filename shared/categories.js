@@ -4,6 +4,7 @@ export const clothing = [
   ["dresses", "Dresses"],
   ["sets", "Sets"],
   ["pajamas-sleepwear", "Pajamas & Sleepwear"],
+  ["cotton-underwear", "Cotton & Underwear"],
   ["tops", "Tops"],
   ["shirts", "Shirts"],
   ["t-shirts", "T-Shirts"],
@@ -45,6 +46,7 @@ const aliases = {
   new: "new-in",
   pajamas: "pajamas-sleepwear",
   "pajamas-&-sleepwear": "pajamas-sleepwear",
+  "cotton-&-underwear": "cotton-underwear",
 };
 export function categorySlug(value) {
   const key = slug(value);
