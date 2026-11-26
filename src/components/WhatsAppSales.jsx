@@ -334,7 +334,9 @@ export default function WhatsAppSales({ catalog, refresh }) {
       image: products.find((product) => inCollection(product, category.slug))
         ?.image,
     }))
-    .filter(({ image, slug }) => image || slug === stockCategory);
+    .filter(({ image, slug }) =>
+      image || slug === stockCategory || slug === "cotton-underwear",
+    );
   const visible = products.filter(
     (product) =>
       inCollection(product, stockCategory) &&
