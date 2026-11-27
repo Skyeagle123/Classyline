@@ -6,6 +6,7 @@ import WhatsAppSales from "../components/WhatsAppSales.jsx";
 export default function Admin() {
   const [auth, setAuth] = React.useState(false),
     [password, setPassword] = React.useState(""),
+    [rememberDevice, setRememberDevice] = React.useState(true),
     [msg, setMsg] = React.useState(""),
     [orders, setOrders] = React.useState([]),
     [catalog, setCatalog] = React.useState(null),
@@ -55,7 +56,7 @@ export default function Admin() {
             run(async () => {
               await api("/admin/login", {
                 method: "POST",
-                body: JSON.stringify({ password }),
+                body: JSON.stringify({ password, rememberDevice }),
               });
               setPassword("");
               setAuth(true);
@@ -74,6 +75,17 @@ export default function Admin() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
+          <label className="flex items-center gap-2 mb-3">
+            <input
+              type="checkbox"
+              checked={rememberDevice}
+              onChange={(e) => setRememberDevice(e.target.checked)}
+            />
+            Keep me signed in on this device for 90 days
+          </label>
+          <p className="text-sm mb-3">
+            Use this on your own phone or computer. Sign out on shared devices.
+          </p>
           <button className="btn">Sign in</button>
         </form>
         <p role="alert">{msg}</p>
