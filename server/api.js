@@ -248,6 +248,13 @@ export async function handle(request, env) {
       const ip = request.headers.get("cf-connecting-ip") || "local";
       await limit(db, "login:" + (await digest(ip)), 5, now);
       const input = await body(request);
+      if (
+        input.rememberDevice !== undefined &&
+        typeof input.rememberDevice !== "boolean"
+      )
+        fail(400, "Invalid remember-device option");
+      const sessionSeconds =
+        input.rememberDevice === true ? 90 * 24 * 60 * 60 : 3600;
       const password = text(input.password, 256);
       if (
         !equal(
@@ -259,10 +266,10 @@ export async function handle(request, env) {
       const token = crypto.randomUUID() + crypto.randomUUID();
       await db
         .prepare("INSERT INTO sessions VALUES (?,?)")
-        .bind(await digest(token), now + 3600)
+        .bind(await digest(token), now + sessionSeconds)
         .run();
       return json({ ok: true }, 200, {
-        "Set-Cookie": `__Host-cl_session=${token}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=3600`,
+        "Set-Cookie": `__Host-cl_session=${token}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${sessionSeconds}`,
       });
     }
     if (path.startsWith("/api/admin/")) {
