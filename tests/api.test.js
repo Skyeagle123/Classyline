@@ -174,6 +174,94 @@ test("login cookie is secure and session token stored only as hash; logout revok
     401,
   );
 });
+test("remembered login survives the old one-hour deadline, expires after 90 days and logout revokes only that device", async (t) => {
+  const e = await setup();
+  const start = Math.floor(Date.now() / 1000);
+  const r = await handle(
+    req("/admin/login", "POST", {
+      password: "test-only-password",
+      rememberDevice: true,
+    }),
+    e,
+  );
+  assert.equal(r.status, 200);
+  const header = r.headers.get("set-cookie");
+  assert.match(header, /Secure; HttpOnly; SameSite=Strict; Max-Age=7776000/);
+  const c = header.split(";")[0];
+  const hash = await digest(c.split("=")[1]);
+  const expiry = e.DB.sqlite
+    .prepare("SELECT expires_at FROM sessions WHERE token_hash=?")
+    .get(hash).expires_at;
+  assert.ok(
+    expiry >= start + 7776000 &&
+      expiry <= Math.floor(Date.now() / 1000) + 7776000,
+  );
+  const otherDevice = await session(e);
+  const clock = t.mock.method(Date, "now", () => (start + 7200) * 1000);
+  assert.equal(
+    (await handle(req("/admin/session", "GET", undefined, { Cookie: c }), e))
+      .status,
+    200,
+  );
+  clock.mock.mockImplementation(() => expiry * 1000);
+  assert.equal(
+    (await handle(req("/admin/session", "GET", undefined, { Cookie: c }), e))
+      .status,
+    401,
+  );
+  clock.mock.restore();
+  await handle(req("/admin/logout", "POST", {}, { Cookie: c }), e);
+  assert.equal(
+    (await handle(req("/admin/session", "GET", undefined, { Cookie: c }), e))
+      .status,
+    401,
+  );
+  assert.equal(
+    (
+      await handle(
+        req("/admin/session", "GET", undefined, { Cookie: otherDevice }),
+        e,
+      )
+    ).status,
+    200,
+  );
+});
+test("short sessions retain the one-hour limit and malformed persistence options are rejected", async () => {
+  const e = await setup();
+  for (const rememberDevice of [undefined, false]) {
+    const start = Math.floor(Date.now() / 1000);
+    const r = await handle(
+      req("/admin/login", "POST", {
+        password: "test-only-password",
+        rememberDevice,
+      }),
+      e,
+    );
+    assert.equal(r.status, 200);
+    assert.match(r.headers.get("set-cookie"), /Max-Age=3600/);
+    const hash = await digest(
+      r.headers.get("set-cookie").split(";")[0].split("=")[1],
+    );
+    const expiry = e.DB.sqlite
+      .prepare("SELECT expires_at FROM sessions WHERE token_hash=?")
+      .get(hash).expires_at;
+    assert.ok(
+      expiry >= start + 3600 && expiry <= Math.floor(Date.now() / 1000) + 3600,
+    );
+  }
+  assert.equal(
+    (
+      await handle(
+        req("/admin/login", "POST", {
+          password: "test-only-password",
+          rememberDevice: "true",
+        }),
+        e,
+      )
+    ).status,
+    400,
+  );
+});
 test("cross-origin writes rejected", async () => {
   const e = await setup();
   assert.equal(
