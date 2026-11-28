@@ -11,7 +11,7 @@ export default function ProductCard({ p }) {
           height="800"
           src={p.image}
           alt={p.title}
-          className={["mens-plaid-shawl-collar-robe", "mens-white-cotton-tank-undershirt"].includes(p.id)
+          className={["mens-plaid-shawl-collar-robe", "mens-white-cotton-tank-undershirt", "CL-TURKISH-SHERPA-SIX-20261115"].includes(p.id)
             ? "w-full aspect-[4/5] object-contain"
             : "w-full aspect-[4/5] object-cover"}
         />
